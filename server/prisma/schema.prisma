@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      String
+  
+  // fields used by all roles
+  name      String
+  createdAt DateTime @default(now())
+  
+  // client specific fields
+  company        String?
+  logo           String?
+  colorHex       String?
+  address        String?
+  postalAddress  String?
+  phoneNumber    String?
+  extraEmails    String?
+  brandPattern   String?
+  shortInfo      String?
+  profileStatus  String?   @default("INCOMPLETE")
+  
+  inviteToken    String?   @unique
+  inviteExpires  DateTime?
+  
+  // relations
+  assignedTasks  Task[]         @relation("WorkerTasks")
+  clientTasks    Task[]         @relation("ClientTasks")
+  invoices       Invoice[]      @relation("ClientInvoices")
+  taskComments   TaskComment[]
+  fileComments   FileComment[]
+  domains        Domain[]       @relation("ClientDomains")
+  projects       TimesheetProject[] @relation("UserProjects")
+}
+
+model Domain {
+  id              Int       @id @default(autoincrement())
+  clientId        Int
+  client          User      @relation("ClientDomains", fields: [clientId], references: [id], onDelete: Cascade)
+  
+  // domain information
+  domainName      String
+  domainRegistrar String?
+  domainExpiry    DateTime?
+  
+  // hosting information
+  hostingProvider String?
+  hostingPlan     String?
+  hostingExpiry   DateTime?
+  
+  // SSL information
+  sslExpiry       DateTime?
+  
+  // metadata
+  isPrimary       Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  notes           String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt @default(now())
+  
+  @@index([clientId])
+}
+
+model Task {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  status      String    @default("PENDING")
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt @default(now())
+  
+  workerId    Int?
+  clientId    Int
+  
+  worker   User?         @relation("WorkerTasks", fields: [workerId], references: [id])
+  client   User          @relation("ClientTasks", fields: [clientId], references: [id])
+  files    TaskFile[]
+  comments TaskComment[]
+}
+
+model TaskFile {
+  id         Int      @id @default(autoincrement())
+  taskId     Int
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  fileName    String
+  fileUrl     String
+  fileType    String
+  
+  // for work items
+  caption     String?
+  section     String?
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  completedBy Int?
+  
+  uploadedAt  DateTime @default(now())
+  uploadedBy  Int
+  version     Int      @default(1)
+  
+  comments    FileComment[]
+}
+
+model FileComment {
+  id        Int      @id @default(autoincrement())
+  fileId    Int
+  file      TaskFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model TaskComment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Invoice {
+  id            Int       @id @default(autoincrement())
+  invoiceNumber String    @unique
+  amount        Float
+  dueDate       DateTime
+  status        String    @default("PENDING")
+  description   String?
+  paidAt        DateTime?
+  createdAt     DateTime  @default(now())
+  fileUrl       String?
+  paymentLink   String?
+  
+  clientId      Int
+  client User @relation("ClientInvoices", fields: [clientId], references: [id])
+}
+
+model TimesheetProject {
+  id          Int      @id @default(autoincrement())
+  projectName String
+  clientId    Int?
+  client      User?    @relation("UserProjects", fields: [clientId], references: [id], onDelete: SetNull)
+  
+  description String?
+  
+  isPaid      Boolean   @default(false)
+  paidAt      DateTime?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt @default(now())
+  
+  entries     TimesheetEntry[]
+  
+  @@index([clientId])
+  @@index([isPaid])
+}
+
+model TimesheetEntry {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  project     TimesheetProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  date        DateTime
+  hoursWorked Float
+  hourlyRate  Float
+  totalPay    Float
+  notes       String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt @default(now())
+  
+  @@index([projectId])
+  @@index([date])
+}
