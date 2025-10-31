@@ -52,6 +52,22 @@ interface Domain {
   createdAt: string;
 }
 
+interface TaskFile {
+  id: number;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  caption?: string;
+  section?: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  uploadedAt: string;
+  task: {
+    id: number;
+    title: string;
+  };
+}
+
 interface Client {
   id: number;
   email: string;
@@ -80,6 +96,11 @@ const ClientDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "tasks" | "invoices" | "hosting">("overview");
+  
+  // Files modal state
+  const [showFilesModal, setShowFilesModal] = useState(false);
+  const [allFiles, setAllFiles] = useState<TaskFile[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -111,6 +132,32 @@ const ClientDetailPage: React.FC = () => {
       setError("Failed to load client information");
     } finally {
       setLoading(false);
+    }
+  };
+
+const fetchAllFiles = async () => {
+  try {
+    setLoadingFiles(true);
+    
+    const [taskFilesRes, profileFilesRes] = await Promise.all([
+      API.get(`/users/files/client/${id}`).catch(() => ({ data: [] })),
+      API.get(`/users/profile-files/client/${id}`).catch(() => ({ data: [] }))
+    ]);
+    
+    const combinedFiles = [...profileFilesRes.data, ...taskFilesRes.data];
+    
+    setAllFiles(combinedFiles);
+  } catch (err) {
+    console.error("Error fetching files:", err);
+  } finally {
+    setLoadingFiles(false);
+  }
+};
+
+  const handleOpenFiles = () => {
+    setShowFilesModal(true);
+    if (allFiles.length === 0) {
+      fetchAllFiles();
     }
   };
 
@@ -163,6 +210,28 @@ const ClientDetailPage: React.FC = () => {
     }
   };
 
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith('image/')) {
+      return (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    if (fileType.includes('pdf')) {
+      return (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      );
+    }
+    return (
+      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -204,7 +273,6 @@ const ClientDetailPage: React.FC = () => {
   const outstandingAmount = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
 
   const domains = client.domains || [];
-  
 
   return (
     <div className="min-h-screen py-24 bg-gray-50">
@@ -286,6 +354,17 @@ const ClientDetailPage: React.FC = () => {
                     </svg>
                     <span>Client since {formatDate(client.createdAt)}</span>
                   </div>
+
+                  <button
+                    onClick={handleOpenFiles}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg hover:opacity-90"
+                    style={{ backgroundColor: colors.primary }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                    View All Files
+                  </button>
                 </div>
               </div>
             </div>
@@ -643,205 +722,318 @@ const ClientDetailPage: React.FC = () => {
             </div>
           )}
 
-{activeTab === "hosting" && (
-  <div>
-    <div className="mb-6">
-      <h2 className="text-2xl font-bold text-gray-900">Domains & Hosting</h2>
-      <p className="text-sm text-gray-600">All domains and hosting information for this client</p>
-    </div>
-
-    {domains.length === 0 ? (
-      <div className="py-12 text-center bg-gray-50 rounded-2xl">
-        <div className="flex justify-center mb-4">
-          <div className="p-4 rounded-full" style={{ backgroundColor: `${colors.primary}15` }}>
-            <svg className="w-12 h-12" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-            </svg>
-          </div>
-        </div>
-        <p className="text-lg font-medium text-gray-700">No domain information</p>
-        <p className="text-sm text-gray-500">Contact your administrator for domain information</p>
-      </div>
-    ) : (
-      <div className="space-y-6">
-        {/* Loop through all domains */}
-        {domains.map((domain) => {
-          const domainDays = domain.domainExpiry ? getDaysUntilExpiry(domain.domainExpiry) : null;
-          const hostingDays = domain.hostingExpiry ? getDaysUntilExpiry(domain.hostingExpiry) : null;
-          const sslDays = domain.sslExpiry ? getDaysUntilExpiry(domain.sslExpiry) : null;
-
-          return (
-            <div
-              key={domain.id}
-              className={`p-6 border-2 rounded-2xl ${
-                domain.isPrimary ? "border-purple-300 bg-purple-50" : "border-gray-200 bg-white"
-              }`}
-            >
-              {/* Domain Header */}
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-xl" style={{ backgroundColor: `${colors.primary}15` }}>
-                    <svg className="w-6 h-6" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                    </svg>
-                  </div>
-                  <div>
-                    <a 
-                      href={`https://${domain.domainName}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xl font-bold transition-colors hover:opacity-80"
-                      style={{ color: colors.primary }}
-                    >
-                      {domain.domainName}
-                    </a>
-                    {domain.domainRegistrar && (
-                      <p className="text-sm text-gray-600">Registrar: {domain.domainRegistrar}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {domain.isPrimary && (
-                    <span className="px-3 py-1 text-xs font-bold text-white bg-purple-600 rounded-full">
-                      PRIMARY
-                    </span>
-                  )}
-                  {!domain.isActive && (
-                    <span className="px-3 py-1 text-xs font-bold text-white bg-gray-500 rounded-full">
-                      INACTIVE
-                    </span>
-                  )}
-                </div>
+          {activeTab === "hosting" && (
+            <div>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Domains & Hosting</h2>
+                <p className="text-sm text-gray-600">All domains and hosting information for this client</p>
               </div>
 
-              {/* Expiry Cards */}
-              <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3">
-                {/* Domain Expiry */}
-                <div className={`p-4 border-2 rounded-xl ${getExpiryStatus(domainDays).bg} ${getExpiryStatus(domainDays).border}`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`p-2 rounded-lg ${getExpiryStatus(domainDays).color === 'red' ? 'bg-red-100' : getExpiryStatus(domainDays).color === 'amber' ? 'bg-amber-100' : getExpiryStatus(domainDays).color === 'green' ? 'bg-green-100' : 'bg-gray-100'}`}>
-                      <svg className={`w-4 h-4 ${getExpiryStatus(domainDays).color === 'red' ? 'text-red-600' : getExpiryStatus(domainDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(domainDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {domains.length === 0 ? (
+                <div className="py-12 text-center bg-gray-50 rounded-2xl">
+                  <div className="flex justify-center mb-4">
+                    <div className="p-4 rounded-full" style={{ backgroundColor: `${colors.primary}15` }}>
+                      <svg className="w-12 h-12" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                       </svg>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase">Domain</p>
-                      <p className={`text-xs font-semibold ${getExpiryStatus(domainDays).color === 'red' ? 'text-red-700' : getExpiryStatus(domainDays).color === 'amber' ? 'text-amber-700' : getExpiryStatus(domainDays).color === 'green' ? 'text-green-700' : 'text-gray-700'}`}>
-                        {getExpiryStatus(domainDays).text}
-                      </p>
-                    </div>
                   </div>
-                  
-                  {domainDays !== null ? (
-                    <>
-                      <p className={`text-3xl font-bold mb-1 ${getExpiryStatus(domainDays).color === 'red' ? 'text-red-600' : getExpiryStatus(domainDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(domainDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`}>
-                        {domainDays < 0 ? 0 : domainDays}
-                      </p>
-                      <p className="mb-2 text-xs text-gray-600">days remaining</p>
-                      <p className="text-xs text-gray-500">
-                        {domain.domainExpiry ? formatDate(domain.domainExpiry) : 'Not set'}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-500">No expiry date set</p>
-                  )}
+                  <p className="text-lg font-medium text-gray-700">No domain information</p>
+                  <p className="text-sm text-gray-500">Contact your administrator for domain information</p>
                 </div>
+              ) : (
+                <div className="space-y-6">
+                  {domains.map((domain) => {
+                    const domainDays = domain.domainExpiry ? getDaysUntilExpiry(domain.domainExpiry) : null;
+                    const hostingDays = domain.hostingExpiry ? getDaysUntilExpiry(domain.hostingExpiry) : null;
+                    const sslDays = domain.sslExpiry ? getDaysUntilExpiry(domain.sslExpiry) : null;
 
-                {/* Hosting Expiry */}
-                <div className={`p-4 border-2 rounded-xl ${getExpiryStatus(hostingDays).bg} ${getExpiryStatus(hostingDays).border}`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`p-2 rounded-lg ${getExpiryStatus(hostingDays).color === 'red' ? 'bg-red-100' : getExpiryStatus(hostingDays).color === 'amber' ? 'bg-amber-100' : getExpiryStatus(hostingDays).color === 'green' ? 'bg-green-100' : 'bg-gray-100'}`}>
-                      <svg className={`w-4 h-4 ${getExpiryStatus(hostingDays).color === 'red' ? 'text-red-600' : getExpiryStatus(hostingDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(hostingDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase">Hosting</p>
-                      <p className={`text-xs font-semibold ${getExpiryStatus(hostingDays).color === 'red' ? 'text-red-700' : getExpiryStatus(hostingDays).color === 'amber' ? 'text-amber-700' : getExpiryStatus(hostingDays).color === 'green' ? 'text-green-700' : 'text-gray-700'}`}>
-                        {getExpiryStatus(hostingDays).text}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {hostingDays !== null ? (
-                    <>
-                      <p className={`text-3xl font-bold mb-1 ${getExpiryStatus(hostingDays).color === 'red' ? 'text-red-600' : getExpiryStatus(hostingDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(hostingDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`}>
-                        {hostingDays < 0 ? 0 : hostingDays}
-                      </p>
-                      <p className="mb-2 text-xs text-gray-600">days remaining</p>
-                      <p className="text-xs text-gray-500">
-                        {domain.hostingExpiry ? formatDate(domain.hostingExpiry) : 'Not set'}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-500">No expiry date set</p>
-                  )}
-                </div>
+                    return (
+                      <div
+                        key={domain.id}
+                        className={`p-6 border-2 rounded-2xl ${
+                          domain.isPrimary ? "border-purple-300 bg-purple-50" : "border-gray-200 bg-white"
+                        }`}
+                      >
+                        {/* Domain Header */}
+                        <div className="flex items-start justify-between mb-6">
+                          <div className="flex items-center gap-3">
+                            <div className="p-3 rounded-xl" style={{ backgroundColor: `${colors.primary}15` }}>
+                              <svg className="w-6 h-6" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                              </svg>
+                            </div>
+                            <div>
+                              <a 
+                                href={`https://${domain.domainName}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xl font-bold transition-colors hover:opacity-80"
+                                style={{ color: colors.primary }}
+                              >
+                                {domain.domainName}
+                              </a>
+                              {domain.domainRegistrar && (
+                                <p className="text-sm text-gray-600">Registrar: {domain.domainRegistrar}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            {domain.isPrimary && (
+                              <span className="px-3 py-1 text-xs font-bold text-white bg-purple-600 rounded-full">
+                                PRIMARY
+                              </span>
+                            )}
+                            {!domain.isActive && (
+                              <span className="px-3 py-1 text-xs font-bold text-white bg-gray-500 rounded-full">
+                                INACTIVE
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                {/* SSL Expiry */}
-                <div className={`p-4 border-2 rounded-xl ${getExpiryStatus(sslDays).bg} ${getExpiryStatus(sslDays).border}`}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`p-2 rounded-lg ${getExpiryStatus(sslDays).color === 'red' ? 'bg-red-100' : getExpiryStatus(sslDays).color === 'amber' ? 'bg-amber-100' : getExpiryStatus(sslDays).color === 'green' ? 'bg-green-100' : 'bg-gray-100'}`}>
-                      <svg className={`w-4 h-4 ${getExpiryStatus(sslDays).color === 'red' ? 'text-red-600' : getExpiryStatus(sslDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(sslDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase">SSL</p>
-                      <p className={`text-xs font-semibold ${getExpiryStatus(sslDays).color === 'red' ? 'text-red-700' : getExpiryStatus(sslDays).color === 'amber' ? 'text-amber-700' : getExpiryStatus(sslDays).color === 'green' ? 'text-green-700' : 'text-gray-700'}`}>
-                        {getExpiryStatus(sslDays).text}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {sslDays !== null ? (
-                    <>
-                      <p className={`text-3xl font-bold mb-1 ${getExpiryStatus(sslDays).color === 'red' ? 'text-red-600' : getExpiryStatus(sslDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(sslDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`}>
-                        {sslDays < 0 ? 0 : sslDays}
-                      </p>
-                      <p className="mb-2 text-xs text-gray-600">days remaining</p>
-                      <p className="text-xs text-gray-500">
-                        {domain.sslExpiry ? formatDate(domain.sslExpiry) : 'Not set'}
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-gray-500">No expiry date set</p>
-                  )}
-                </div>
-              </div>
+                        {/* Expiry Cards */}
+                        <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3">
+                          {/* Domain Expiry */}
+                          <div className={`p-4 border-2 rounded-xl ${getExpiryStatus(domainDays).bg} ${getExpiryStatus(domainDays).border}`}>
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className={`p-2 rounded-lg ${getExpiryStatus(domainDays).color === 'red' ? 'bg-red-100' : getExpiryStatus(domainDays).color === 'amber' ? 'bg-amber-100' : getExpiryStatus(domainDays).color === 'green' ? 'bg-green-100' : 'bg-gray-100'}`}>
+                                <svg className={`w-4 h-4 ${getExpiryStatus(domainDays).color === 'red' ? 'text-red-600' : getExpiryStatus(domainDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(domainDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase">Domain</p>
+                                <p className={`text-xs font-semibold ${getExpiryStatus(domainDays).color === 'red' ? 'text-red-700' : getExpiryStatus(domainDays).color === 'amber' ? 'text-amber-700' : getExpiryStatus(domainDays).color === 'green' ? 'text-green-700' : 'text-gray-700'}`}>
+                                  {getExpiryStatus(domainDays).text}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {domainDays !== null ? (
+                              <>
+                                <p className={`text-3xl font-bold mb-1 ${getExpiryStatus(domainDays).color === 'red' ? 'text-red-600' : getExpiryStatus(domainDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(domainDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`}>
+                                  {domainDays < 0 ? 0 : domainDays}
+                                </p>
+                                <p className="mb-2 text-xs text-gray-600">days remaining</p>
+                                <p className="text-xs text-gray-500">
+                                  {domain.domainExpiry ? formatDate(domain.domainExpiry) : 'Not set'}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-sm text-gray-500">No expiry date set</p>
+                            )}
+                          </div>
 
-              {/* Additional Details */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="p-4 bg-white border border-gray-200 rounded-xl">
-                  <p className="mb-2 text-xs font-semibold text-gray-500 uppercase">Hosting Provider</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {domain.hostingProvider || 'Not specified'}
-                  </p>
-                </div>
-                <div className="p-4 bg-white border border-gray-200 rounded-xl">
-                  <p className="mb-2 text-xs font-semibold text-gray-500 uppercase">Hosting Plan</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {domain.hostingPlan || 'Not specified'}
-                  </p>
-                </div>
-              </div>
+                          {/* Hosting Expiry */}
+                          <div className={`p-4 border-2 rounded-xl ${getExpiryStatus(hostingDays).bg} ${getExpiryStatus(hostingDays).border}`}>
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className={`p-2 rounded-lg ${getExpiryStatus(hostingDays).color === 'red' ? 'bg-red-100' : getExpiryStatus(hostingDays).color === 'amber' ? 'bg-amber-100' : getExpiryStatus(hostingDays).color === 'green' ? 'bg-green-100' : 'bg-gray-100'}`}>
+                                <svg className={`w-4 h-4 ${getExpiryStatus(hostingDays).color === 'red' ? 'text-red-600' : getExpiryStatus(hostingDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(hostingDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase">Hosting</p>
+                                <p className={`text-xs font-semibold ${getExpiryStatus(hostingDays).color === 'red' ? 'text-red-700' : getExpiryStatus(hostingDays).color === 'amber' ? 'text-amber-700' : getExpiryStatus(hostingDays).color === 'green' ? 'text-green-700' : 'text-gray-700'}`}>
+                                  {getExpiryStatus(hostingDays).text}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {hostingDays !== null ? (
+                              <>
+                                <p className={`text-3xl font-bold mb-1 ${getExpiryStatus(hostingDays).color === 'red' ? 'text-red-600' : getExpiryStatus(hostingDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(hostingDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`}>
+                                  {hostingDays < 0 ? 0 : hostingDays}
+                                </p>
+                                <p className="mb-2 text-xs text-gray-600">days remaining</p>
+                                <p className="text-xs text-gray-500">
+                                  {domain.hostingExpiry ? formatDate(domain.hostingExpiry) : 'Not set'}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-sm text-gray-500">No expiry date set</p>
+                            )}
+                          </div>
 
-              {/* Notes */}
-              {domain.notes && (
-                <div className="p-4 mt-4 border border-gray-200 rounded-xl bg-amber-50">
-                  <p className="mb-2 text-xs font-semibold text-gray-700 uppercase">Notes</p>
-                  <p className="text-sm text-gray-700">{domain.notes}</p>
+                          {/* SSL Expiry */}
+                          <div className={`p-4 border-2 rounded-xl ${getExpiryStatus(sslDays).bg} ${getExpiryStatus(sslDays).border}`}>
+                            <div className="flex items-center gap-2 mb-3">
+                              <div className={`p-2 rounded-lg ${getExpiryStatus(sslDays).color === 'red' ? 'bg-red-100' : getExpiryStatus(sslDays).color === 'amber' ? 'bg-amber-100' : getExpiryStatus(sslDays).color === 'green' ? 'bg-green-100' : 'bg-gray-100'}`}>
+                                <svg className={`w-4 h-4 ${getExpiryStatus(sslDays).color === 'red' ? 'text-red-600' : getExpiryStatus(sslDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(sslDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-500 uppercase">SSL</p>
+                                <p className={`text-xs font-semibold ${getExpiryStatus(sslDays).color === 'red' ? 'text-red-700' : getExpiryStatus(sslDays).color === 'amber' ? 'text-amber-700' : getExpiryStatus(sslDays).color === 'green' ? 'text-green-700' : 'text-gray-700'}`}>
+                                  {getExpiryStatus(sslDays).text}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {sslDays !== null ? (
+                              <>
+                                <p className={`text-3xl font-bold mb-1 ${getExpiryStatus(sslDays).color === 'red' ? 'text-red-600' : getExpiryStatus(sslDays).color === 'amber' ? 'text-amber-600' : getExpiryStatus(sslDays).color === 'green' ? 'text-green-600' : 'text-gray-600'}`}>
+                                  {sslDays < 0 ? 0 : sslDays}
+                                </p>
+                                <p className="mb-2 text-xs text-gray-600">days remaining</p>
+                                <p className="text-xs text-gray-500">
+                                  {domain.sslExpiry ? formatDate(domain.sslExpiry) : 'Not set'}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-sm text-gray-500">No expiry date set</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Additional Details */}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <div className="p-4 bg-white border border-gray-200 rounded-xl">
+                            <p className="mb-2 text-xs font-semibold text-gray-500 uppercase">Hosting Provider</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {domain.hostingProvider || 'Not specified'}
+                            </p>
+                          </div>
+                          <div className="p-4 bg-white border border-gray-200 rounded-xl">
+                            <p className="mb-2 text-xs font-semibold text-gray-500 uppercase">Hosting Plan</p>
+                            <p className="text-sm font-medium text-gray-900">
+                              {domain.hostingPlan || 'Not specified'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Notes */}
+                        {domain.notes && (
+                          <div className="p-4 mt-4 border border-gray-200 rounded-xl bg-amber-50">
+                            <p className="mb-2 text-xs font-semibold text-gray-700 uppercase">Notes</p>
+                            <p className="text-sm text-gray-700">{domain.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
-          );
-        })}
-      </div>
-    )}
-  </div>
-)}
+          )}
         </div>
       </div>
+
+      {/* FILES MODAL */}
+      {showFilesModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setShowFilesModal(false)}>
+          <div className="relative w-full max-w-4xl max-h-[90vh] m-4 bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200" style={{ backgroundColor: colors.primary }}>
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                </svg>
+                <h2 className="text-2xl font-bold text-white">All Files</h2>
+                <span className="px-3 py-1 text-sm font-semibold bg-white rounded-full text-blakc bg-opacity-20">
+                  {allFiles.length} {allFiles.length === 1 ? 'file' : 'files'}
+                </span>
+              </div>
+              <button
+                onClick={() => setShowFilesModal(false)}
+                className="p-2 text-white transition-colors rounded-lg hover:bg-white hover:bg-opacity-20"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+              {loadingFiles ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.primary }}></div>
+                    <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.secondary, animationDelay: "0.1s" }}></div>
+                    <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.accent, animationDelay: "0.2s" }}></div>
+                  </div>
+                </div>
+              ) : allFiles.length === 0 ? (
+                <div className="py-12 text-center">
+                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-lg font-medium text-gray-500">No files uploaded yet</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {allFiles.map((file) => (
+                    <div
+                      key={file.id}
+                      className="p-4 transition-all border border-gray-200 rounded-xl hover:shadow-md hover:border-gray-300"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0 p-3 rounded-lg" style={{ backgroundColor: `${colors.primary}20` }}>
+                          <div style={{ color: colors.primary }}>
+                            {getFileIcon(file.fileType)}
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h3 className="mb-1 text-sm font-semibold text-gray-900 truncate">
+                            {file.fileName}
+                          </h3>
+                          
+                          {file.caption && (
+                            <p className="mb-2 text-xs text-gray-600 line-clamp-2">{file.caption}</p>
+                          )}
+                          
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            <span className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded">
+                              {file.task.title}
+                            </span>
+                            
+                            {file.section && (
+                              <span className="px-2 py-1 text-xs font-medium rounded" style={{ 
+                                backgroundColor: `${colors.secondary}20`,
+                                color: colors.secondary 
+                              }}>
+                                {file.section}
+                              </span>
+                            )}
+                            
+                            {file.isCompleted && (
+                              <span className="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded">
+                                ✓ Completed
+                              </span>
+                            )}
+                          </div>
+                          
+                          <p className="mb-3 text-xs text-gray-500">
+                            Uploaded {formatDate(file.uploadedAt)}
+                          </p>
+                          
+                          <a
+                            href={`http://localhost:4000/${file.fileUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white transition-colors rounded-lg"
+                            style={{ backgroundColor: colors.primary }}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            View File
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

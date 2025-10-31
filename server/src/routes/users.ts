@@ -356,7 +356,26 @@ router.post("/complete-profile", uploadFile.array("files", 10), async (req, res)
     const files = req.files as Express.Multer.File[];
     let logoPath = user.logo;
 
+    // NEW: Create profile files directory for this user
+    const profileFilesDir = `uploads/profile-files/${user.id}`;
+    if (!fs.existsSync(profileFilesDir)) {
+      fs.mkdirSync(profileFilesDir, { recursive: true });
+    }
+
     if (files && files.length > 0) {
+      // NEW: Copy all uploaded files to user's profile folder
+      for (const file of files) {
+        const sourcePath = path.join(filesDir, file.filename);
+        const destPath = path.join(profileFilesDir, file.filename);
+        
+        try {
+          fs.copyFileSync(sourcePath, destPath);
+        } catch (copyError) {
+          console.error("Error copying file:", copyError);
+        }
+      }
+
+      // Select logo (existing logic - unchanged)
       if (logoIndex !== undefined) {
         const logoIdx = parseInt(logoIndex);
         if (logoIdx >= 0 && logoIdx < files.length) {
@@ -435,6 +454,97 @@ router.get("/clients/list", verifyJWT, async (req: any, res) => {
   } catch (error) {
     console.error("Error fetching clients:", error);
     res.status(500).json({ error: "Failed to fetch clients" });
+  }
+});
+
+// get all files for a specific client
+router.get("/files/client/:clientId", verifyJWT, verifyAdmin, async (req, res) => {
+  try {
+    const clientId = parseInt(req.params.clientId);
+    
+    const tasks = await prisma.task.findMany({
+      where: { clientId },
+      include: {
+        files: {
+          include: {
+            task: {
+              select: {
+                id: true,
+                title: true
+              }
+            }
+          },
+          orderBy: {
+            uploadedAt: 'desc'
+          }
+        }
+      }
+    });
+
+    const allFiles = tasks.flatMap(task => 
+      task.files.map(file => ({
+        ...file,
+        task: {
+          id: task.id,
+          title: task.title
+        }
+      }))
+    );
+
+    res.json(allFiles);
+  } catch (error) {
+    console.error("Error fetching client files:", error);
+    res.status(500).json({ error: "Failed to fetch files" });
+  }
+});
+
+// get all profile files for the client
+router.get("/profile-files/client/:clientId", verifyJWT, verifyAdmin, async (req, res) => {
+  try {
+    const clientId = parseInt(req.params.clientId);
+    
+    const profileFilesDir = path.join(__dirname, `../../uploads/profile-files/${clientId}`);
+    
+    if (!fs.existsSync(profileFilesDir)) {
+      return res.json([]);
+    }
+
+    const fileNames = fs.readdirSync(profileFilesDir);
+    
+    const files = fileNames.map(fileName => {
+      const filePath = path.join(profileFilesDir, fileName);
+      const stats = fs.statSync(filePath);
+      const ext = path.extname(fileName).toLowerCase();
+      
+      let fileType = 'application/octet-stream';
+      if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
+        fileType = `image/${ext.slice(1)}`;
+      } else if (ext === '.pdf') {
+        fileType = 'application/pdf';
+      } else if (['.doc', '.docx'].includes(ext)) {
+        fileType = 'application/msword';
+      }
+      
+      return {
+        id: `profile-${fileName}`,
+        fileName: fileName,
+        fileUrl: `uploads/profile-files/${clientId}/${fileName}`,
+        fileType: fileType,
+        uploadedAt: stats.birthtime,
+        caption: null,
+        section: 'Profile',
+        isCompleted: true,
+        task: {
+          id: 0,
+          title: 'Profile Setup'
+        }
+      };
+    });
+
+    res.json(files);
+  } catch (error) {
+    console.error("Error fetching profile files:", error);
+    res.status(500).json({ error: "Failed to fetch profile files" });
   }
 });
 
