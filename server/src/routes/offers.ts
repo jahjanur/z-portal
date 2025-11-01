@@ -50,18 +50,8 @@ const generateOfferPDF = (offer: Offer): Promise<Buffer> => {
     const pageHeight = doc.page.height;
     const margin = 50;
 
-    // header
-
-    // main gradient background
-    doc.rect(0, 0, pageWidth, 220).fill(colors.primary);
-
-    // secondary gradient layer
-    doc
-      .save()
-      .rect(0, 140, pageWidth, 80)
-      .fillOpacity(0.4)
-      .fill(colors.secondary)
-      .restore();
+    // header with gradient background
+    doc.rect(0, 0, pageWidth, 180).fill(colors.primary);
 
     // decorative circles (top right)
     doc
@@ -94,21 +84,7 @@ const generateOfferPDF = (offer: Offer): Promise<Buffer> => {
       .text("Building Digital Excellence", margin, 90)
       .fillOpacity(1);
 
-    // "PROFESSIONAL OFFER" badge
-    doc
-      .save()
-      .roundedRect(margin, 130, 200, 40, 20)
-      .fillOpacity(0.2)
-      .fill(colors.white)
-      .restore();
-
-    doc
-      .fontSize(14)
-      .fillColor(colors.white)
-      .font("Helvetica-Bold")
-      .text("PROFESSIONAL OFFER", margin + 20, 143);
-
-    // date badge
+    // date in top right
     const dateText = new Date().toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -116,7 +92,7 @@ const generateOfferPDF = (offer: Offer): Promise<Buffer> => {
     });
 
     doc
-      .fontSize(10)
+      .fontSize(11)
       .fillColor(colors.white)
       .font("Helvetica")
       .fillOpacity(0.9)
@@ -126,8 +102,20 @@ const generateOfferPDF = (offer: Offer): Promise<Buffer> => {
       })
       .fillOpacity(1);
 
+    // company details section on header
+    doc
+      .fontSize(10)
+      .fillColor(colors.white)
+      .font("Helvetica")
+      .fillOpacity(0.85)
+      .text("EPAGE LABS LIMITED", margin, 130)
+      .text("Suite C, Level 7, World Trust Tower,", margin, 145)
+      .text("50 Stanley Street, Central,", margin, 157)
+      .text("Hong Kong", margin, 169)
+      .fillOpacity(1);
+
     // client section
-    let yPos = 260;
+    let yPos = 220;
 
     // client card
     doc

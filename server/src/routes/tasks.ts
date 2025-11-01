@@ -46,6 +46,13 @@ router.get("/", verifyJWT, async (req: any, res) => {
               role: true
             }
           },
+          project: {  // ADD PROJECT
+            select: {
+              id: true,
+              name: true,
+              description: true
+            }
+          },
           files: true,
           comments: true
         } 
@@ -63,6 +70,13 @@ router.get("/", verifyJWT, async (req: any, res) => {
               role: true
             }
           },
+          project: {  // ADD PROJECT
+            select: {
+              id: true,
+              name: true,
+              description: true
+            }
+          },
           files: true,
           comments: true
         } 
@@ -77,6 +91,13 @@ router.get("/", verifyJWT, async (req: any, res) => {
               email: true,
               name: true,
               role: true
+            }
+          },
+          project: {  // ADD PROJECT
+            select: {
+              id: true,
+              name: true,
+              description: true
             }
           },
           files: true,
@@ -118,6 +139,13 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
             email: true,
             name: true,
             role: true
+          }
+        },
+        project: {  // ADD PROJECT
+          select: {
+            id: true,
+            name: true,
+            description: true
           }
         },
         files: {
@@ -180,7 +208,7 @@ router.post("/", verifyJWT, async (req: any, res) => {
       return res.status(403).json({ error: "Only admins can create tasks" });
     }
 
-    const { title, description, clientId, workerId, status, dueDate } = req.body;
+    const { title, description, clientId, workerId, status, dueDate, projectId } = req.body;  // ADD projectId
 
     if (!title || !clientId) {
       return res.status(400).json({ error: "Title and clientId are required" });
@@ -202,11 +230,22 @@ router.post("/", verifyJWT, async (req: any, res) => {
       }
     }
 
+    // Validate projectId if provided
+    if (projectId) {
+      const project = await prisma.project.findUnique({
+        where: { id: projectId }
+      });
+      if (!project) {
+        return res.status(400).json({ error: "Invalid project ID" });
+      }
+    }
+
     const taskData: any = {
       title,
       description: description || null,
       clientId,
       workerId: workerId || null,
+      projectId: projectId || null,  // ADD projectId
       status: status || "PENDING",
     };
 
@@ -232,6 +271,13 @@ router.post("/", verifyJWT, async (req: any, res) => {
             email: true,
             name: true,
             role: true
+          }
+        },
+        project: {  // ADD PROJECT
+          select: {
+            id: true,
+            name: true,
+            description: true
           }
         }
       }
@@ -289,6 +335,13 @@ router.patch("/:id/status", verifyJWT, async (req: any, res) => {
             email: true,
             name: true,
             role: true
+          }
+        },
+        project: {  // ADD PROJECT
+          select: {
+            id: true,
+            name: true,
+            description: true
           }
         }
       }
@@ -460,13 +513,14 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
       return res.status(403).json({ error: "Clients cannot update tasks" });
     }
 
-    const { title, description, status, dueDate, workerId, clientId } = req.body;
+    const { title, description, status, dueDate, workerId, clientId, projectId } = req.body;  // ADD projectId
     const updateData: any = {};
 
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (status !== undefined) updateData.status = status;
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
+    if (projectId !== undefined) updateData.projectId = projectId;  // ADD projectId
 
     if (role === "ADMIN") {
       if (workerId !== undefined) updateData.workerId = workerId;
@@ -492,6 +546,13 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
             email: true,
             name: true,
             role: true
+          }
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            description: true
           }
         }
       }

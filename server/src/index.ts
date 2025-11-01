@@ -9,6 +9,7 @@ import usersRoutes from "./routes/users";
 import domainsRoutes from "./routes/domains";
 import offersRoutes from "./routes/offers";
 import timesheetRoutes from "./routes/timesheet";
+import projectRoutes from "./routes/projects";
 
 dotenv.config();
 const app = express();
@@ -25,6 +26,7 @@ app.use("/invoices", invoiceRoutes);
 app.use("/domains", domainsRoutes);
 app.use("/api/offers", offersRoutes);
 app.use("/timesheets", timesheetRoutes);
+app.use("/projects", projectRoutes);
 
 
 app.get("/api", (req, res) => res.send("API is running ✅"));

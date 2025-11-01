@@ -30,16 +30,30 @@ interface User {
   phoneNumber?: string;
 }
 
+interface Project {
+  id: number;
+  name: string;
+  description?: string;
+  clientId?: number;
+  client?: {
+    id: number;
+    name: string;
+    company?: string;
+  };
+}
+
 interface Task {
   id: number;
   title: string;
   description?: string;
   workerId?: number;
   clientId: number;
+  projectId?: number;
   status: string;
   dueDate?: string;
   worker?: User;
   client?: User;
+  project?: Project;
 }
 
 interface Invoice {
@@ -84,6 +98,7 @@ const RoleAdmin: React.FC = () => {
   const [clients, setClients] = useState<User[]>([]);
   const [workers, setWorkers] = useState<User[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,8 +154,18 @@ const RoleAdmin: React.FC = () => {
     }
   };
 
+  const fetchProjects = async () => {
+    try {
+      const response = await API.get("/projects");
+      setProjects(response.data);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  };
+
   useEffect(() => {
     fetchAll();
+    fetchProjects();
   }, []);
 
   useEffect(() => {
@@ -150,8 +175,12 @@ const RoleAdmin: React.FC = () => {
     }
   }, [location]);
 
-  const incompleteClients = clients.filter(c => c.profileStatus === "INCOMPLETE");
-  const completeClients = clients.filter(c => c.profileStatus === "COMPLETE");
+  const incompleteClients = clients.filter(c => {
+    const status = c.profileStatus?.trim().toUpperCase() || "";
+    return status === "INCOMPLETE" || status === "PENDING" || status === "" || !c.profileStatus;
+  });
+  
+  const completeClients = clients.filter(c => c.profileStatus?.trim().toUpperCase() === "COMPLETE");
   
   const activeTasks = tasks.filter(t => t.status !== "COMPLETED");
   const completedTasks = tasks.filter(t => t.status === "COMPLETED");
@@ -192,22 +221,48 @@ const RoleAdmin: React.FC = () => {
     }
   };
 
+  const resendInvite = async (clientId: number) => {
+    try {
+      await API.post(`/users/${clientId}/resend-invite`);
+      alert("Invite sent successfully!");
+    } catch (err) {
+      console.error("Error resending invite:", err);
+      alert("Failed to send invite.");
+    }
+  };
+
   const createTask = async (taskData: {
     title: string;
     description: string;
     clientId: string;
     workerId: string;
     dueDate: string;
+    projectId: string;
   }) => {
     try {
       await API.post("/tasks", {
         ...taskData,
         clientId: parseInt(taskData.clientId, 10),
         workerId: taskData.workerId ? parseInt(taskData.workerId, 10) : null,
+        projectId: taskData.projectId ? parseInt(taskData.projectId, 10) : null,
       });
       fetchAll();
     } catch (err) {
       console.error("Error creating task:", err);
+    }
+  };
+
+  const handleCreateProject = async (projectData: { name: string; clientId: string; description: string }) => {
+    try {
+      await API.post("/projects", {
+        name: projectData.name,
+        clientId: projectData.clientId || null,
+        description: projectData.description || null,
+      });
+      await fetchProjects();
+    } catch (error) {
+      console.error("Error creating project:", error);
+      alert("Failed to create project");
     }
   };
 
@@ -243,78 +298,78 @@ const RoleAdmin: React.FC = () => {
     }
   };
 
-const createDomain = async (domainData: {
-  clientId: string;
-  domainName: string;
-  domainExpiry: string;
-  hostingPlan: string;
-  hostingExpiry: string;
-}) => {
-  try {
-    await API.post("/domains", {
-      clientId: Number(domainData.clientId),
-      domainName: domainData.domainName,
-      domainExpiry: domainData.domainExpiry || null,
-      hostingPlan: domainData.hostingPlan || null,
-      hostingExpiry: domainData.hostingExpiry || null,
-    });
-    fetchAll();
-    alert("Domain added successfully!");
-  } catch (err: unknown) {
-    console.error("Error adding domain:", err);
-    alert("Failed to add domain. Please try again.");
-  }
-};
+  const createDomain = async (domainData: {
+    clientId: string;
+    domainName: string;
+    domainExpiry: string;
+    hostingPlan: string;
+    hostingExpiry: string;
+  }) => {
+    try {
+      await API.post("/domains", {
+        clientId: Number(domainData.clientId),
+        domainName: domainData.domainName,
+        domainExpiry: domainData.domainExpiry || null,
+        hostingPlan: domainData.hostingPlan || null,
+        hostingExpiry: domainData.hostingExpiry || null,
+      });
+      fetchAll();
+      alert("Domain added successfully!");
+    } catch (err: unknown) {
+      console.error("Error adding domain:", err);
+      alert("Failed to add domain. Please try again.");
+    }
+  };
 
-const updateDomain = async (domainId: number, domainData: {
-  domainName: string;
-  domainExpiry: string;
-  hostingPlan: string;
-  hostingExpiry: string;
-}) => {
-  try {
-    await API.put(`/domains/${domainId}`, {
-      domainName: domainData.domainName,
-      domainExpiry: domainData.domainExpiry || null,
-      hostingPlan: domainData.hostingPlan || null,
-      hostingExpiry: domainData.hostingExpiry || null,
+  const updateDomain = async (domainId: number, domainData: {
+    domainName: string;
+    domainExpiry: string;
+    hostingPlan: string;
+    hostingExpiry: string;
+  }) => {
+    try {
+      await API.put(`/domains/${domainId}`, {
+        domainName: domainData.domainName,
+        domainExpiry: domainData.domainExpiry || null,
+        hostingPlan: domainData.hostingPlan || null,
+        hostingExpiry: domainData.hostingExpiry || null,
+      });
+      setEditingDomain(null);
+      fetchAll();
+      alert("Domain updated successfully!");
+    } catch (err: unknown) {
+      console.error("Error updating domain:", err);
+      alert("Failed to update domain. Please try again.");
+    }
+  };
+
+  const deleteDomain = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this domain?")) return;
+    
+    try {
+      await API.delete(`/domains/${id}`);
+      fetchAll();
+      alert("Domain deleted successfully!");
+    } catch (err: unknown) {
+      console.error("Error deleting domain:", err);
+      alert("Failed to delete domain. Please try again.");
+    }
+  };
+
+  const handleEditDomain = (domain: Domain) => {
+    setEditingDomain({
+      id: domain.id,
+      domainName: domain.domainName,
+      domainExpiry: domain.domainExpiry,
+      hostingPlan: domain.hostingPlan,
+      hostingExpiry: domain.hostingExpiry,
+      clientId: domain.client.id,
     });
+  };
+
+  const handleCancelEdit = () => {
     setEditingDomain(null);
-    fetchAll();
-    alert("Domain updated successfully!");
-  } catch (err: unknown) {
-    console.error("Error updating domain:", err);
-    alert("Failed to update domain. Please try again.");
-  }
-};
-
-const deleteDomain = async (id: number) => {
-  if (!confirm("Are you sure you want to delete this domain?")) return;
-  
-  try {
-    await API.delete(`/domains/${id}`);
-    fetchAll();
-    alert("Domain deleted successfully!");
-  } catch (err: unknown) {
-    console.error("Error deleting domain:", err);
-    alert("Failed to delete domain. Please try again.");
-  }
-};
-
-const handleEditDomain = (domain: Domain) => {
-  setEditingDomain({
-    id: domain.id,
-    domainName: domain.domainName,
-    domainExpiry: domain.domainExpiry,
-    hostingPlan: domain.hostingPlan,
-    hostingExpiry: domain.hostingExpiry,
-    clientId: domain.client.id,
-  });
-};
-
-const handleCancelEdit = () => {
-  setEditingDomain(null);
-};
+  };
 
   if (loading) {
     return (
@@ -409,6 +464,7 @@ const handleCancelEdit = () => {
                   <ListDisplay
                     items={incompleteClients}
                     onDelete={deleteUser}
+                    onResendInvite={resendInvite}
                     showProfileStatus={true}
                     getProfileStatus={(client) => client.profileStatus}
                     renderItem={(c) => (
@@ -490,6 +546,8 @@ const handleCancelEdit = () => {
                 onSubmit={createTask}
                 clients={clients}
                 workers={workers}
+                projects={projects}
+                onCreateProject={handleCreateProject}
                 colors={colors}
               />
               
@@ -502,7 +560,7 @@ const handleCancelEdit = () => {
                   </span>
                 </h3>
                 {activeTasks.length > 0 ? (
-                  <TasksList tasks={activeTasks} onDelete={deleteTask} />
+                  <TasksList tasks={activeTasks} onDelete={deleteTask} colors={colors} />
                 ) : (
                   <div className="py-8 text-center bg-gray-50 rounded-xl">
                     <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -537,7 +595,7 @@ const handleCancelEdit = () => {
                 {showCompletedTasks && (
                   <div>
                     {completedTasks.length > 0 ? (
-                      <TasksList tasks={completedTasks} onDelete={deleteTask} />
+                      <TasksList tasks={completedTasks} onDelete={deleteTask} colors={colors} />
                     ) : (
                       <p className="py-4 text-sm text-center text-gray-500 bg-gray-50 rounded-xl">No completed tasks yet</p>
                     )}

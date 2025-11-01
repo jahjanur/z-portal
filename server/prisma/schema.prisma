@@ -40,6 +40,28 @@ model User {
   fileComments   FileComment[]
   domains        Domain[]       @relation("ClientDomains")
   projects       TimesheetProject[] @relation("UserProjects")
+  clientProjects Project[]      @relation("ClientProjects")
+}
+
+// NEW: Project model for organizing tasks
+model Project {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  clientId    Int?
+  client      User?     @relation("ClientProjects", fields: [clientId], references: [id], onDelete: SetNull)
+  
+  status      String    @default("ACTIVE") // ACTIVE, COMPLETED, ARCHIVED
+  startDate   DateTime?
+  endDate     DateTime?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt @default(now())
+  
+  tasks       Task[]    @relation("ProjectTasks")
+  
+  @@index([clientId])
+  @@index([status])
 }
 
 model Domain {
@@ -82,11 +104,15 @@ model Task {
   
   workerId    Int?
   clientId    Int
+  projectId   Int?      // NEW: Optional project link
   
   worker   User?         @relation("WorkerTasks", fields: [workerId], references: [id])
   client   User          @relation("ClientTasks", fields: [clientId], references: [id])
+  project  Project?      @relation("ProjectTasks", fields: [projectId], references: [id], onDelete: SetNull)
   files    TaskFile[]
   comments TaskComment[]
+  
+  @@index([projectId])
 }
 
 model TaskFile {

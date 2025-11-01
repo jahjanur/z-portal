@@ -19,10 +19,22 @@ const ListDisplay = <T extends { id: number }>({
 }: ListDisplayProps<T>) => {
   const navigate = useNavigate();
 
+  // Helper function to check if profile is incomplete
+  const isProfileIncomplete = (status: string | null | undefined): boolean => {
+    const normalized = status?.trim().toUpperCase() || "";
+    return (
+      normalized === "INCOMPLETE" ||
+      normalized === "PENDING" ||
+      normalized === "" ||
+      !status
+    );
+  };
+
   return (
     <div className="space-y-2">
       {items.map((item) => {
         const profileStatus = showProfileStatus && getProfileStatus ? getProfileStatus(item) : null;
+        const isIncomplete = isProfileIncomplete(profileStatus);
 
         return (
           <div
@@ -35,12 +47,12 @@ const ListDisplay = <T extends { id: number }>({
               {showProfileStatus && profileStatus && (
                 <span
                   className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                    profileStatus === "COMPLETE"
+                    profileStatus.trim().toUpperCase() === "COMPLETE"
                       ? "bg-green-100 text-green-700 border border-green-200"
                       : "bg-amber-100 text-amber-700 border border-amber-200"
                   }`}
                 >
-                  {profileStatus === "COMPLETE" ? "✓ Complete" : "⚠ Incomplete Profile"}
+                  {profileStatus.trim().toUpperCase() === "COMPLETE" ? "✓ Complete" : "⚠ Incomplete Profile"}
                 </span>
               )}
             </div>
@@ -49,7 +61,7 @@ const ListDisplay = <T extends { id: number }>({
               className="flex items-center gap-2"
               onClick={(e) => e.stopPropagation()}
             >
-              {showProfileStatus && profileStatus === "INCOMPLETE" && onResendInvite && (
+              {showProfileStatus && isIncomplete && onResendInvite && (
                 <button
                   onClick={() => onResendInvite(item.id)}
                   className="px-3 py-1.5 text-sm font-semibold text-blue-600 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors"

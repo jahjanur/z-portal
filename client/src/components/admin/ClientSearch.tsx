@@ -41,6 +41,16 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete, colors }
     }
   };
 
+  const isProfileIncomplete = (client: User): boolean => {
+    const status = client.profileStatus?.trim().toUpperCase() || "";
+    return (
+      status === "INCOMPLETE" ||
+      status === "PENDING" ||
+      status === "" ||
+      !client.profileStatus
+    );
+  };
+
   return (
     <div className="mb-6">
       <div className="relative max-w-md">
@@ -70,79 +80,85 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete, colors }
           <div className="absolute z-50 w-full mt-2 overflow-y-auto bg-white border border-gray-200 shadow-xl top-full rounded-xl max-h-80">
             {filtered.length > 0 ? (
               <div className="p-2">
-                {filtered.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center justify-between p-3 transition-colors rounded-lg hover:bg-gray-50"
-                  >
-                    <div 
-                      className="flex-1 cursor-pointer"
-                      onClick={() => {
-                        navigate(`/clients/${c.id}`);
-                        setSearch("");
-                      }}
+                {filtered.map((c) => {
+                  const isIncomplete = isProfileIncomplete(c);
+                  
+                  return (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between p-3 transition-colors rounded-lg hover:bg-gray-50"
                     >
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900">{c.name}</p>
-                        {c.profileStatus === "INCOMPLETE" && (
-                          <span className="px-2 py-0.5 text-xs font-semibold text-orange-700 bg-orange-100 rounded-full">
-                            Incomplete
-                          </span>
-                        )}
+                      <div 
+                        className="flex-1 cursor-pointer"
+                        onClick={() => {
+                          navigate(`/clients/${c.id}`);
+                          setSearch("");
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-gray-900">{c.name}</p>
+                          {isIncomplete && (
+                            <span className="px-2 py-0.5 text-xs font-semibold text-orange-700 bg-orange-100 rounded-full">
+                              Incomplete
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {c.company} • {c.email}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-500">
-                        {c.company} • {c.email}
-                      </p>
-                    </div>
-                    <div className="flex gap-2 ml-3">
-                      {/* Temporarily showing for all clients - remove condition to test */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleResendInvite(c.id, c.email);
-                        }}
-                        disabled={resendingId === c.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors border rounded-lg disabled:opacity-50"
-                        style={{ 
-                          color: colors.primary, 
-                          borderColor: colors.primary,
-                          backgroundColor: 'white'
-                        }}
-                        title="Resend invite email"
-                      >
-                        {resendingId === c.id ? (
-                          <>
-                            <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Sending...
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                            Resend
-                          </>
+                      <div className="flex gap-2 ml-3">
+                        {/* Only show Resend Invite for INCOMPLETE clients - SAME LOGIC AS CLIENTSLIST */}
+                        {isIncomplete && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleResendInvite(c.id, c.email);
+                            }}
+                            disabled={resendingId === c.id}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors border rounded-lg disabled:opacity-50"
+                            style={{ 
+                              color: colors.primary, 
+                              borderColor: colors.primary,
+                              backgroundColor: 'white'
+                            }}
+                            title="Resend invite email"
+                          >
+                            {resendingId === c.id ? (
+                              <>
+                                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                                Resend
+                              </>
+                            )}
+                          </button>
                         )}
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (confirm(`Delete ${c.name}?`)) {
-                            onDelete(c.id);
-                            setSearch("");
-                          }
-                        }}
-                        className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
-                        title="Delete client"
-                      >
-                        Delete
-                      </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete ${c.name}?`)) {
+                              onDelete(c.id);
+                              setSearch("");
+                            }
+                          }}
+                          className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+                          title="Delete client"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="p-4 text-center text-gray-500">No clients found</div>

@@ -182,41 +182,64 @@ const Timesheets = () => {
 
   const exportProjectToPDF = (project: TimesheetProject) => {
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
 
-    // Title
-    doc.setFontSize(20);
+    // Title with company name
+    doc.setFontSize(22);
     doc.setTextColor(91, 79, 255);
-    doc.text(project.projectName, 14, 20);
+    doc.text(project.projectName.toUpperCase(), 14, 20);
 
-    // Project details
+    // ePage logo/text in top right
+    doc.setFontSize(12);
+    doc.setTextColor(91, 79, 255);
+    doc.text("EPAGE", pageWidth - 35, 20);
+
+    // Client details
     doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    doc.setTextColor(100, 100, 100);
+    let yPos = 32;
+    
     if (project.client) {
-      doc.text(`Client: ${project.client.name}${project.client.company ? ` (${project.client.company})` : ""}`, 14, 34);
-    }
-    if (project.description) {
-      doc.text(`Description: ${project.description}`, 14, 40);
+      if (project.client.company) {
+        doc.text(`Company name: ${project.client.company}`, 14, yPos);
+        yPos += 6;
+      }
+      doc.text(`Address: ${project.client.name}`, 14, yPos);
+      yPos += 6;
     }
 
-    // Summary box
-    const summaryY = project.description ? 48 : 42;
-    doc.setFillColor(248, 249, 250);
-    doc.rect(14, summaryY, 182, 20, "F");
-    doc.setFontSize(11);
-    doc.setTextColor(0);
-    doc.text(`Total Entries: ${project.entries.length}`, 20, summaryY + 8);
-    doc.text(`Total Hours: ${project.totalHours?.toFixed(1) || 0}h`, 20, summaryY + 15);
-    doc.text(`Total Amount: $${project.totalPay?.toFixed(2) || 0}`, 120, summaryY + 8);
-    doc.text(`Status: ${project.isPaid ? "PAID" : "PENDING"}`, 120, summaryY + 15);
+    // Summary box with red border highlight
+    yPos += 4;
+    const summaryBoxY = yPos;
+    const summaryBoxHeight = 24;
+    
+    // Draw red line above summary
+    doc.setDrawColor(91, 79, 255);
+    doc.setLineWidth(2);
+    doc.line(14, summaryBoxY - 2, pageWidth - 14, summaryBoxY - 2);
+
+    // Summary content
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
+    
+    const leftCol = 14;
+    const rightCol = pageWidth / 2 + 10;
+    
+    doc.text(`Total Entries: ${project.entries.length}`, leftCol, summaryBoxY + 5);
+    doc.text(`Total Hours: ${project.totalHours?.toFixed(1) || 0}h`, leftCol, summaryBoxY + 12);
+    
+    doc.text(`Total Amount: $${project.totalPay?.toFixed(2) || 0}`, rightCol, summaryBoxY + 5);
+    doc.text(`Status: ${project.isPaid ? "PAID" : "PENDING"}`, rightCol, summaryBoxY + 12);
 
     if (project.dateRange) {
       doc.text(
         `Period: ${new Date(project.dateRange.startDate).toLocaleDateString()} - ${new Date(project.dateRange.endDate).toLocaleDateString()}`,
-        20,
-        summaryY + 22
+        leftCol,
+        summaryBoxY + 19
       );
     }
+
+    yPos = summaryBoxY + summaryBoxHeight + 5;
 
     // Table data
     const tableData = project.entries.map((entry) => [
@@ -231,9 +254,18 @@ const Timesheets = () => {
       entry.notes || "-",
     ]);
 
-    // Add table
+    // Add summary row at the end
+    tableData.push([
+      "",
+      `${project.totalHours?.toFixed(1) || 0}h`,
+      "",
+      `$${project.totalPay?.toFixed(2) || 0}`,
+      "",
+    ]);
+
+    // Add table with improved styling
     autoTable(doc, {
-      startY: summaryY + 28,
+      startY: yPos,
       head: [["Date", "Hours", "Rate", "Total Pay", "Notes"]],
       body: tableData,
       theme: "grid",
@@ -241,21 +273,45 @@ const Timesheets = () => {
         fillColor: [91, 79, 255],
         textColor: [255, 255, 255],
         fontStyle: "bold",
+        fontSize: 10,
+        halign: "center",
       },
       styles: {
         fontSize: 9,
-        cellPadding: 5,
+        cellPadding: 6,
+        lineColor: [200, 200, 200],
+        lineWidth: 0.5,
       },
       columnStyles: {
-        0: { cellWidth: 35 },
-        1: { cellWidth: 25, halign: "right" },
-        2: { cellWidth: 30, halign: "right" },
-        3: { cellWidth: 35, halign: "right" },
-        4: { cellWidth: 57 },
+        0: { cellWidth: 35, halign: "center" },
+        1: { cellWidth: 25, halign: "center" },
+        2: { cellWidth: 30, halign: "center" },
+        3: { cellWidth: 35, halign: "center" },
+        4: { cellWidth: 57, halign: "left" },
+      },
+      // Style the last row (totals)
+      didParseCell: (data) => {
+        if (data.row.index === tableData.length - 1) {
+          data.cell.styles.fillColor = [248, 249, 250] as [number, number, number];
+          data.cell.styles.fontStyle = "bold";
+          data.cell.styles.textColor = [26, 26, 46] as [number, number, number];
+        }
       },
     });
 
-    // Footer
+    // Company details footer
+    const autoTableDoc = doc as typeof doc & { lastAutoTable?: { finalY: number } };
+    const finalY = autoTableDoc.lastAutoTable?.finalY || yPos + 100;
+    const footerY = Math.max(finalY + 20, doc.internal.pageSize.height - 70);
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text("EPAGE LABS LIMITED", 14, footerY);
+    doc.text("Suite C, Level 7, World Trust Tower,", 14, footerY + 5);
+    doc.text("50 Stanley Street, Central,", 14, footerY + 10);
+    doc.text("Hong Kong", 14, footerY + 15);
+
+    // Page numbers
     const docWithInternal = doc as unknown as {
       internal: {
         getNumberOfPages(): number;
