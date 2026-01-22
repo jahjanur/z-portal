@@ -17,7 +17,7 @@ const FileViewer: React.FC<FileViewerProps> = ({ isOpen, onClose, file }) => {
   if (!isOpen || !file) return null;
 
   const isImage = file.fileType.startsWith("image/");
-  const fullUrl = `http://localhost:4000${file.fileUrl}`;
+  const fullUrl = `http://localhost:4001${file.fileUrl}`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">

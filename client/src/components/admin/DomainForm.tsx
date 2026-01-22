@@ -10,15 +10,11 @@ interface DomainFormProps {
   onSubmit: (domainData: {
     clientId: string;
     domainName: string;
-    domainExpiry: string;
-    hostingPlan: string;
-    hostingExpiry: string;
+    notes?: string;
   }) => Promise<void>;
   onUpdate: (domainId: number, domainData: {
     domainName: string;
-    domainExpiry: string;
-    hostingPlan: string;
-    hostingExpiry: string;
+    notes?: string;
   }) => Promise<void>;
   clients: User[];
   colors: {
@@ -31,9 +27,7 @@ interface DomainFormProps {
   editingDomain: {
     id: number;
     domainName: string;
-    domainExpiry?: string;
-    hostingPlan?: string;
-    hostingExpiry?: string;
+    notes?: string;
     clientId: number;
   } | null;
   onCancelEdit: () => void;
@@ -52,9 +46,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
   const [formData, setFormData] = useState({
     clientId: "",
     domainName: "",
-    domainExpiry: "",
-    hostingPlan: "",
-    hostingExpiry: "",
+    notes: "",
   });
 
   useEffect(() => {
@@ -68,17 +60,13 @@ const DomainForm: React.FC<DomainFormProps> = ({
       setFormData({
         clientId: editingDomain.clientId.toString(),
         domainName: editingDomain.domainName,
-        domainExpiry: editingDomain.domainExpiry ? editingDomain.domainExpiry.split('T')[0] : "",
-        hostingPlan: editingDomain.hostingPlan || "",
-        hostingExpiry: editingDomain.hostingExpiry ? editingDomain.hostingExpiry.split('T')[0] : "",
+        notes: editingDomain.notes || "",
       });
     } else {
       setFormData({
         clientId: "",
         domainName: "",
-        domainExpiry: "",
-        hostingPlan: "",
-        hostingExpiry: "",
+        notes: "",
       });
     }
   }, [editingDomain]);
@@ -87,19 +75,6 @@ const DomainForm: React.FC<DomainFormProps> = ({
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const setDefaultDates = () => {
-    const today = new Date();
-    const oneYearFromNow = new Date(today);
-    oneYearFromNow.setFullYear(today.getFullYear() + 1);
-    
-    const formattedDate = oneYearFromNow.toISOString().split('T')[0];
-    
-    setFormData({
-      ...formData,
-      domainExpiry: formattedDate,
-      hostingExpiry: formattedDate,
-    });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,9 +87,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
     if (editingDomain) {
       await onUpdate(editingDomain.id, {
         domainName: formData.domainName,
-        domainExpiry: formData.domainExpiry,
-        hostingPlan: formData.hostingPlan,
-        hostingExpiry: formData.hostingExpiry,
+        notes: formData.notes,
       });
       onCancelEdit();
     } else {
@@ -123,7 +96,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
         return;
       }
       await onSubmit(formData);
-      setFormData({ clientId: "", domainName: "", domainExpiry: "", hostingPlan: "", hostingExpiry: "" });
+      setFormData({ clientId: "", domainName: "", notes: "" });
     }
   };
 
@@ -143,19 +116,6 @@ const DomainForm: React.FC<DomainFormProps> = ({
         <h3 className="text-sm font-semibold text-gray-700">
           {editingDomain ? "✏️ Edit Domain" : "Add New Domain"}
         </h3>
-        {!editingDomain && (
-          <button
-              type="button"
-              onClick={setDefaultDates}
-              className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-white transition-opacity rounded-lg hover:opacity-90"
-              style={{ backgroundColor: colors.primary }}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Set 1-Year Expiry
-            </button>
-        )}
       </div>
       
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -194,35 +154,13 @@ const DomainForm: React.FC<DomainFormProps> = ({
           </div>
 
           <div>
-            <label className="block mb-2 text-xs font-semibold text-gray-600">Domain Expiry Date</label>
-            <input
-              type="date"
-              name="domainExpiry"
-              value={formData.domainExpiry}
-              onChange={handleChange}
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 text-xs font-semibold text-gray-600">Hosting Plan</label>
+            <label className="block mb-2 text-xs font-semibold text-gray-600">Notes</label>
             <input
               type="text"
-              name="hostingPlan"
-              value={formData.hostingPlan}
+              name="notes"
+              value={formData.notes}
               onChange={handleChange}
-              placeholder="Basic, Professional, etc."
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className="block mb-2 text-xs font-semibold text-gray-600">Hosting Expiry Date</label>
-            <input
-              type="date"
-              name="hostingExpiry"
-              value={formData.hostingExpiry}
-              onChange={handleChange}
+              placeholder="Optional notes about this domain"
               className={inputClass}
             />
           </div>

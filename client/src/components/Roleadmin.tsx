@@ -189,12 +189,9 @@ const RoleAdmin: React.FC = () => {
   const paidInvoices = invoices.filter(i => i.status === "PAID");
 
   const createWorker = async (workerData: { email: string; password: string; name: string }) => {
-    try {
-      await API.post("/users", { ...workerData, role: "WORKER" });
-      fetchAll();
-    } catch (err) {
-      console.error("Error creating worker:", err);
-    }
+    const response = await API.post("/users", { ...workerData, role: "WORKER" });
+    fetchAll();
+    return response.data;
   };
 
   const deleteUser = async (id: number) => {

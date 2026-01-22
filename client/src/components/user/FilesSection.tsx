@@ -41,7 +41,7 @@ const FilesBySection: React.FC<FilesBySectionProps> = ({ files, primaryColor }) 
                       <p className="text-xs text-gray-500">{file.taskTitle}</p>
                     </div>
                     <a
-                      href={`http://localhost:4000${file.fileUrl}`}
+                      href={`http://localhost:4001${file.fileUrl}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-3 py-1 text-xs font-semibold text-white transition-opacity rounded-lg hover:opacity-90"

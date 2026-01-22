@@ -39,12 +39,6 @@ async function main() {
       data: {
         clientId: client.id,
         domainName: `${client.company?.toLowerCase().replace(/\s/g,'') || 'example'}.com`,
-        domainRegistrar: 'Namecheap',
-        domainExpiry: new Date('2026-01-01'),
-        hostingProvider: 'Hostinger',
-        hostingPlan: 'Basic',
-        hostingExpiry: new Date('2026-01-01'),
-        sslExpiry: new Date('2025-12-01'),
         isPrimary: true,
         isActive: true,
         notes: 'Primary client domain',

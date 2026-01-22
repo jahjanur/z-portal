@@ -314,9 +314,6 @@ export async function notifyNewDomain(domain: any, client: { email: string; name
             <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3 style="margin-top: 0;">Domain Details</h3>
               <p><strong>Domain:</strong> ${domain.domainName}</p>
-              ${domain.hostingPlan ? `<p><strong>Hosting Plan:</strong> ${domain.hostingPlan}</p>` : ''}
-              ${domain.domainExpiry ? `<p><strong>Domain Expires:</strong> ${new Date(domain.domainExpiry).toLocaleDateString()}</p>` : ''}
-              ${domain.hostingExpiry ? `<p><strong>Hosting Expires:</strong> ${new Date(domain.hostingExpiry).toLocaleDateString()}</p>` : ''}
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -354,9 +351,6 @@ export async function notifyDomainExpiringSoon(domain: any, client: { email: str
             <div style="background-color: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
               <h3 style="margin-top: 0; color: #92400E;">Domain Details</h3>
               <p><strong>Domain:</strong> ${domain.domainName}</p>
-              <p><strong>Expiry Date:</strong> ${new Date(domain.domainExpiry).toLocaleDateString()}</p>
-              ${domain.hostingPlan ? `<p><strong>Hosting Plan:</strong> ${domain.hostingPlan}</p>` : ''}
-              <p><strong>Days Remaining:</strong> ${daysRemaining} days</p>
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -394,9 +388,6 @@ export async function notifyHostingExpiringSoon(domain: any, client: { email: st
             <div style="background-color: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
               <h3 style="margin-top: 0; color: #92400E;">Hosting Details</h3>
               <p><strong>Domain:</strong> ${domain.domainName}</p>
-              <p><strong>Hosting Plan:</strong> ${domain.hostingPlan || 'N/A'}</p>
-              <p><strong>Expiry Date:</strong> ${new Date(domain.hostingExpiry).toLocaleDateString()}</p>
-              <p><strong>Days Remaining:</strong> ${daysRemaining} days</p>
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -434,8 +425,6 @@ export async function notifySSLExpiringSoon(domain: any, client: { email: string
             <div style="background-color: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
               <h3 style="margin-top: 0; color: #92400E;">SSL Details</h3>
               <p><strong>Domain:</strong> ${domain.domainName}</p>
-              <p><strong>SSL Expiry Date:</strong> ${new Date(domain.sslExpiry).toLocaleDateString()}</p>
-              <p><strong>Days Remaining:</strong> ${daysRemaining} days</p>
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -473,7 +462,6 @@ export async function notifyDomainExpired(domain: any, client: { email: string; 
             <div style="background-color: #FEE2E2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #EF4444;">
               <h3 style="margin-top: 0; color: #991B1B;">Domain Details</h3>
               <p><strong>Domain:</strong> ${domain.domainName}</p>
-              <p><strong>Expired On:</strong> ${new Date(domain.domainExpiry).toLocaleDateString()}</p>
               <p><strong>Status:</strong> EXPIRED</p>
             </div>
             
@@ -512,8 +500,6 @@ export async function notifyDomainUpdated(domain: any, client: { email: string; 
             <h3 style="margin-top: 0;">Domain Details</h3>
             <p><strong>Domain:</strong> ${domain.domainName}</p>
             <p><strong>Updated fields:</strong> ${updatedFields.join(', ')}</p>
-            ${domain.domainExpiry ? `<p><strong>Domain Expires:</strong> ${new Date(domain.domainExpiry).toLocaleDateString()}</p>` : ''}
-            ${domain.hostingExpiry ? `<p><strong>Hosting Expires:</strong> ${new Date(domain.hostingExpiry).toLocaleDateString()}</p>` : ''}
           </div>
           
           <div style="text-align: center; margin: 30px 0;">

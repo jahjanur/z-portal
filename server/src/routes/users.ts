@@ -198,13 +198,7 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
       logo, 
       colorHex, 
       postalAddress,
-      domainName,
-      domainRegistrar,
-      domainExpiry,
-      hostingProvider,
-      hostingPlan,
-      hostingExpiry,
-      sslExpiry
+      domainName
     } = req.body;
 
     if (!email || !password || !role || !name) {
@@ -268,12 +262,6 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
           data: {
             clientId: newUser.id,
             domainName,
-            domainRegistrar: domainRegistrar || null,
-            domainExpiry: domainExpiry ? new Date(domainExpiry) : null,
-            hostingProvider: hostingProvider || null,
-            hostingPlan: hostingPlan || null,
-            hostingExpiry: hostingExpiry ? new Date(hostingExpiry) : null,
-            sslExpiry: sslExpiry ? new Date(sslExpiry) : null,
             isPrimary: true,
           }
         });

@@ -39,7 +39,7 @@ const FileCard: React.FC<FileCardProps> = ({ file, formatDate, primaryColor }) =
         </div>
       </div>
       <a
-        href={`http://localhost:4000${file.fileUrl}`}
+        href={`http://localhost:4001${file.fileUrl}`}
         target="_blank"
         rel="noopener noreferrer"
         className="block w-full px-3 py-2 mt-3 text-xs font-semibold text-center text-white transition-opacity rounded-lg hover:opacity-90"

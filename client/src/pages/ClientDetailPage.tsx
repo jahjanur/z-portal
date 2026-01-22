@@ -296,7 +296,7 @@ const fetchAllFiles = async () => {
               {/* Logo */}
               {client.logo ? (
                 <img
-                  src={`http://localhost:4000${client.logo}`}
+                  src={`http://localhost:4001${client.logo}`}
                   alt={client.company || client.name}
                   className="object-cover w-20 h-20 border-2 border-gray-200 rounded-xl"
                 />
@@ -702,7 +702,7 @@ const fetchAllFiles = async () => {
                         </div>
                         {invoice.fileUrl && (
                           <a
-                            href={`http://localhost:4000${invoice.fileUrl}`}
+                            href={`http://localhost:4001${invoice.fileUrl}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
@@ -1012,7 +1012,7 @@ const fetchAllFiles = async () => {
                           </p>
                           
                           <a
-                            href={`http://localhost:4000/${file.fileUrl}`}
+                            href={`http://localhost:4001/${file.fileUrl}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white transition-colors rounded-lg"

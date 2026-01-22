@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 
 const colors = {
@@ -40,13 +40,13 @@ const Offers: React.FC = () => {
 
   const removeProduct = (id: string) => {
     if (products.length > 1) {
-      setProducts(products.filter((p) => p.id !== id));
+      setProducts(products.filter((p: Product) => p.id !== id));
     }
   };
 
   const updateProduct = (id: string, field: keyof Product, value: unknown) => {
     setProducts(
-      products.map((p) => (p.id === id ? { ...p, [field]: value } : p))
+      products.map((p: Product) => (p.id === id ? { ...p, [field]: value } : p))
     );
   };
 
@@ -59,7 +59,7 @@ const Offers: React.FC = () => {
     setLoading(true);
     try {
       const totalPrice = products.reduce(
-        (sum, p) => sum + (p.price || 0),
+        (sum: number, p: Product) => sum + (p.price || 0),
         0
       );
 
@@ -68,11 +68,11 @@ const Offers: React.FC = () => {
         clientEmail: recipientEmail,
         pageTitle,
         description,
-        products: products.map((p) => ({
+        products: products.map((p: Product) => ({
           name: p.name,
           price: p.price,
           timeline: p.timeline,
-          techStack: p.techStack.split(",").map((t) => t.trim()),
+          techStack: p.techStack.split(",").map((t: string) => t.trim()),
         })),
         totalPrice,
       });
@@ -103,7 +103,7 @@ const Offers: React.FC = () => {
     setLoading(true);
     try {
       const totalPrice = products.reduce(
-        (sum, p) => sum + (p.price || 0),
+        (sum: number, p: Product) => sum + (p.price || 0),
         0
       );
 
@@ -114,11 +114,11 @@ const Offers: React.FC = () => {
           clientEmail: recipientEmail,
           pageTitle,
           description,
-          products: products.map((p) => ({
+          products: products.map((p: Product) => ({
             name: p.name,
             price: p.price,
             timeline: p.timeline,
-            techStack: p.techStack.split(",").map((t) => t.trim()),
+            techStack: p.techStack.split(",").map((t: string) => t.trim()),
           })),
           totalPrice,
         },
@@ -147,7 +147,7 @@ const Offers: React.FC = () => {
 
   return (
     <form
-      onSubmit={(e) => {
+      onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         sendOfferByEmail();
       }}
@@ -166,14 +166,14 @@ const Offers: React.FC = () => {
           <input
             placeholder="Client Name *"
             value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setClientName(e.target.value)}
             className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
           />
           <input
             placeholder="Client Email *"
             type="email"
             value={recipientEmail}
-            onChange={(e) => setRecipientEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRecipientEmail(e.target.value)}
             className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
           />
         </div>
@@ -187,13 +187,13 @@ const Offers: React.FC = () => {
         <input
           placeholder="Project Title *"
           value={pageTitle}
-          onChange={(e) => setPageTitle(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPageTitle(e.target.value)}
           className="w-full px-4 py-3 mb-4 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
         />
         <textarea
           placeholder="Project Description *"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
           className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
           rows={5}
         />
@@ -215,7 +215,7 @@ const Offers: React.FC = () => {
           </button>
         </div>
 
-        {products.map((product, index) => (
+        {products.map((product: Product, index: number) => (
           <div
             key={product.id}
             className="relative p-6 mb-4 border border-gray-200 rounded-xl bg-gray-50"
@@ -250,7 +250,7 @@ const Offers: React.FC = () => {
               <input
                 placeholder="Product Name"
                 value={product.name}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   updateProduct(product.id, "name", e.target.value)
                 }
                 className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
@@ -259,7 +259,7 @@ const Offers: React.FC = () => {
                 type="number"
                 placeholder="Price"
                 value={product.price || ""}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   updateProduct(
                     product.id,
                     "price",
@@ -271,7 +271,7 @@ const Offers: React.FC = () => {
               <input
                 placeholder="Timeline (e.g., 2 weeks)"
                 value={product.timeline}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   updateProduct(product.id, "timeline", e.target.value)
                 }
                 className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
@@ -279,7 +279,7 @@ const Offers: React.FC = () => {
               <input
                 placeholder="Tech Stack (comma separated)"
                 value={product.techStack}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   updateProduct(product.id, "techStack", e.target.value)
                 }
                 className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
@@ -295,7 +295,7 @@ const Offers: React.FC = () => {
               Total Price:
             </span>
             <span className="text-2xl font-bold" style={{ color: colors.primary }}>
-              ${products.reduce((sum, p) => sum + (p.price || 0), 0).toFixed(2)}
+              ${products.reduce((sum: number, p: Product) => sum + (p.price || 0), 0).toFixed(2)}
             </span>
           </div>
         </div>

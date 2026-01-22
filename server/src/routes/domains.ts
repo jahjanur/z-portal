@@ -67,12 +67,6 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
     const {
       clientId,
       domainName,
-      domainRegistrar,
-      domainExpiry,
-      hostingProvider,
-      hostingPlan,
-      hostingExpiry,
-      sslExpiry,
       isPrimary,
       notes
     } = req.body;
@@ -95,12 +89,6 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
       data: {
         clientId: Number(clientId),
         domainName,
-        domainRegistrar: domainRegistrar || null,
-        domainExpiry: domainExpiry ? new Date(domainExpiry) : null,
-        hostingProvider: hostingProvider || null,
-        hostingPlan: hostingPlan || null,
-        hostingExpiry: hostingExpiry ? new Date(hostingExpiry) : null,
-        sslExpiry: sslExpiry ? new Date(sslExpiry) : null,
         isPrimary: isPrimary || false,
         notes: notes || null,
       },
@@ -128,12 +116,6 @@ router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
     const { id } = req.params;
     const {
       domainName,
-      domainRegistrar,
-      domainExpiry,
-      hostingProvider,
-      hostingPlan,
-      hostingExpiry,
-      sslExpiry,
       isPrimary,
       isActive,
       notes
@@ -162,12 +144,6 @@ router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
       where: { id: Number(id) },
       data: {
         domainName: domainName !== undefined ? domainName : existingDomain.domainName,
-        domainRegistrar: domainRegistrar !== undefined ? domainRegistrar : existingDomain.domainRegistrar,
-        domainExpiry: domainExpiry ? new Date(domainExpiry) : (domainExpiry === null ? null : existingDomain.domainExpiry),
-        hostingProvider: hostingProvider !== undefined ? hostingProvider : existingDomain.hostingProvider,
-        hostingPlan: hostingPlan !== undefined ? hostingPlan : existingDomain.hostingPlan,
-        hostingExpiry: hostingExpiry ? new Date(hostingExpiry) : (hostingExpiry === null ? null : existingDomain.hostingExpiry),
-        sslExpiry: sslExpiry ? new Date(sslExpiry) : (sslExpiry === null ? null : existingDomain.sslExpiry),
         isPrimary: isPrimary !== undefined ? isPrimary : existingDomain.isPrimary,
         isActive: isActive !== undefined ? isActive : existingDomain.isActive,
         notes: notes !== undefined ? notes : existingDomain.notes,

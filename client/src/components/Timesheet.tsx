@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import API from "../api";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
 declare module "jspdf" {

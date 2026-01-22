@@ -1,3 +1,43 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Fix text color for all form inputs - override body color */
+input,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+input[type="time"],
+input[type="month"],
+input[type="week"],
+textarea,
+select {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+}
+
+/* Fix placeholder text color */
+input::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+}
+
+/* Ensure select options are visible */
+select option {
+  color: #111827 !important;
+  background-color: #ffffff !important;
+}
+
+/* Fix for inputs inside forms with white backgrounds */
+form input,
+form textarea,
+form select {
+  color: #111827 !important;
+}
