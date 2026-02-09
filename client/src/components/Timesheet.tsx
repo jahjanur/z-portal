@@ -192,7 +192,7 @@ const Timesheets = () => {
     // ePage logo/text in top right
     doc.setFontSize(12);
     doc.setTextColor(91, 79, 255);
-    doc.text("EPAGE", pageWidth - 35, 20);
+    doc.text("Z-Portal", pageWidth - 35, 20);
 
     // Client details
     doc.setFontSize(10);
@@ -306,7 +306,7 @@ const Timesheets = () => {
 
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
-    doc.text("EPAGE LABS LIMITED", 14, footerY);
+    doc.text("Z-Portal", 14, footerY);
     doc.text("Suite C, Level 7, World Trust Tower,", 14, footerY + 5);
     doc.text("50 Stanley Street, Central,", 14, footerY + 10);
     doc.text("Hong Kong", 14, footerY + 15);

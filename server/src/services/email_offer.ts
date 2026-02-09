@@ -30,15 +30,15 @@ export const sendOfferPDF = async (client: Client, offer: Offer): Promise<void> 
 
     await transporter.verify();
 
-    let logoPath = path.join(process.cwd(), "public", "EcoreLogo.svg");
+    let logoPath = path.join(process.cwd(), "public", "ZPortalLogo.svg");
     let logoBuffer: Buffer | null = null;
     let logoBase64 = "";
 
     const possiblePaths = [
-      path.join(process.cwd(), "public", "EcoreLogo.svg"),
-      path.join(process.cwd(), "public", "ecorelogo.svg"),
-      path.join(process.cwd(), "EcoreLogo.svg"),
-      path.join(process.cwd(), "public", "EcoreLogo.png"),
+      path.join(process.cwd(), "public", "ZPortalLogo.svg"),
+      path.join(process.cwd(), "public", "zportallogo.svg"),
+      path.join(process.cwd(), "ZPortalLogo.svg"),
+      path.join(process.cwd(), "public", "ZPortalLogo.png"),
       path.join(process.cwd(), "public", "logo.svg"),
       path.join(process.cwd(), "public", "logo.png"),
     ];
@@ -175,10 +175,10 @@ export const sendOfferPDF = async (client: Client, offer: Offer): Promise<void> 
             <div class="header">
               ${logoBase64 ? `
                 <div class="logo-container">
-                  <img src="${logoBase64}" alt="EPAGE Logo" class="logo" />
+                  <img src="${logoBase64}" alt="Z-Portal Logo" class="logo" />
                 </div>
               ` : `
-                <h1>EPAGE</h1>
+                <h1>Z-Portal</h1>
               `}
               <p>Building Digital Excellence</p>
             </div>
@@ -209,7 +209,7 @@ export const sendOfferPDF = async (client: Client, offer: Offer): Promise<void> 
               
               <p style="margin-top: 30px;">
                 <strong>Best regards,</strong><br>
-                <span style="color: #5B4FFF; font-weight: 600;">EPAGE Digital Team</span>
+                <span style="color: #5B4FFF; font-weight: 600;">Z-Portal Team</span>
               </p>
             </div>
             
@@ -240,14 +240,14 @@ If you have any questions or would like to discuss any aspect of this offer, ple
 We look forward to the possibility of working together!
 
 Best regards,
-EPAGE Digital Team
+Z-Portal Team
 
 ---
 Made with ❤ ePage Digital.
     `;
 
     const mailOptions: any = {
-      from: `"EPAGE" <${process.env.SMTP_USER}>`,
+      from: `"Z-Portal" <${process.env.SMTP_USER}>`,
       to: client.email,
       subject: `Professional Offer: ${offer.title}`,
       text: textContent,
@@ -263,9 +263,9 @@ Made with ❤ ePage Digital.
 
     if (logoBuffer) {
       mailOptions.attachments.push({
-        filename: "EcoreLogo.svg",
+        filename: "ZPortalLogo.svg",
         content: logoBuffer,
-        cid: "logo@epage",
+        cid: "logo@zportal",
       });
     }
 

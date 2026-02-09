@@ -1,4 +1,4 @@
-# 🚀 ECORE Quick Start Guide
+# 🚀 Z-Portal Quick Start Guide
 
 ## Step-by-Step to Run Your App
 

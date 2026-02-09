@@ -1,4 +1,4 @@
-# ECORE Setup Guide
+# Z-Portal Setup Guide
 
 ## Prerequisites
 - Node.js (v18 or higher)

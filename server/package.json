@@ -5,13 +5,14 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.ts"
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "dotenv": "^16.4.5",
     "@prisma/client": "^6.16.2",
     "@types/multer": "^2.0.0",
     "@types/nodemailer": "^7.0.2",

@@ -1,4 +1,4 @@
-# ECORE Database Schema - Complete Reference for ER Diagram
+# Z-Portal Database Schema - Complete Reference for ER Diagram
 
 ## Database Information
 - **Database Type**: SQLite
@@ -447,6 +447,6 @@ TIMESHEETPROJECT (1) ──< (N) TIMESHEETENTRY [via projectId]
 
 ---
 
-This document provides all the information needed to create a comprehensive ER diagram for the ECORE database.
+This document provides all the information needed to create a comprehensive ER diagram for the Z-Portal database.
 
 

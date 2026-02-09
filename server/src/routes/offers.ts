@@ -73,7 +73,7 @@ const generateOfferPDF = (offer: Offer): Promise<Buffer> => {
       .fontSize(36)
       .fillColor(colors.white)
       .font("Helvetica-Bold")
-      .text("EPAGE", margin, 45);
+      .text("Z-Portal", margin, 45);
 
     // tagline
     doc
@@ -108,7 +108,7 @@ const generateOfferPDF = (offer: Offer): Promise<Buffer> => {
       .fillColor(colors.white)
       .font("Helvetica")
       .fillOpacity(0.85)
-      .text("EPAGE LABS LIMITED", margin, 130)
+      .text("Z-Portal", margin, 130)
       .text("Suite C, Level 7, World Trust Tower,", margin, 145)
       .text("50 Stanley Street, Central,", margin, 157)
       .text("Hong Kong", margin, 169)

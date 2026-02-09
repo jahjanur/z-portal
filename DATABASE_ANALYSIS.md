@@ -1,8 +1,8 @@
-# ECORE Database Analysis
+# Z-Portal Database Analysis
 
-## What is ECORE?
+## What is Z-Portal?
 
-**ECORE is a comprehensive business management application** designed to help businesses manage their clients, projects, tasks, and operations efficiently. It serves as a centralized platform for:
+**Z-Portal is a comprehensive business management application** designed to help businesses manage their clients, projects, tasks, and operations efficiently. It serves as a centralized platform for:
 
 ### Core Purpose
 - **Client Management**: Manage client profiles, company information, branding, and contact details
@@ -14,7 +14,7 @@
 - **Team Collaboration**: Enable communication through comments on tasks and files
 
 ### User Roles
-ECORE supports three distinct user roles:
+Z-Portal supports three distinct user roles:
 
 1. **ADMIN** - Full system access, manages all clients, workers, tasks, invoices, and domains
 2. **WORKER** - Assigned to tasks, can update task status, upload files, add comments, view assigned client invoices
@@ -572,7 +572,7 @@ server/uploads/
 
 ## Summary
 
-**ECORE is a business management application** that provides a complete solution for managing clients, projects, tasks, and business operations. The database architecture supports:
+**Z-Portal is a business management application** that provides a complete solution for managing clients, projects, tasks, and business operations. The database architecture supports:
 
 ### Core Business Functions
 - **Client Management**: Complete client profiles with company information, branding, contact details, and profile completion workflow
@@ -591,7 +591,7 @@ server/uploads/
 - **File Storage**: Organized file system for uploads, invoices, and client profile files
 
 ### Business Value
-ECORE helps businesses:
+Z-Portal helps businesses:
 - **Streamline Operations**: Centralized platform for all client-related activities
 - **Improve Communication**: Clear task workflows and comment systems
 - **Track Finances**: Automated invoicing and payment tracking

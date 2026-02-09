@@ -26,8 +26,8 @@ export default function Navbar() {
           <div className="flex items-center space-x-8">
             <Link to="/" className="flex items-center gap-2 group">
               <img 
-                src="/EcoreLogo.svg" 
-                alt="Ecore Logo" 
+                src="/ZPortalLogo.svg" 
+                alt="Z-Portal Logo" 
                 className="h-16 transition-transform group-hover:scale-110"
               />
             </Link>

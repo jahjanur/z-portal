@@ -32,7 +32,7 @@ app.use("/projects", projectRoutes);
 app.get("/api", (req, res) => res.send("API is running ✅"));
 
 if (process.env.NODE_ENV === "production") {
-  const buildPath = path.join(__dirname, "../client/dist");
+  const buildPath = path.join(__dirname, "client");
   app.use(express.static(buildPath));
   app.get("*", (req, res) => res.sendFile(path.join(buildPath, "index.html")));
 }
