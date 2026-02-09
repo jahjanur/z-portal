@@ -81,6 +81,19 @@ For the default “single app” deploy, leave `VITE_API_URL` unset so the app u
 
 ---
 
+## Hostinger
+
+Z-Portal is set up so Hostinger can detect it as an **Express.js** app (root `package.json` includes `express` and a `main` entry). If you still see *Unsupported framework or invalid project structure*:
+
+1. When adding the Node.js app, choose **Import Git Repository** and select **z-portal**.
+2. If the system does not auto-detect, set **Build settings** manually:
+   - **Build command:** `npm run build`
+   - **Start command:** `npm run start`
+3. Ensure **Node.js version** is 18.x, 20.x, 22.x, or 24.x (via **Build settings** or **Node version** in the dashboard).
+4. Root `npm install` runs `postinstall`, which installs dependencies for both `client` and `server`; then `npm run build` builds the app and `npm run start` runs the Express server.
+
+---
+
 ## Quick reference for support
 
 - **Project type:** Vite + React frontend, Express backend; single Node app in production.
