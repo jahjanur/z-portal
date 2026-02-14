@@ -21,14 +21,16 @@ const RecentProjectCard: React.FC<RecentProjectCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className="p-4 transition-all border border-gray-200 rounded-lg cursor-pointer hover:shadow-md hover:border-gray-300"
+      className="p-4 transition-all border rounded-xl cursor-pointer backdrop-blur-sm hover:border-white/15"
+      style={{
+        backgroundColor: "rgba(42, 42, 42, 0.8)",
+        borderColor: "rgba(255, 255, 255, 0.08)",
+      }}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h4 className="font-semibold text-gray-900">{task.title}</h4>
-          <p className="text-sm text-gray-500">
-            {task.worker?.name || "Unassigned"}
-          </p>
+          <h4 className="font-semibold text-white">{task.title}</h4>
+          <p className="text-sm text-gray-500">{task.worker?.name || "Unassigned"}</p>
         </div>
         <span
           className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(

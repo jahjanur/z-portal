@@ -2,7 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fix text color for all form inputs - override body color */
+/* ---------------------------------------------------------------------------
+   Global: dark theme, grid background, surfaces
+   --------------------------------------------------------------------------- */
+body {
+  background-color: #0f0f12;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Page background: grid + vignette (use on login and main layout) */
+.bg-app-grid {
+  background-color: #0f0f12;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  position: relative;
+}
+.bg-app-grid::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 80% 80% at 50% 50%,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) 100%
+  );
+  z-index: 0;
+}
+
+/* Optional: very subtle noise overlay (CSS-only) */
+.bg-app-grid::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.02;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  z-index: 0;
+}
+
+/* Surface utilities */
+.surface-1 { background-color: #0f0f12; }
+.surface-2 { background-color: rgba(255, 255, 255, 0.05); }
+.surface-3 { background-color: rgba(255, 255, 255, 0.08); }
+
+/* ---------------------------------------------------------------------------
+   Form inputs: dark-theme readable (labels, placeholders, focus)
+   Used across login and dashboard forms.
+   --------------------------------------------------------------------------- */
 input,
 input[type="text"],
 input[type="email"],
@@ -18,26 +67,34 @@ input[type="month"],
 input[type="week"],
 textarea,
 select {
-  color: #111827 !important;
-  background-color: #ffffff !important;
+  color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.75rem;
 }
-
-/* Fix placeholder text color */
 input::placeholder,
 textarea::placeholder {
-  color: #9ca3af !important;
-  opacity: 1 !important;
+  color: rgba(255, 255, 255, 0.35);
+  opacity: 1;
 }
-
-/* Ensure select options are visible */
+input:hover,
+textarea:hover,
+select:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: rgba(91, 79, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(91, 79, 255, 0.25);
+}
 select option {
-  color: #111827 !important;
-  background-color: #ffffff !important;
+  color: #111827;
+  background-color: #ffffff;
 }
 
-/* Fix for inputs inside forms with white backgrounds */
-form input,
-form textarea,
-form select {
-  color: #111827 !important;
+/* Form context: ensure labels/helper text are visible */
+form label {
+  color: rgba(255, 255, 255, 0.75);
 }

@@ -2,7 +2,7 @@
   "name": "z-portal",
   "private": true,
   "version": "1.0.0",
-  "description": "Z-Portal – Vite+React frontend, Express backend (single Node app in production)",
+  "description": "Z-Portal \u2013 Vite+React frontend, Express backend (single Node app in production)",
   "main": "server/dist/index.js",
   "dependencies": {
     "express": "^5.1.0"
@@ -12,10 +12,13 @@
     "install:all": "npm install --prefix client && npm install --prefix server",
     "build": "npm run build:client && npm run build:server && npm run copy:client",
     "build:client": "cd client && npm run build",
-    "build:server": "cd server && npx prisma generate && npm run build",
+    "build:server": "cd server && npm run db:generate && npm run build",
     "copy:client": "node -e \"const fs=require('fs');const p=require('path');const src=p.join('client','dist');const dest=p.join('server','dist','client');if(fs.existsSync(src)){fs.mkdirSync(p.join('server','dist'),{recursive:true});fs.cpSync(src,dest,{recursive:true});}\"",
     "start": "cd server && node dist/index.js",
-    "dev": "echo 'Run client: cd client && npm run dev; Run server: cd server && npm run dev'"
+    "dev": "echo 'Run client: cd client && npm run dev; Run server: cd server && npm run dev'",
+    "db:generate": "cd server && npm run db:generate",
+    "db:migrate": "cd server && npm run db:migrate",
+    "db:seed": "cd server && npm run db:seed"
   },
   "engines": {
     "node": ">=18.0.0"

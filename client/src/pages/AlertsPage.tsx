@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api";
 
@@ -166,42 +166,42 @@ export default function AlertsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-app">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.primary }}></div>
             <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.danger, animationDelay: '0.1s' }}></div>
             <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.warning, animationDelay: '0.2s' }}></div>
           </div>
-          <span className="text-lg font-medium text-gray-700">Loading alerts...</span>
+          <span className="text-lg font-medium text-gray-400">Loading alerts...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen px-4 py-24 bg-gray-50 md:px-8">
+    <div className="min-h-screen px-4 py-24 bg-app md:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+            className="p-2 transition-colors border border-border-subtle bg-card rounded-lg hover:bg-app"
           >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">
+            <h1 className="text-4xl font-bold text-white">
               Attention <span style={{ color: colors.danger }}>Needed</span>
             </h1>
-            <p className="mt-2 text-gray-600">Items requiring immediate action</p>
+            <p className="mt-2 text-gray-400">Items requiring immediate action</p>
           </div>
         </div>
 
         {/* Summary */}
-        <div className="p-6 mb-8 bg-white border border-gray-200 shadow-sm rounded-2xl">
+        <div className="p-6 mb-8 border border-border-subtle bg-card shadow-sm rounded-2xl">
           <div className="flex items-center gap-4">
             <div className="flex items-center justify-center w-16 h-16 rounded-full bg-red-50">
               <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -210,7 +210,7 @@ export default function AlertsPage() {
             </div>
             <div>
               <h2 className="text-3xl font-bold text-red-600">{totalAlerts}</h2>
-              <p className="text-gray-600">Items need your attention</p>
+              <p className="text-gray-400">Items need your attention</p>
             </div>
           </div>
         </div>
@@ -219,7 +219,7 @@ export default function AlertsPage() {
         <div className="space-y-6">
           {/* Expiring Domains */}
           {expiringDomains.length > 0 && (
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-orange-50">
                   <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,7 +227,7 @@ export default function AlertsPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Expiring Domains</h3>
+                  <h3 className="text-lg font-bold text-white">Expiring Domains</h3>
                   <p className="text-sm text-gray-500">{expiringDomains.length} domains expiring within 30 days</p>
                 </div>
               </div>
@@ -242,8 +242,8 @@ export default function AlertsPage() {
                       onClick={() => navigate("/dashboard", { state: { activeTab: "domains" } })}
                     >
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{domain.domainName}</h4>
-                        <p className="text-sm text-gray-600">
+                        <h4 className="font-semibold text-white">{domain.domainName}</h4>
+                        <p className="text-sm text-gray-400">
                           {domain.client.name} • Expires: {formatDate(domain.domainExpiry!)} • {daysLeft} days left
                         </p>
                       </div>
@@ -259,7 +259,7 @@ export default function AlertsPage() {
 
           {/* Expiring Hosting */}
           {expiringHosting.length > 0 && (
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-indigo-50">
                   <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -267,7 +267,7 @@ export default function AlertsPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Expiring Hosting</h3>
+                  <h3 className="text-lg font-bold text-white">Expiring Hosting</h3>
                   <p className="text-sm text-gray-500">{expiringHosting.length} hosting plans expiring within 30 days</p>
                 </div>
               </div>
@@ -282,8 +282,8 @@ export default function AlertsPage() {
                       onClick={() => navigate("/dashboard", { state: { activeTab: "domains" } })}
                     >
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{domain.domainName}</h4>
-                        <p className="text-sm text-gray-600">
+                        <h4 className="font-semibold text-white">{domain.domainName}</h4>
+                        <p className="text-sm text-gray-400">
                           {domain.client.name} • Hosting expires: {formatDate(domain.hostingExpiry!)} • {daysLeft} days left
                         </p>
                       </div>
@@ -299,7 +299,7 @@ export default function AlertsPage() {
 
           {/* Expiring SSL */}
           {expiringSSL.length > 0 && (
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-green-50">
                   <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -307,7 +307,7 @@ export default function AlertsPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Expiring SSL Certificates</h3>
+                  <h3 className="text-lg font-bold text-white">Expiring SSL Certificates</h3>
                   <p className="text-sm text-gray-500">{expiringSSL.length} SSL certificates expiring within 30 days</p>
                 </div>
               </div>
@@ -322,8 +322,8 @@ export default function AlertsPage() {
                       onClick={() => navigate("/dashboard", { state: { activeTab: "domains" } })}
                     >
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{domain.domainName}</h4>
-                        <p className="text-sm text-gray-600">
+                        <h4 className="font-semibold text-white">{domain.domainName}</h4>
+                        <p className="text-sm text-gray-400">
                           {domain.client.name} • SSL expires: {formatDate(domain.sslExpiry!)} • {daysLeft} days left
                         </p>
                       </div>
@@ -339,7 +339,7 @@ export default function AlertsPage() {
 
           {/* Pending Approval Tasks */}
           {pendingApprovalTasks.length > 0 && (
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-purple-50">
                   <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -347,7 +347,7 @@ export default function AlertsPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Tasks Awaiting Approval</h3>
+                  <h3 className="text-lg font-bold text-white">Tasks Awaiting Approval</h3>
                   <p className="text-sm text-gray-500">{pendingApprovalTasks.length} tasks need review</p>
                 </div>
               </div>
@@ -360,8 +360,8 @@ export default function AlertsPage() {
                     onClick={() => navigate("/dashboard", { state: { activeTab: "tasks" } })}
                   >
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{task.title}</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="font-semibold text-white">{task.title}</h4>
+                      <p className="text-sm text-gray-400">
                         Worker: {task.worker?.name || "Unassigned"} • Client: {task.client?.name || "Unknown"}
                       </p>
                     </div>
@@ -376,7 +376,7 @@ export default function AlertsPage() {
 
           {/* Overdue Tasks */}
           {overdueTasks.length > 0 && (
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-red-50">
                   <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -384,7 +384,7 @@ export default function AlertsPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Overdue Tasks</h3>
+                  <h3 className="text-lg font-bold text-white">Overdue Tasks</h3>
                   <p className="text-sm text-gray-500">{overdueTasks.length} tasks past deadline</p>
                 </div>
               </div>
@@ -397,8 +397,8 @@ export default function AlertsPage() {
                     onClick={() => navigate("/dashboard", { state: { activeTab: "tasks" } })}
                   >
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{task.title}</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="font-semibold text-white">{task.title}</h4>
+                      <p className="text-sm text-gray-400">
                         Due: {task.dueDate ? formatDate(task.dueDate) : "No date"} • Status: {task.status}
                       </p>
                     </div>
@@ -413,7 +413,7 @@ export default function AlertsPage() {
 
           {/* Overdue Invoices */}
           {overdueInvoices.length > 0 && (
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-amber-50">
                   <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -421,7 +421,7 @@ export default function AlertsPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Overdue Invoices</h3>
+                  <h3 className="text-lg font-bold text-white">Overdue Invoices</h3>
                   <p className="text-sm text-gray-500">
                     {overdueInvoices.length} invoices • {formatCurrency(overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0))} outstanding
                   </p>
@@ -436,8 +436,8 @@ export default function AlertsPage() {
                     onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
                   >
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">Invoice #{invoice.invoiceNumber}</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="font-semibold text-white">Invoice #{invoice.invoiceNumber}</h4>
+                      <p className="text-sm text-gray-400">
                         {invoice.client?.name} • {formatCurrency(invoice.amount)} • Due: {formatDate(invoice.dueDate)}
                       </p>
                     </div>
@@ -452,7 +452,7 @@ export default function AlertsPage() {
 
           {/* Unpaid Invoices */}
           {unpaidInvoices.length > 0 && (
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-yellow-50">
                   <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -460,7 +460,7 @@ export default function AlertsPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Pending Invoices</h3>
+                  <h3 className="text-lg font-bold text-white">Pending Invoices</h3>
                   <p className="text-sm text-gray-500">
                     {unpaidInvoices.length} unpaid • {formatCurrency(unpaidInvoices.reduce((sum, inv) => sum + inv.amount, 0))} pending
                   </p>
@@ -475,8 +475,8 @@ export default function AlertsPage() {
                     onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
                   >
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">Invoice #{invoice.invoiceNumber}</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="font-semibold text-white">Invoice #{invoice.invoiceNumber}</h4>
+                      <p className="text-sm text-gray-400">
                         {invoice.client?.name} • {formatCurrency(invoice.amount)} • Due: {formatDate(invoice.dueDate)}
                       </p>
                     </div>
@@ -491,7 +491,7 @@ export default function AlertsPage() {
 
           {/* Incomplete Profiles */}
           {incompleteProfiles.length > 0 && (
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 rounded-lg bg-blue-50">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -499,7 +499,7 @@ export default function AlertsPage() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Incomplete Client Profiles</h3>
+                  <h3 className="text-lg font-bold text-white">Incomplete Client Profiles</h3>
                   <p className="text-sm text-gray-500">{incompleteProfiles.length} clients need to complete onboarding</p>
                 </div>
               </div>
@@ -512,8 +512,8 @@ export default function AlertsPage() {
                     onClick={() => navigate("/dashboard", { state: { activeTab: "clients" } })}
                   >
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{client.name}</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="font-semibold text-white">{client.name}</h4>
+                      <p className="text-sm text-gray-400">
                         {client.email} • {client.company || "No company"} • Joined: {formatDate(client.createdAt)}
                       </p>
                     </div>
@@ -528,12 +528,12 @@ export default function AlertsPage() {
 
           {/* All Clear */}
           {totalAlerts === 0 && (
-            <div className="p-12 text-center bg-white border border-gray-200 rounded-2xl">
+            <div className="p-12 text-center border border-border-subtle bg-card rounded-2xl">
               <svg className="w-20 h-20 mx-auto mb-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <h2 className="mb-2 text-2xl font-bold text-gray-900">All Clear! 🎉</h2>
-              <p className="text-gray-600">No items require immediate attention</p>
+              <h2 className="mb-2 text-2xl font-bold text-white">All Clear! 🎉</h2>
+              <p className="text-gray-400">No items require immediate attention</p>
             </div>
           )}
         </div>

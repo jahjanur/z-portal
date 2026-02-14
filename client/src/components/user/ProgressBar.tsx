@@ -20,16 +20,16 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
+        <span className="text-sm font-medium text-gray-400">{label}</span>
         <span className={`text-sm font-bold ${labelColor}`}>
           {current} / {total}
         </span>
       </div>
-      <div className="w-full h-3 overflow-hidden bg-gray-200 rounded-full">
+      <div className="w-full h-3 overflow-hidden rounded-full bg-white/10">
         <div
           className="h-full transition-all duration-500 rounded-full"
           style={{ width: `${percentage}%`, backgroundColor: color }}
-        ></div>
+        />
       </div>
     </div>
   );

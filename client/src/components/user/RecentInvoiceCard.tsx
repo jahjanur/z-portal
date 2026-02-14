@@ -24,16 +24,20 @@ const RecentInvoiceCard: React.FC<RecentInvoiceCardProps> = ({
   primaryColor,
 }) => {
   return (
-    <div className="p-4 transition-all border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300">
+    <div
+      className="p-4 transition-all border rounded-xl backdrop-blur-sm hover:border-white/15"
+      style={{
+        backgroundColor: "rgba(42, 42, 42, 0.8)",
+        borderColor: "rgba(255, 255, 255, 0.08)",
+      }}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <h4 className="font-semibold text-gray-900">
-            #{invoice.invoiceNumber}
-          </h4>
+          <h4 className="font-semibold text-white">#{invoice.invoiceNumber}</h4>
           <p className="text-sm text-gray-500">Due: {formatDate(invoice.dueDate)}</p>
         </div>
         <div className="text-right">
-          <p className="text-lg font-bold" style={{ color: primaryColor }}>
+          <p className="text-lg font-bold text-white" style={{ color: primaryColor }}>
             {formatCurrency(invoice.amount)}
           </p>
           <span

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api";
 import { formatCurrency, formatDate } from "../utils";
@@ -314,31 +314,33 @@ export default function HomePage() {
     navigate("/dashboard", { state: { activeTab: "invoices" } });
   };
 
+  const cardClass = "rounded-2xl border border-border-subtle bg-card backdrop-blur-sm";
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-app">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.primary }}></div>
-            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.secondary, animationDelay: '0.1s' }}></div>
-            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.accent, animationDelay: '0.2s' }}></div>
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/80" />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/60" style={{ animationDelay: "0.1s" }} />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/40" style={{ animationDelay: "0.2s" }} />
           </div>
-          <span className="text-lg font-medium text-gray-700">Loading dashboard...</span>
+          <span className="text-lg font-medium text-gray-400">Loading dashboard...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen px-4 py-24 bg-gray-50 md:px-8">
+    <div className="min-h-screen px-4 py-24 bg-app md:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex flex-col gap-4 mb-8 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">
-              Admin <span style={{ color: colors.primary }}>Analytics</span>
+            <h1 className="text-4xl font-bold text-white">
+              Admin <span className="text-gray-400">Analytics</span>
             </h1>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-2 text-gray-400">
               Real-time insights and company-wide analytics
             </p>
           </div>
@@ -347,12 +349,11 @@ export default function HomePage() {
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
+                className={`px-4 py-2 text-sm font-semibold rounded-full transition-all ${
                   timeRange === range
-                    ? "text-white"
-                    : "text-gray-600 bg-white border border-gray-200 hover:bg-gray-50"
+                    ? "bg-white text-app"
+                    : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
                 }`}
-                style={timeRange === range ? { backgroundColor: colors.primary } : {}}
               >
                 {range.charAt(0).toUpperCase() + range.slice(1)}
               </button>
@@ -363,66 +364,66 @@ export default function HomePage() {
         {/* Key Metrics Grid */}
         <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
           {/* Total Revenue */}
-          <div 
-            className="relative p-6 overflow-hidden transition-all bg-white border border-gray-200 shadow-sm cursor-pointer rounded-2xl hover:shadow-lg"
-            onClick={() => navigate("/revenue")}>
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ backgroundColor: colors.primary, transform: 'translate(30%, -30%)' }}></div>
+          <div
+            className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-white/15 ${cardClass}`}
+            onClick={() => navigate("/revenue")}
+          >
             <div className="relative">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-gray-600">Total Revenue</p>
-                <div className="p-2 rounded-lg" style={{ backgroundColor: `${colors.primary}15` }}>
-                  <svg className="w-5 h-5" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Total Revenue</p>
+                <div className="p-2 rounded-lg bg-white/10">
+                  <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold" style={{ color: colors.primary }}>{formatCurrency(totalRevenue)}</p>
+              <p className="text-3xl font-bold text-white">{formatCurrency(totalRevenue)}</p>
               <p className="mt-2 text-sm text-gray-500">
-                <span className="font-semibold text-green-600">{formatCurrency(totalPaid)}</span> paid • 
-                <span className="font-semibold text-amber-600"> {formatCurrency(totalPending)}</span> pending
+                <span className="font-semibold text-green-400">{formatCurrency(totalPaid)}</span> paid •
+                <span className="font-semibold text-amber-400"> {formatCurrency(totalPending)}</span> pending
               </p>
             </div>
           </div>
 
           {/* Clients */}
-          <div 
-            className="relative p-6 overflow-hidden transition-all bg-white border border-gray-200 shadow-sm cursor-pointer rounded-2xl hover:shadow-lg"
-            onClick={() => navigate("/clients")}>
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ backgroundColor: colors.accent, transform: 'translate(30%, -30%)' }}></div>
+          <div
+            className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-white/15 ${cardClass}`}
+            onClick={() => navigate("/clients")}
+          >
             <div className="relative">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-gray-600">Active Clients</p>
-                <div className="p-2 rounded-lg" style={{ backgroundColor: `${colors.accent}15` }}>
-                  <svg className="w-5 h-5" style={{ color: colors.accent }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Active Clients</p>
+                <div className="p-2 rounded-lg bg-white/10">
+                  <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold" style={{ color: colors.accent }}>{totalClients}</p>
+              <p className="text-3xl font-bold text-white">{totalClients}</p>
               <p className="mt-2 text-sm text-gray-500">
                 {incompleteProfiles > 0 && (
-                  <span className="font-semibold text-red-600">{incompleteProfiles} incomplete profiles</span>
+                  <span className="font-semibold text-red-400">{incompleteProfiles} incomplete profiles</span>
                 )}
-                {incompleteProfiles === 0 && <span className="text-green-600">All profiles complete</span>}
+                {incompleteProfiles === 0 && <span className="text-green-400">All profiles complete</span>}
               </p>
             </div>
           </div>
 
           {/* Tasks */}
-          <div 
-            className="relative p-6 overflow-hidden transition-all bg-white border border-gray-200 shadow-sm cursor-pointer rounded-2xl hover:shadow-lg"
-            onClick={() => navigate("/tasks-overview")}>
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ backgroundColor: colors.success, transform: 'translate(30%, -30%)' }}></div>
+          <div
+            className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-white/15 ${cardClass}`}
+            onClick={() => navigate("/tasks-overview")}
+          >
             <div className="relative">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-gray-600">Task Completion</p>
-                <div className="p-2 rounded-lg bg-green-50">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Task Completion</p>
+                <div className="p-2 rounded-lg bg-white/10">
+                  <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-green-600">
+              <p className="text-3xl font-bold text-green-400">
                 {filteredTasks.length > 0 ? Math.round((completedTasks / filteredTasks.length) * 100) : 0}%
               </p>
               <p className="mt-2 text-sm text-gray-500">
@@ -433,19 +434,19 @@ export default function HomePage() {
 
           {/* Alerts */}
           <div
-            className="relative p-6 overflow-hidden transition-all bg-white border border-gray-200 shadow-sm cursor-pointer rounded-2xl hover:shadow-lg"
-            onClick={() => navigate("/alerts")}>
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10" style={{ backgroundColor: colors.danger, transform: 'translate(30%, -30%)' }}></div>
+            className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-white/15 ${cardClass}`}
+            onClick={() => navigate("/alerts")}
+          >
             <div className="relative">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-gray-600">Attention Needed</p>
-                <div className="p-2 rounded-lg bg-red-50">
-                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Attention Needed</p>
+                <div className="p-2 rounded-lg bg-white/10">
+                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-red-600">
+              <p className="text-3xl font-bold text-red-400">
                 {overdueInvoices.length + overdueTasks.length + pendingApproval + incompleteProfiles + totalDomainAlerts}
               </p>
               <p className="mt-2 text-sm text-gray-500">
@@ -458,8 +459,8 @@ export default function HomePage() {
         {/* Charts Row 1 */}
         <div className="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-3">
           {/* Revenue Trend */}
-          <div className="p-6 bg-white border border-gray-200 shadow-sm lg:col-span-2 rounded-2xl">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">Revenue Trend</h3>
+          <div className={`p-6 lg:col-span-2 ${cardClass}`}>
+            <h3 className="mb-4 text-lg font-bold text-white">Revenue Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={getRevenueByPeriod()}>
                 <defs>
@@ -472,11 +473,11 @@ export default function HomePage() {
                     <stop offset="95%" stopColor={colors.warning} stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="period" />
-                <YAxis tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis dataKey="period" tick={{ fill: "#9ca3af" }} />
+                <YAxis tick={{ fill: "#9ca3af" }} tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ backgroundColor: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} labelStyle={{ color: "#fff" }} />
+                <Legend wrapperStyle={{ color: "#fff" }} />
                 <Area type="monotone" dataKey="paid" stroke={colors.success} fillOpacity={1} fill="url(#colorPaid)" name="Paid" />
                 <Area type="monotone" dataKey="pending" stroke={colors.warning} fillOpacity={1} fill="url(#colorPending)" name="Pending" />
               </AreaChart>
@@ -484,8 +485,8 @@ export default function HomePage() {
           </div>
 
           {/* Task Distribution */}
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">Task Status</h3>
+          <div className={`p-6 ${cardClass}`}>
+            <h3 className="mb-4 text-lg font-bold text-white">Task Status</h3>
             {taskDistribution.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -503,8 +504,8 @@ export default function HomePage() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
-                  <Legend />
+                  <Tooltip contentStyle={{ backgroundColor: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} />
+                  <Legend wrapperStyle={{ color: "#fff" }} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -518,21 +519,16 @@ export default function HomePage() {
         {/* Charts Row 2 */}
         <div className="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-2">
           {/* Top Clients by Revenue */}
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">Top Clients by Revenue</h3>
+          <div className={`p-6 ${cardClass}`}>
+            <h3 className="mb-4 text-lg font-bold text-white">Top Clients by Revenue</h3>
             {getTopClientsByRevenue().length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={getTopClientsByRevenue()} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} />
-                  <YAxis dataKey="name" type="category" width={100} />
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                  <Bar 
-                    dataKey="amount" 
-                    fill={colors.primary} 
-                    radius={[0, 8, 8, 0]}
-                    style={{ cursor: 'pointer' }}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                  <XAxis type="number" tick={{ fill: "#9ca3af" }} tickFormatter={(value) => formatCurrency(value)} />
+                  <YAxis dataKey="name" type="category" width={100} tick={{ fill: "#9ca3af" }} />
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ backgroundColor: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} />
+                  <Bar dataKey="amount" fill={colors.primary} radius={[0, 8, 8, 0]} style={{ cursor: "pointer" }} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -543,16 +539,16 @@ export default function HomePage() {
           </div>
 
           {/* Worker Performance */}
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">Worker Performance</h3>
+          <div className={`p-6 ${cardClass}`}>
+            <h3 className="mb-4 text-lg font-bold text-white">Worker Performance</h3>
             {getWorkerPerformance().length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={getWorkerPerformance()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                  <XAxis dataKey="name" tick={{ fill: "#9ca3af" }} />
+                  <YAxis tick={{ fill: "#9ca3af" }} />
+                  <Tooltip contentStyle={{ backgroundColor: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} />
+                  <Legend wrapperStyle={{ color: "#fff" }} />
                   <Bar dataKey="completed" fill={colors.success} name="Completed" />
                   <Bar dataKey="total" fill={colors.info} name="Total Tasks" />
                 </BarChart>
@@ -566,16 +562,16 @@ export default function HomePage() {
         </div>
 
         {/* Task Completion Trend */}
-        <div className="p-6 mb-8 bg-white border border-gray-200 shadow-sm rounded-2xl">
-          <h3 className="mb-4 text-lg font-bold text-gray-900">Task Completion Trend</h3>
+        <div className={`p-6 mb-8 ${cardClass}`}>
+          <h3 className="mb-4 text-lg font-bold text-white">Task Completion Trend</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={getTaskCompletionTrend()}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" tickFormatter={(value) => `${value}%`} />
-              <Tooltip />
-              <Legend />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+              <XAxis dataKey="date" tick={{ fill: "#9ca3af" }} />
+              <YAxis yAxisId="left" tick={{ fill: "#9ca3af" }} />
+              <YAxis yAxisId="right" orientation="right" tick={{ fill: "#9ca3af" }} tickFormatter={(value) => `${value}%`} />
+              <Tooltip contentStyle={{ backgroundColor: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} />
+              <Legend wrapperStyle={{ color: "#fff" }} />
               <Line yAxisId="left" type="monotone" dataKey="completed" stroke={colors.success} strokeWidth={2} name="Completed Tasks" />
               <Line yAxisId="left" type="monotone" dataKey="total" stroke={colors.info} strokeWidth={2} name="Total Tasks" />
               <Line yAxisId="right" type="monotone" dataKey="rate" stroke={colors.accent} strokeWidth={2} name="Completion Rate %" />
@@ -586,21 +582,21 @@ export default function HomePage() {
         {/* Quick Actions & Recent Activity */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Quick Actions */}
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">Quick Actions</h3>
+          <div className={`p-6 ${cardClass}`}>
+            <h3 className="mb-4 text-lg font-bold text-white">Quick Actions</h3>
             <div className="space-y-3">
               <button 
                 onClick={handleCreateClient}
-                className="flex items-center justify-between w-full p-4 text-left transition-all border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300"
+                className="flex items-center justify-between w-full p-4 text-left transition-all border border-border-subtle rounded-xl hover:border-white/20 bg-white/5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: `${colors.primary}15` }}>
-                    <svg className="w-5 h-5" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-2 rounded-lg bg-white/10">
+                    <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">Create New Client</p>
+                    <p className="font-semibold text-white">Create New Client</p>
                     <p className="text-sm text-gray-500">Add a new client to the system</p>
                   </div>
                 </div>
@@ -611,16 +607,16 @@ export default function HomePage() {
 
               <button 
                 onClick={handleCreateTask}
-                className="flex items-center justify-between w-full p-4 text-left transition-all border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300"
+                className="flex items-center justify-between w-full p-4 text-left transition-all border border-border-subtle rounded-xl hover:border-white/20 bg-white/5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg" style={{ backgroundColor: `${colors.accent}15` }}>
-                    <svg className="w-5 h-5" style={{ color: colors.accent }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-2 rounded-lg bg-white/10">
+                    <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">Create New Task</p>
+                    <p className="font-semibold text-white">Create New Task</p>
                     <p className="text-sm text-gray-500">Assign a task to a worker</p>
                   </div>
                 </div>
@@ -631,16 +627,16 @@ export default function HomePage() {
 
               <button 
                 onClick={handleCreateInvoice}
-                className="flex items-center justify-between w-full p-4 text-left transition-all border border-gray-200 rounded-lg hover:shadow-md hover:border-gray-300"
+                className="flex items-center justify-between w-full p-4 text-left transition-all border border-border-subtle rounded-xl hover:border-white/20 bg-white/5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-50">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-2 rounded-lg bg-white/10">
+                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-900">Generate Invoice</p>
+                    <p className="font-semibold text-white">Generate Invoice</p>
                     <p className="text-sm text-gray-500">Create and send an invoice</p>
                   </div>
                 </div>
@@ -652,31 +648,31 @@ export default function HomePage() {
           </div>
 
           {/* Recent Activity */}
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">Recent Activity</h3>
+          <div className={`p-6 ${cardClass}`}>
+            <h3 className="mb-4 text-lg font-bold text-white">Recent Activity</h3>
             <div className="space-y-3">
               {invoices
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 5)
                 .map((invoice) => (
-                  <div 
-                    key={invoice.id} 
-                    className="flex items-start gap-3 p-3 transition-all border border-gray-200 rounded-lg cursor-pointer hover:shadow-md hover:border-gray-300"
+                  <div
+                    key={invoice.id}
+                    className="flex items-start gap-3 p-3 transition-all border border-border-subtle rounded-xl cursor-pointer hover:border-white/20 bg-white/5"
                     onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
                   >
-                    <div className={`p-2 rounded-lg ${invoice.status === "PAID" ? "bg-green-50" : "bg-amber-50"}`}>
-                      <svg className={`w-4 h-4 ${invoice.status === "PAID" ? "text-green-600" : "text-amber-600"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className={`p-2 rounded-lg ${invoice.status === "PAID" ? "bg-green-500/20" : "bg-amber-500/20"}`}>
+                      <svg className={`w-4 h-4 ${invoice.status === "PAID" ? "text-green-400" : "text-amber-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm font-semibold text-white">
                         Invoice #{invoice.invoiceNumber} - {invoice.client?.name || "Unknown Client"}
                       </p>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs text-gray-400">
                         {formatCurrency(invoice.amount)} • {invoice.status}
                       </p>
-                      <p className="text-xs text-gray-400">{formatDate(invoice.createdAt)}</p>
+                      <p className="text-xs text-gray-500">{formatDate(invoice.createdAt)}</p>
                     </div>
                   </div>
                 ))}
@@ -690,140 +686,139 @@ export default function HomePage() {
         {/* System Health & Alerts */}
         <div className="grid grid-cols-1 gap-6 mt-8 lg:grid-cols-3">
           {/* System Health */}
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">System Health</h3>
+          <div className={`p-6 ${cardClass}`}>
+            <h3 className="mb-4 text-lg font-bold text-white">System Health</h3>
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Active Workers</span>
-                  <span className="text-sm font-bold text-green-600">{totalWorkers}/{totalWorkers}</span>
+                  <span className="text-sm font-medium text-gray-400">Active Workers</span>
+                  <span className="text-sm font-bold text-green-400">{totalWorkers}/{totalWorkers}</span>
                 </div>
-                <div className="w-full h-2 overflow-hidden bg-gray-200 rounded-full">
-                  <div className="h-full transition-all duration-500 bg-green-500 rounded-full" style={{ width: '100%' }}></div>
+                <div className="w-full h-2 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full transition-all duration-500 rounded-full bg-green-500" style={{ width: "100%" }} />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Client Onboarding</span>
-                  <span className="text-sm font-bold" style={{ color: colors.primary }}>
+                  <span className="text-sm font-medium text-gray-400">Client Onboarding</span>
+                  <span className="text-sm font-bold text-white">
                     {totalClients - incompleteProfiles}/{totalClients}
                   </span>
                 </div>
-                <div className="w-full h-2 overflow-hidden bg-gray-200 rounded-full">
-                  <div 
-                    className="h-full transition-all duration-500 rounded-full" 
-                    style={{ 
+                <div className="w-full h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full transition-all duration-500 rounded-full"
+                    style={{
                       width: `${totalClients > 0 ? ((totalClients - incompleteProfiles) / totalClients) * 100 : 0}%`,
-                      backgroundColor: colors.primary
+                      backgroundColor: colors.primary,
                     }}
-                  ></div>
+                  />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-700">Invoice Collection</span>
-                  <span className="text-sm font-bold text-amber-600">
-                    {invoices.filter(i => i.status === "PAID").length}/{invoices.length}
+                  <span className="text-sm font-medium text-gray-400">Invoice Collection</span>
+                  <span className="text-sm font-bold text-amber-400">
+                    {invoices.filter((i) => i.status === "PAID").length}/{invoices.length}
                   </span>
                 </div>
-                <div className="w-full h-2 overflow-hidden bg-gray-200 rounded-full">
-                  <div 
-                    className="h-full transition-all duration-500 rounded-full bg-amber-500" 
-                    style={{ width: `${invoices.length > 0 ? (invoices.filter(i => i.status === "PAID").length / invoices.length) * 100 : 0}%` }}
-                  ></div>
+                <div className="w-full h-2 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full transition-all duration-500 rounded-full bg-amber-500"
+                    style={{ width: `${invoices.length > 0 ? (invoices.filter((i) => i.status === "PAID").length / invoices.length) * 100 : 0}%` }}
+                  />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Urgent Alerts */}
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl lg:col-span-2">
-            <h3 className="mb-4 text-lg font-bold text-gray-900">Urgent Alerts</h3>
+          <div className={`p-6 lg:col-span-2 ${cardClass}`}>
+            <h3 className="mb-4 text-lg font-bold text-white">Urgent Alerts</h3>
             <div className="space-y-3">
               {pendingApproval > 0 && (
-                <div 
-                  className="flex items-start gap-3 p-4 transition-all border-l-4 rounded-r-lg cursor-pointer bg-purple-50 hover:shadow-md" 
-                  style={{ borderColor: colors.accent }}
+                <div
+                  className="flex items-start gap-3 p-4 transition-all border-l-4 rounded-r-lg cursor-pointer bg-white/5 border-amber-500/50 hover:bg-white/10"
                   onClick={() => navigate("/dashboard", { state: { activeTab: "tasks" } })}
                 >
-                  <svg className="w-5 h-5 mt-0.5" style={{ color: colors.accent }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mt-0.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{pendingApproval} tasks awaiting approval</p>
-                    <p className="text-sm text-gray-600">Review and approve completed work</p>
+                    <p className="font-semibold text-white">{pendingApproval} tasks awaiting approval</p>
+                    <p className="text-sm text-gray-400">Review and approve completed work</p>
                   </div>
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               )}
 
               {overdueTasks.length > 0 && (
-                <div 
-                  className="flex items-start gap-3 p-4 transition-all border-l-4 border-red-500 rounded-r-lg cursor-pointer bg-red-50 hover:shadow-md"
+                <div
+                  className="flex items-start gap-3 p-4 transition-all border-l-4 border-red-500/70 rounded-r-lg cursor-pointer bg-red-500/10 hover:bg-red-500/15"
                   onClick={() => navigate("/dashboard", { state: { activeTab: "tasks" } })}
                 >
-                  <svg className="w-5 h-5 mt-0.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mt-0.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{overdueTasks.length} overdue tasks</p>
-                    <p className="text-sm text-gray-600">Tasks past their deadline need attention</p>
+                    <p className="font-semibold text-white">{overdueTasks.length} overdue tasks</p>
+                    <p className="text-sm text-gray-400">Tasks past their deadline need attention</p>
                     <div className="mt-2 space-y-1">
-                      {overdueTasks.slice(0, 3).map(task => (
+                      {overdueTasks.slice(0, 3).map((task) => (
                         <p key={task.id} className="text-xs text-gray-500">• {task.title}</p>
                       ))}
                     </div>
                   </div>
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               )}
 
               {overdueInvoices.length > 0 && (
-                <div 
-                  className="flex items-start gap-3 p-4 transition-all border-l-4 rounded-r-lg cursor-pointer bg-amber-50 border-amber-500 hover:shadow-md"
+                <div
+                  className="flex items-start gap-3 p-4 transition-all border-l-4 border-amber-500/70 rounded-r-lg cursor-pointer bg-amber-500/10 hover:bg-amber-500/15"
                   onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
                 >
-                  <svg className="w-5 h-5 mt-0.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mt-0.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{overdueInvoices.length} overdue invoices</p>
-                    <p className="text-sm text-gray-600">
+                    <p className="font-semibold text-white">{overdueInvoices.length} overdue invoices</p>
+                    <p className="text-sm text-gray-400">
                       Total: {formatCurrency(overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0))}
                     </p>
                     <div className="mt-2 space-y-1">
-                      {overdueInvoices.slice(0, 3).map(inv => (
+                      {overdueInvoices.slice(0, 3).map((inv) => (
                         <p key={inv.id} className="text-xs text-gray-500">
                           • Invoice #{inv.invoiceNumber} - {inv.client?.name}
                         </p>
                       ))}
                     </div>
                   </div>
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               )}
 
               {incompleteProfiles > 0 && (
-                <div 
-                  className="flex items-start gap-3 p-4 transition-all border-l-4 border-blue-500 rounded-r-lg cursor-pointer bg-blue-50 hover:shadow-md"
+                <div
+                  className="flex items-start gap-3 p-4 transition-all border-l-4 border-blue-500/70 rounded-r-lg cursor-pointer bg-blue-500/10 hover:bg-blue-500/15"
                   onClick={() => navigate("/dashboard", { state: { activeTab: "clients" } })}
                 >
-                  <svg className="w-5 h-5 mt-0.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 mt-0.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                   <div className="flex-1">
-                    <p className="font-semibold text-gray-900">{incompleteProfiles} incomplete client profiles</p>
-                    <p className="text-sm text-gray-600">Clients need to complete their onboarding</p>
+                    <p className="font-semibold text-white">{incompleteProfiles} incomplete client profiles</p>
+                    <p className="text-sm text-gray-400">Clients need to complete their onboarding</p>
                   </div>
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
@@ -832,10 +827,10 @@ export default function HomePage() {
               {pendingApproval === 0 && overdueTasks.length === 0 && overdueInvoices.length === 0 && incompleteProfiles === 0 && (
                 <div className="flex items-center justify-center py-8">
                   <div className="text-center">
-                    <svg className="w-16 h-16 mx-auto mb-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-16 h-16 mx-auto mb-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p className="font-semibold text-gray-900">All clear!</p>
+                    <p className="font-semibold text-white">All clear!</p>
                     <p className="text-sm text-gray-500">No urgent items require attention</p>
                   </div>
                 </div>

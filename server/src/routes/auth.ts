@@ -10,10 +10,13 @@ const JWT_SECRET = process.env.JWT_SECRET || "secret";
 // login
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
+    const rawEmail = req.body.email;
+    const rawPassword = req.body.password;
+    if (!rawEmail || !rawPassword) {
       return res.status(400).json({ message: "Email and password required" });
     }
+    const email = String(rawEmail).trim().toLowerCase();
+    const password = String(rawPassword).trim();
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
@@ -45,7 +48,11 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     console.error("Login error:", err);
-    return res.status(500).json({ message: "Login failed" });
+    const message =
+      process.env.NODE_ENV === "development" && err instanceof Error
+        ? `Login failed: ${err.message}`
+        : "Login failed";
+    return res.status(500).json({ message });
   }
 });
 

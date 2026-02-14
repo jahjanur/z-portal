@@ -3,8 +3,35 @@ import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
+/** Bootstrap a single ADMIN from env (production). Otherwise run full demo seed. */
 async function main() {
-  console.log('🌱 Starting database seed...');
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  if (adminEmail && adminPassword) {
+    console.log('🌱 Bootstrap: creating/updating ADMIN from SEED_ADMIN_EMAIL...');
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    const name = process.env.SEED_ADMIN_NAME || 'Admin';
+    const emailLower = adminEmail.trim().toLowerCase();
+    await prisma.user.upsert({
+      where: { email: emailLower },
+      create: {
+        email: emailLower,
+        password: hashedPassword,
+        role: 'ADMIN',
+        name,
+      },
+      update: {
+        password: hashedPassword,
+        role: 'ADMIN',
+        name,
+      },
+    });
+    console.log(`✅ Admin bootstrap done: ${emailLower}`);
+    return;
+  }
+
+  console.log('🌱 Starting full demo seed...');
 
   await prisma.taskComment.deleteMany({});
   await prisma.fileComment.deleteMany({});
@@ -108,7 +135,7 @@ async function main() {
     },
   });
 
-  console.log('✅ Seeding finished!');
+  console.log('✅ Full demo seed finished!');
 }
 
 main()

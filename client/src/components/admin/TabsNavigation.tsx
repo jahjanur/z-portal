@@ -15,7 +15,7 @@ interface TabsNavigationProps {
   colors: { primary: string };
 }
 
-const TabsNavigation: React.FC<TabsNavigationProps> = ({ activeTab, setActiveTab, counts, colors }) => {
+const TabsNavigation: React.FC<TabsNavigationProps> = ({ activeTab, setActiveTab, counts }) => {
   return (
     <div className="mb-6 overflow-x-auto">
       <div className="flex flex-wrap gap-2">
@@ -29,21 +29,20 @@ const TabsNavigation: React.FC<TabsNavigationProps> = ({ activeTab, setActiveTab
               ? "Timesheets"
               : tab.charAt(0).toUpperCase() + tab.slice(1);
 
+          const isActive = activeTab === tab;
           return (
-            <div key={tab} className="p-1 bg-white border border-gray-200 shadow-sm rounded-xl">
-              <button
-                onClick={() => setActiveTab(tab)}
-                className={`px-6 py-2.5 text-sm font-semibold rounded-lg transition-all ${
-                  activeTab === tab
-                    ? "text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                }`}
-                style={activeTab === tab ? { backgroundColor: colors.primary } : {}}
-              >
-                {label}
-                {showCount && ` (${counts[tab]})`}
-              </button>
-            </div>
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
+                isActive
+                  ? "bg-accent text-white shadow-md shadow-accent/20"
+                  : "border border-white/10 bg-white/5 text-white/70 hover:border-white/15 hover:bg-white/10 hover:text-white/90"
+              }`}
+            >
+              {label}
+              {showCount && ` (${counts[tab]})`}
+            </button>
           );
         })}
       </div>

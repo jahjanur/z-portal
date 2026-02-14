@@ -164,16 +164,18 @@ const fetchAll = async () => {
     return new Date(expiryDate) < new Date();
   };
 
+  const cardClass = "p-6 rounded-2xl border border-border-subtle bg-card backdrop-blur-sm";
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-app">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.primary }}></div>
-            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.secondary, animationDelay: '0.1s' }}></div>
-            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.accent, animationDelay: '0.2s' }}></div>
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/80" />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/60" style={{ animationDelay: "0.1s" }} />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/40" style={{ animationDelay: "0.2s" }} />
           </div>
-          <span className="text-lg font-medium text-gray-700">Loading your dashboard...</span>
+          <span className="text-lg font-medium text-gray-400">Loading your dashboard...</span>
         </div>
       </div>
     );
@@ -181,14 +183,13 @@ const fetchAll = async () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="max-w-md p-6 border border-red-200 bg-red-50 rounded-xl">
-          <p className="mb-2 text-lg font-semibold text-red-800">Error:</p>
-          <p className="text-red-600">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-app">
+        <div className="max-w-md p-6 border border-red-500/30 bg-red-500/10 rounded-2xl">
+          <p className="mb-2 text-lg font-semibold text-red-300">Error:</p>
+          <p className="text-red-400">{error}</p>
           <button
             onClick={fetchAll}
-            className="px-4 py-2 mt-4 text-sm font-semibold text-white rounded-lg"
-            style={{ backgroundColor: colors.primary }}
+            className="px-4 py-2 mt-4 text-sm font-semibold rounded-full bg-white text-app hover:bg-gray-200"
           >
             Try Again
           </button>
@@ -198,14 +199,14 @@ const fetchAll = async () => {
   }
 
   return (
-    <div className="min-h-screen py-24 bg-gray-50">
+    <div className="min-h-screen py-24 bg-app">
       <div className="px-4 mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-bold text-gray-900">
-            Client <span style={{ color: colors.primary }}>Dashboard</span>
+          <h1 className="mb-2 text-4xl font-bold text-white">
+            Client <span className="text-gray-400">Dashboard</span>
           </h1>
-          <p className="text-lg text-gray-600">Track your projects, invoices, files, and domains</p>
+          <p className="text-lg text-gray-400">Track your projects, invoices, files, and domains</p>
         </div>
 
         {/* Tab Navigation */}
@@ -219,12 +220,11 @@ const fetchAll = async () => {
                   setStatusFilter("ALL");
                   setSearchQuery("");
                 }}
-                className={`px-6 py-3 text-sm font-semibold rounded-lg transition-all ${
+                className={`px-6 py-3 text-sm font-semibold rounded-full transition-all ${
                   activeTab === tab
-                    ? "text-white shadow-md"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-white border border-gray-200"
+                    ? "bg-white text-app"
+                    : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
                 }`}
-                style={activeTab === tab ? { backgroundColor: colors.primary } : {}}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </button>
@@ -287,7 +287,7 @@ const fetchAll = async () => {
             </div>
 
             {/* Progress Chart */}
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className={cardClass}>
               <h3 className="mb-4 text-lg font-bold text-gray-900">Project Progress</h3>
               <div className="space-y-4">
                 <ProgressBar
@@ -316,7 +316,7 @@ const fetchAll = async () => {
 
             {/* Recent Activity */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+              <div className={cardClass}>
                 <h3 className="mb-4 text-lg font-bold text-gray-900">Recent Projects</h3>
                 <div className="space-y-3">
                   {tasks.slice(0, 3).map((task) => (
@@ -339,7 +339,7 @@ const fetchAll = async () => {
                 </button>
               </div>
 
-              <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+              <div className={cardClass}>
                 <h3 className="mb-4 text-lg font-bold text-gray-900">Recent Invoices</h3>
                 <div className="space-y-3">
                   {invoices.slice(0, 3).map((invoice) => (
@@ -380,7 +380,7 @@ const fetchAll = async () => {
                     className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
                       statusFilter === status
                         ? "text-white"
-                        : "text-gray-600 bg-white border border-gray-200 hover:bg-gray-50"
+                        : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
                     }`}
                     style={statusFilter === status ? { backgroundColor: colors.primary } : {}}
                   >
@@ -401,7 +401,7 @@ const fetchAll = async () => {
             {/* Tasks List */}
             <div className="space-y-4">
               {filteredTasks.length === 0 ? (
-                <div className="py-12 text-center bg-white border border-gray-200 rounded-2xl">
+                <div className="py-12 text-center rounded-2xl border border-border-subtle bg-card">
                   <div className="flex justify-center mb-4">
                     <div className="p-4 rounded-full" style={{ backgroundColor: `${colors.primary}15` }}>
                       <svg className="w-12 h-12" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -442,7 +442,7 @@ const fetchAll = async () => {
                     className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
                       statusFilter === status
                         ? "text-white"
-                        : "text-gray-600 bg-white border border-gray-200 hover:bg-gray-50"
+                        : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
                     }`}
                     style={statusFilter === status ? { backgroundColor: colors.primary } : {}}
                   >
@@ -463,7 +463,7 @@ const fetchAll = async () => {
             {/* Invoices List */}
             <div className="space-y-4">
               {filteredInvoices.length === 0 ? (
-                <div className="py-12 text-center bg-white border border-gray-200 rounded-2xl">
+                <div className="py-12 text-center rounded-2xl border border-border-subtle bg-card">
                   <div className="flex justify-center mb-4">
                     <div className="p-4 rounded-full" style={{ backgroundColor: `${colors.primary}15` }}>
                       <svg className="w-12 h-12" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -522,7 +522,7 @@ const fetchAll = async () => {
         {/* Files Tab */}
         {activeTab === "files" && (
           <div className="space-y-6">
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className={cardClass}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">All Project Files</h2>
                 <span className="px-4 py-2 text-sm font-semibold text-white rounded-lg" style={{ backgroundColor: colors.primary }}>
@@ -641,7 +641,7 @@ const fetchAll = async () => {
             )}
 
             {/* Domains List */}
-            <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+            <div className={cardClass}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">All Domains</h2>
                 <span className="px-4 py-2 text-sm font-semibold text-white rounded-lg" style={{ backgroundColor: colors.primary }}>

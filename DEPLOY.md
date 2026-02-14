@@ -1,102 +1,177 @@
-# Deploying Z-Portal to Cloud Hosting
+# Z-Portal: Database & deployment setup
 
-**Project type:** **Vite + React (frontend)** and **Express (backend)** — single Node.js app in production (Express serves the built React app and the API).
+Production pattern: **Docker Compose (PostgreSQL)** + **.env.production** + **Prisma** + **admin bootstrap via seed**. App runs behind Nginx Proxy Manager; DB is internal only.
 
-**Node.js:** Use **18.x**, **20.x**, **22.x**, or **24.x** (set in dashboard or `engines` in root `package.json`).
-
----
-
-## Build & start commands
-
-| Step   | Command         | When to use      |
-|--------|------------------|------------------|
-| Install | `npm run install:all` | First time / when deps change (or run `npm install` in both `client` and `server`) |
-| Build  | `npm run build`  | Every deploy     |
-| Start  | `npm run start`  | Run the app      |
-
-If your host runs **only** from the **repository root**:
-
-- **Build command:** `npm run install:all && npm run build`
-- **Start command:** `npm run start`
-
-Some hosts expect a single “install” step. Use:
-
-- **Install:** `npm run install:all`  
-  (or `npm install --prefix client && npm install --prefix server`)
-- **Build:** `npm run build`
-- **Start:** `npm run start`
+**To run locally without Docker** (PostgreSQL installed on your machine), use **LOCAL_SETUP.md** instead of this file.
 
 ---
 
-## What the build does
+## 1. File changes summary
 
-1. Installs client and server dependencies (if you use `install:all`).
-2. **build:client** — builds the Vite/React app into `client/dist`.
-3. **build:server** — runs `prisma generate` and `tsc` in `server/` → output in `server/dist/`.
-4. **copy:client** — copies `client/dist` to `server/dist/client` so Express can serve the SPA in production.
-
-In production, a **single process** runs `node server/dist/index.js`; it serves the API and the React app.
-
----
-
-## Environment variables (server)
-
-Set these in your cloud dashboard (or in a `.env` file only if the host supports it; never commit secrets).
-
-| Variable       | Required | Description |
-|----------------|----------|-------------|
-| `NODE_ENV`     | Yes      | Set to `production`. |
-| `PORT`         | No       | Port the app listens on (default `4001`). Many hosts set this automatically. |
-| `DATABASE_URL` | Yes      | PostgreSQL connection string (e.g. `postgresql://user:pass@host:5432/dbname?sslmode=require`). |
-| `JWT_SECRET`   | Yes      | Secret for signing JWTs (use a long random string in production). |
-| `CLIENT_URL`   | No       | Full URL of the app (e.g. `https://yourapp.com`) for invite/email links. Defaults to `http://localhost:3000`. |
-| `FRONTEND_URL` | No       | Same as `CLIENT_URL` for notification emails. Defaults to `http://localhost:5173`. |
-| `SMTP_HOST`    | No*      | SMTP server for emails (e.g. `smtp.gmail.com`). *Required if you use invite/payment/notification emails. |
-| `SMTP_PORT`    | No       | SMTP port (e.g. `587`). |
-| `SMTP_USER`    | No*      | SMTP username. *Required if using email. |
-| `SMTP_PASS`    | No*      | SMTP password. *Required if using email. |
-| `ADMIN_EMAIL`  | No       | Admin email used in notifications. |
+| Item | Location | Purpose |
+|------|----------|---------|
+| Docker Compose | `docker-compose.yml` | PostgreSQL 16, volume `zportal_pgdata`, no public DB port |
+| Env template (root) | `.env.example` | All vars: Docker (`POSTGRES_*`), app (`DATABASE_URL`, `JWT_SECRET`, etc.), optional `SEED_ADMIN_*` |
+| Env template (server) | `server/.env.example` | App-only vars for `server/.env` or `server/.env.production` |
+| Env loading | `server/src/index.ts` | Loads `.env` then `.env.production` (override) when `NODE_ENV=production` |
+| Prisma scripts | `server/package.json` | `db:generate`, `db:migrate`, `db:seed` |
+| Root scripts | `package.json` | `db:generate`, `db:migrate`, `db:seed` (run in server) |
+| Seed | `server/prisma/seed.ts` | If `SEED_ADMIN_EMAIL` + `SEED_ADMIN_PASSWORD` set → upsert one ADMIN; else full demo seed |
+| Schema | `server/prisma/schema.prisma` | Unchanged; `url = env("DATABASE_URL")` |
 
 ---
 
-## Database (PostgreSQL)
+## 2. Local (development)
 
-- Create a PostgreSQL database on your host or use a managed service (e.g. Render, Railway, Supabase, Neon).
-- Set `DATABASE_URL` in the app’s environment.
-- **First deploy / after schema changes:** run migrations from the **server** directory:
-  - In a “release” or “post-build” step, or via SSH/console:
-  - `cd server && npx prisma migrate deploy`
-- Optional: seed data with `cd server && npx prisma db seed` (only if you use a seed script).
+### 2.1 One-time setup
+
+```bash
+# From repo root (z-portal/)
+cd /path/to/z-portal
+
+# Copy env and set DB password (required by compose)
+cp .env.example .env
+# Edit .env: set POSTGRES_PASSWORD and optionally DATABASE_URL for localhost
+
+# For app when running on host: DB must be reachable. Either:
+# A) Expose DB only to host: in docker-compose.yml under db, add:
+#    ports: ["127.0.0.1:5432:5432"]
+# B) Or run app in Docker (same network) and use DATABASE_URL with host `db`.
+
+# Start PostgreSQL
+docker compose up -d db
+
+# Wait for healthy (optional)
+docker compose ps
+
+# Server env: copy and set DATABASE_URL (localhost if you exposed port)
+cp server/.env.example server/.env
+# Set DATABASE_URL=postgresql://zportal:YOUR_POSTGRES_PASSWORD@localhost:5432/zportal
+```
+
+### 2.2 Migrate and seed (demo data)
+
+```bash
+# From repo root
+npm run db:migrate
+npm run db:seed
+# No SEED_ADMIN_* in .env → full demo seed (admin@test.com / admin123, etc.)
+```
+
+### 2.3 Run app
+
+```bash
+npm run build
+npm start
+# Or dev: terminal 1: cd client && npm run dev; terminal 2: cd server && npm run dev
+```
+
+### 2.4 Login not working?
+
+1. **Server won’t start / “DATABASE_URL is not set”**  
+   Create `server/.env` from `server/.env.example` and set `DATABASE_URL` (and `JWT_SECRET`). For local dev without Docker, see **LOCAL_SETUP.md**.
+
+2. **“Invalid credentials” or login does nothing**  
+   - Ensure the DB is up (Docker: `docker compose up -d db`; local: see LOCAL_SETUP.md).  
+   - Apply schema and create users: `npm run db:migrate` then `npm run db:seed` (from repo root).  
+   - Use the **demo admin** (all lowercase, no spaces): **email** `admin@test.com`, **password** `admin123`.  
+   - Email is matched case-insensitively; leading/trailing spaces are trimmed.
+
+3. **Still failing**  
+   Re-run the seed to reset demo users: `npm run db:seed` (this replaces all demo data; use only in dev).
 
 ---
 
-## Optional: frontend-only API URL
+## 3. Server (production)
 
-If you ever split frontend and backend (e.g. frontend on a CDN, API on another URL), set:
+### 3.1 Assumptions
 
-- **Build-time (Vite):** `VITE_API_URL=https://your-api.example.com`
-- Then the client will use that base URL instead of the same origin.
+- Server has Docker and Docker Compose.
+- App runs on the same host (or in same Docker network) so it can use hostname `db` for DB.
+- Nginx Proxy Manager (or similar) fronts the app; no direct DB port exposed to the internet.
 
-For the default “single app” deploy, leave `VITE_API_URL` unset so the app uses the same origin.
+### 3.2 One-time setup
+
+```bash
+# On server: clone/copy repo, then from repo root
+cd /path/to/z-portal
+
+# Create production env (never commit)
+cp .env.example .env
+cp server/.env.example server/.env.production
+
+# Edit .env (for Docker Compose):
+#   POSTGRES_USER=zportal
+#   POSTGRES_PASSWORD=<strong random password>
+#   POSTGRES_DB=zportal
+
+# Edit server/.env.production:
+#   DATABASE_URL=postgresql://zportal:<same password>@db:5432/zportal
+#   JWT_SECRET=<long random secret, e.g. openssl rand -base64 32>
+#   NODE_ENV=production
+#   PORT=4001
+#   SEED_ADMIN_EMAIL=admin@yourcompany.com
+#   SEED_ADMIN_PASSWORD=<strong admin password>
+
+# Start DB only (no port exposure)
+docker compose up -d db
+
+# From repo root: run migrations (app must have DATABASE_URL; run from server dir so .env.production is used)
+cd server
+export NODE_ENV=production
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+# With SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD set, seed creates/updates that single ADMIN only.
+
+cd ..
+npm run build
+npm start
+# Or run server under systemd/PM2 with NODE_ENV=production.
+```
+
+### 3.3 Bootstrap admin (if not done in 3.2)
+
+```bash
+cd server
+export NODE_ENV=production
+# Ensure server/.env.production has SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD
+npm run db:seed
+# Seed will upsert that ADMIN (bcrypt). Safe to run again to reset password.
+```
 
 ---
 
-## Hostinger
+## 4. Commands reference
 
-Z-Portal is set up so Hostinger can detect it as an **Express.js** app (root `package.json` includes `express` and a `main` entry). If you still see *Unsupported framework or invalid project structure*:
+| Command | Where | Purpose |
+|--------|--------|--------|
+| `docker compose up -d db` | Repo root | Start PostgreSQL (volume persistent) |
+| `docker compose down` | Repo root | Stop containers (volume kept) |
+| `npm run db:generate` | Repo root or server | `prisma generate` |
+| `npm run db:migrate` | Repo root or server | `prisma migrate deploy` |
+| `npm run db:seed` | Repo root or server | `prisma db seed` (admin bootstrap if SEED_* set, else demo) |
 
-1. When adding the Node.js app, choose **Import Git Repository** and select **z-portal**.
-2. If the system does not auto-detect, set **Build settings** manually:
-   - **Build command:** `npm run build`
-   - **Start command:** `npm run start`
-3. Ensure **Node.js version** is 18.x, 20.x, 22.x, or 24.x (via **Build settings** or **Node version** in the dashboard).
-4. Root `npm install` runs `postinstall`, which installs dependencies for both `client` and `server`; then `npm run build` builds the app and `npm run start` runs the Express server.
+Prisma schema path: `server/prisma/schema.prisma` (default when running from server).
 
 ---
 
-## Quick reference for support
+## 5. Security notes
 
-- **Project type:** Vite + React frontend, Express backend; single Node app in production.
-- **Build command:** `npm run install:all && npm run build` (or separate install + build as above).
-- **Start command:** `npm run start`
-- **Node version:** 18.x / 20.x / 22.x / 24.x
+- **Secrets**: Use strong random values for `POSTGRES_PASSWORD`, `JWT_SECRET`, and `SEED_ADMIN_PASSWORD`. Example: `openssl rand -base64 32`. Never commit `.env` or `.env.production`.
+- **DB port**: Do not expose PostgreSQL to the internet. Use no `ports` in compose (app connects via hostname `db` on the Docker network). For local dev only, if the app runs on the host, bind to `127.0.0.1:5432` only.
+- **Minimal exposure**: Run app behind Nginx Proxy Manager (HTTPS, internal app port). Restrict DB to localhost or Docker network only.
+- **Seed in production**: Use `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` only for the initial bootstrap (or a one-time password reset). Remove or leave unset after first login and prefer changing password via app if that feature exists.
+- **Migrations**: Run `npm run db:migrate` after deploy; do not run `prisma migrate dev` in production.
+
+---
+
+## 6. Alternative: one-time bootstrap script
+
+If you prefer not to use the seed for production admin:
+
+1. Create a script `server/scripts/bootstrap-admin.ts` that reads `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD`, hashes with bcrypt, and upserts the ADMIN user (same logic as in seed).
+2. Run once: `cd server && npx ts-node scripts/bootstrap-admin.ts` (or compile and run with node).
+3. Document in DEPLOY.md and do not wire it to `prisma db seed`.
+
+The current setup uses the seed for this so one command (`npm run db:seed`) with env set is enough.

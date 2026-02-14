@@ -77,13 +77,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
     : projects;
 
   return (
-    <div className="p-5 mb-6 border border-gray-200 bg-gray-50 rounded-xl">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-700">Add New Task</h3>
+    <div className="mb-6 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-white/90">Add New Task</h3>
         <button
+          type="button"
           onClick={() => setShowProjectForm(!showProjectForm)}
-          className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90"
-          style={{ backgroundColor: colors.primary }}
+          className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -94,8 +94,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
       {/* Quick Project Creation */}
       {showProjectForm && (
-        <div className="p-4 mb-4 border-2 border-purple-200 bg-purple-50 rounded-xl">
-          <h4 className="mb-3 text-xs font-semibold text-gray-700">Create New Project</h4>
+        <div className="mb-4 rounded-xl border-2 border-accent/30 bg-accent/10 p-4">
+          <h4 className="mb-3 text-xs font-semibold text-white/90">Create New Project</h4>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
             <input
               placeholder="Project name *"

@@ -56,12 +56,12 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, colors }) => {
   };
 
   return (
-    <div className="p-5 mb-6 border border-gray-200 bg-gray-50 rounded-xl">
-      <h3 className="mb-4 text-sm font-semibold text-gray-700">Add New Worker</h3>
+    <div className="mb-6 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+      <h3 className="mb-4 text-sm font-semibold text-white/90">Add New Worker</h3>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div>
-            <label className="block mb-1 text-xs font-medium text-gray-600">Full Name *</label>
+            <label className="mb-1 block text-xs font-medium text-white/80">Full Name *</label>
             <input
               placeholder="e.g., John Doe"
               value={formData.name}
@@ -69,12 +69,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, colors }) => {
               onKeyPress={handleKeyPress}
               disabled={isSubmitting}
               required
-              style={{ color: '#111827', backgroundColor: '#ffffff' }}
-              className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-400"
+              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
-            <label className="block mb-1 text-xs font-medium text-gray-600">Email Address *</label>
+            <label className="mb-1 block text-xs font-medium text-white/80">Email Address *</label>
             <input
               type="email"
               placeholder="e.g., john@example.com"
@@ -83,12 +82,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, colors }) => {
               onKeyPress={handleKeyPress}
               disabled={isSubmitting}
               required
-              style={{ color: '#111827', backgroundColor: '#ffffff' }}
-              className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-400"
+              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
-            <label className="block mb-1 text-xs font-medium text-gray-600">Password *</label>
+            <label className="mb-1 block text-xs font-medium text-white/80">Password *</label>
             <input
               type="password"
               placeholder="Minimum 6 characters"
@@ -98,16 +96,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, colors }) => {
               disabled={isSubmitting}
               required
               minLength={6}
-              style={{ color: '#111827', backgroundColor: '#ffffff' }}
-              className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-300 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-400"
+              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div className="flex items-end">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full px-4 py-2.5 text-sm font-semibold text-white rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: colors.primary }}
+              className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting ? "Adding..." : "Add Worker"}
             </button>

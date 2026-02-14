@@ -21,9 +21,9 @@ function App() {
   return (
     <Router>
       <Toaster position="top-right" />
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen bg-app-grid">
         <Navbar />
-        <main className="flex-grow">
+        <main className="relative z-10 flex-grow">
           <Routes>
             {/* Home page - Admin only */}
             <Route

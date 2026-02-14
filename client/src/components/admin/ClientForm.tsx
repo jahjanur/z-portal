@@ -71,14 +71,14 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
   };
 
   return (
-<div className="p-6 mb-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-gray-900">Add New Client</h3>
-          <p className="text-sm text-gray-600">Create a new client account and send invitation</p>
+          <h3 className="text-xl font-bold text-white/95">Add New Client</h3>
+          <p className="text-sm text-white/60">Create a new client account and send invitation</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-blue-700 bg-blue-100 rounded-lg">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           Email invite will be sent
@@ -89,28 +89,26 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">
-              Contact Person <span className="text-red-500">*</span>
+            <label className="mb-2 block text-sm font-semibold text-white/80">
+              Contact Person <span className="text-red-400">*</span>
             </label>
             <input
               placeholder="John Doe"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-              style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
               required
             />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">
-              Company Name <span className="text-red-500">*</span>
+            <label className="mb-2 block text-sm font-semibold text-white/80">
+              Company Name <span className="text-red-400">*</span>
             </label>
             <input
               placeholder="Acme Corporation"
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-              style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
               required
             />
           </div>
@@ -118,44 +116,42 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">
-              Email Address <span className="text-red-500">*</span>
+            <label className="block mb-2 text-sm font-semibold text-white/80">
+              Email Address <span className="text-red-400">*</span>
             </label>
             <input
               placeholder="john@example.com"
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-              style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
               required
             />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-semibold text-gray-700">
-              Password <span className="text-red-500">*</span>
+            <label className="block mb-2 text-sm font-semibold text-white/80">
+              Password <span className="text-red-400">*</span>
             </label>
             <input
               type="password"
               placeholder="••••••••"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-              style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
               required
             />
           </div>
         </div>
 
         <div>
-          <label className="block mb-2 text-sm font-semibold text-gray-700">
-            Postal Address <span className="text-red-500">*</span>
+          <label className="block mb-2 text-sm font-semibold text-white/80">
+            Postal Address <span className="text-red-400">*</span>
           </label>
           <input
             placeholder="P.O. Box 123, City, Postal Code"
             value={formData.postalAddress}
             onChange={(e) => setFormData({ ...formData, postalAddress: e.target.value })}
-            className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
+            className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
             style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
             required
           />
@@ -166,12 +162,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
           <button
             type="button"
             onClick={() => setShowHostingFields(!showHostingFields)}
-            className="flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-2 rounded-lg hover:shadow-sm"
-            style={{ 
-              color: colors.primary, 
-              borderColor: colors.primary,
-              backgroundColor: showHostingFields ? `${colors.primary}15` : 'white'
-            }}
+            className={`flex items-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-all ${
+              showHostingFields
+                ? "border-accent bg-accent/15 text-accent"
+                : "border-white/20 bg-white/5 text-white/90 hover:bg-white/10"
+            }`}
           >
             {showHostingFields ? (
               <>
@@ -194,14 +189,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
 
       {/* Domain & Hosting Fields (Optional) */}
       {showHostingFields && (
-        <div className="p-5 mt-4 border-2 border-dashed rounded-xl" style={{ borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}08` }}>
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-bold text-gray-900">Domain & Hosting Information</h4>
+        <div className="mt-4 rounded-xl border-2 border-dashed border-accent/40 bg-accent/10 p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h4 className="text-sm font-bold text-white/95">Domain & Hosting Information</h4>
             <button
               type="button"
               onClick={setDefaultDates}
-              className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-white transition-opacity rounded-lg hover:opacity-90"
-              style={{ backgroundColor: colors.primary }}
+              className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -213,26 +207,26 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                <label className="block mb-2 text-sm font-semibold text-white/80">
                   Domain Name
                 </label>
                 <input
                   placeholder="example.com"
                   value={formData.domainName}
                   onChange={(e) => setFormData({ ...formData, domainName: e.target.value })}
-                  className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
+                  className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
                   style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                <label className="block mb-2 text-sm font-semibold text-white/80">
                   Domain Expiry Date
                 </label>
                 <input
                   type="date"
                   value={formData.domainExpiry}
                   onChange={(e) => setFormData({ ...formData, domainExpiry: e.target.value })}
-                  className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
+                  className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
                   style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
                 />
               </div>
@@ -240,26 +234,26 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                <label className="block mb-2 text-sm font-semibold text-white/80">
                   Hosting Plan
                 </label>
                 <input
                   placeholder="Basic / Premium / Enterprise"
                   value={formData.hostingPlan}
                   onChange={(e) => setFormData({ ...formData, hostingPlan: e.target.value })}
-                  className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
+                  className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
                   style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-semibold text-gray-700">
+                <label className="block mb-2 text-sm font-semibold text-white/80">
                   Hosting Expiry Date
                 </label>
                 <input
                   type="date"
                   value={formData.hostingExpiry}
                   onChange={(e) => setFormData({ ...formData, hostingExpiry: e.target.value })}
-                  className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
+                  className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
                   style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
                 />
               </div>
@@ -269,11 +263,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
       )}
 
       {/* Submit Button */}
-      <div className="pt-6 mt-6 border-t border-gray-200">
+      <div className="mt-6 border-t border-white/10 pt-6">
         <button
+          type="button"
           onClick={handleSubmit}
-          className="w-full px-6 py-4 text-sm font-semibold text-white transition-all rounded-lg hover:opacity-90 hover:shadow-lg"
-          style={{ backgroundColor: colors.primary }}
+          className="w-full rounded-xl bg-accent px-6 py-4 text-sm font-semibold text-white shadow-lg shadow-accent/20 transition-all hover:opacity-90 hover:shadow-accent/30"
         >
           <span className="flex items-center justify-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,8 +276,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
             Add Client & Send Invite
           </span>
         </button>
-        <p className="mt-3 text-xs text-center text-gray-500">
-          <span className="text-red-500">*</span> Required fields • Client will receive an email to complete their profile
+        <p className="mt-3 text-center text-xs text-white/50">
+          <span className="text-red-400">*</span> Required fields • Client will receive an email to complete their profile
         </p>
       </div>
     </div>

@@ -63,7 +63,7 @@ export default function TasksOverview() {
       case "PENDING_APPROVAL":
         return "bg-purple-100 text-purple-700 border-purple-200";
       default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
+        return "bg-gray-100 text-gray-400 border-gray-200";
     }
   };
 
@@ -93,45 +93,45 @@ export default function TasksOverview() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-app">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.primary }}></div>
             <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.success, animationDelay: '0.1s' }}></div>
             <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.warning, animationDelay: '0.2s' }}></div>
           </div>
-          <span className="text-lg font-medium text-gray-700">Loading tasks...</span>
+          <span className="text-lg font-medium text-gray-400">Loading tasks...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen px-4 py-24 bg-gray-50 md:px-8">
+    <div className="min-h-screen px-4 py-24 bg-app md:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+            className="p-2 transition-colors rounded-lg border border-border-subtle bg-card hover:bg-white/10"
           >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
           <div>
-            <h1 className="text-4xl font-bold text-gray-900">
+            <h1 className="text-4xl font-bold text-white">
               Task <span style={{ color: colors.primary }}>Overview</span>
             </h1>
-            <p className="mt-2 text-gray-600">Monitor task progress and completion rates</p>
+            <p className="mt-2 text-gray-400">Monitor task progress and completion rates</p>
           </div>
         </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-5">
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+          <div className="p-6 rounded-2xl border border-border-subtle bg-card backdrop-blur-sm">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-gray-600">Completion Rate</p>
+              <p className="text-sm font-semibold text-gray-400">Completion Rate</p>
               <div className="p-2 rounded-lg bg-green-50">
                 <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -142,34 +142,34 @@ export default function TasksOverview() {
             <p className="mt-2 text-sm text-gray-500">{completedCount} of {tasks.length}</p>
           </div>
 
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-            <p className="mb-3 text-sm font-semibold text-gray-600">Completed</p>
+          <div className="p-6 rounded-2xl border border-border-subtle bg-card backdrop-blur-sm">
+            <p className="mb-3 text-sm font-semibold text-gray-400">Completed</p>
             <p className="text-3xl font-bold text-green-600">{completedCount}</p>
           </div>
 
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-            <p className="mb-3 text-sm font-semibold text-gray-600">In Progress</p>
+          <div className="p-6 rounded-2xl border border-border-subtle bg-card backdrop-blur-sm">
+            <p className="mb-3 text-sm font-semibold text-gray-400">In Progress</p>
             <p className="text-3xl font-bold text-blue-600">{inProgressCount}</p>
           </div>
 
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-            <p className="mb-3 text-sm font-semibold text-gray-600">Pending</p>
+          <div className="p-6 rounded-2xl border border-border-subtle bg-card backdrop-blur-sm">
+            <p className="mb-3 text-sm font-semibold text-gray-400">Pending</p>
             <p className="text-3xl font-bold text-amber-600">{pendingCount}</p>
           </div>
 
-          <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-            <p className="mb-3 text-sm font-semibold text-gray-600">Need Approval</p>
+          <div className="p-6 rounded-2xl border border-border-subtle bg-card backdrop-blur-sm">
+            <p className="mb-3 text-sm font-semibold text-gray-400">Need Approval</p>
             <p className="text-3xl font-bold text-purple-600">{pendingApprovalCount}</p>
           </div>
         </div>
 
         {/* Filters and Search */}
-        <div className="flex flex-col gap-4 p-6 mb-6 bg-white border border-gray-200 shadow-sm md:flex-row md:items-center md:justify-between rounded-2xl">
+        <div className="flex flex-col gap-4 p-6 mb-6 rounded-2xl border border-border-subtle bg-card md:flex-row md:items-center md:justify-between rounded-2xl">
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFilter("all")}
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                filter === "all" ? "text-white" : "text-gray-600 bg-gray-100 hover:bg-gray-200"
+                filter === "all" ? "text-white" : "text-gray-400 bg-gray-100 hover:bg-gray-200"
               }`}
               style={filter === "all" ? { backgroundColor: colors.primary } : {}}
             >
@@ -178,7 +178,7 @@ export default function TasksOverview() {
             <button
               onClick={() => setFilter("completed")}
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                filter === "completed" ? "text-white bg-green-600" : "text-gray-600 bg-gray-100 hover:bg-gray-200"
+                filter === "completed" ? "text-white bg-green-600" : "text-gray-400 bg-gray-100 hover:bg-gray-200"
               }`}
             >
               Completed ({completedCount})
@@ -186,7 +186,7 @@ export default function TasksOverview() {
             <button
               onClick={() => setFilter("in_progress")}
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                filter === "in_progress" ? "text-white bg-blue-600" : "text-gray-600 bg-gray-100 hover:bg-gray-200"
+                filter === "in_progress" ? "text-white bg-blue-600" : "text-gray-400 bg-gray-100 hover:bg-gray-200"
               }`}
             >
               In Progress ({inProgressCount})
@@ -194,7 +194,7 @@ export default function TasksOverview() {
             <button
               onClick={() => setFilter("pending")}
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                filter === "pending" ? "text-white bg-amber-600" : "text-gray-600 bg-gray-100 hover:bg-gray-200"
+                filter === "pending" ? "text-white bg-amber-600" : "text-gray-400 bg-gray-100 hover:bg-gray-200"
               }`}
             >
               Pending ({pendingCount})
@@ -202,7 +202,7 @@ export default function TasksOverview() {
             <button
               onClick={() => setFilter("pending_approval")}
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                filter === "pending_approval" ? "text-white bg-purple-600" : "text-gray-600 bg-gray-100 hover:bg-gray-200"
+                filter === "pending_approval" ? "text-white bg-purple-600" : "text-gray-400 bg-gray-100 hover:bg-gray-200"
               }`}
             >
               Approval ({pendingApprovalCount})
@@ -234,19 +234,19 @@ export default function TasksOverview() {
           {filteredTasks.map((task) => (
             <div
               key={task.id}
-              className="flex flex-col gap-4 p-6 transition-all bg-white border border-gray-200 shadow-sm cursor-pointer md:flex-row md:items-center md:justify-between rounded-2xl hover:shadow-lg hover:border-gray-300"
+              className="flex flex-col gap-4 p-6 transition-all rounded-2xl border border-border-subtle bg-card cursor-pointer md:flex-row md:items-center md:justify-between rounded-2xl hover:shadow-lg hover:border-gray-300"
               onClick={() => navigate(`/tasks/${task.id}`)}
             >
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-bold text-gray-900">{task.title}</h3>
+                  <h3 className="text-lg font-bold text-white">{task.title}</h3>
                   <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(task.status)}`}>
                     {task.status.replace("_", " ")}
                   </span>
                 </div>
 
                 {task.description && (
-                  <p className="mb-3 text-sm text-gray-600 line-clamp-2">{task.description}</p>
+                  <p className="mb-3 text-sm text-gray-400 line-clamp-2">{task.description}</p>
                 )}
 
                 <div className="flex flex-wrap gap-4 text-sm text-gray-500">
@@ -288,11 +288,11 @@ export default function TasksOverview() {
           ))}
 
           {filteredTasks.length === 0 && (
-            <div className="py-12 text-center bg-white border border-gray-200 rounded-2xl">
+            <div className="py-12 text-center rounded-2xl border border-border-subtle bg-card">
               <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              <p className="text-lg font-medium text-gray-700">No tasks found</p>
+              <p className="text-lg font-medium text-gray-400">No tasks found</p>
               <p className="text-sm text-gray-500">Try adjusting your filters or search query</p>
             </div>
           )}

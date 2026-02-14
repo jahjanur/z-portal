@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API from "../api";
+import Modal from "../components/ui/Modal";
 
 const colors = {
   primary: "#5B4FFF",
@@ -922,118 +923,88 @@ const fetchAllFiles = async () => {
       </div>
 
       {/* FILES MODAL */}
-      {showFilesModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setShowFilesModal(false)}>
-          <div className="relative w-full max-w-4xl max-h-[90vh] m-4 bg-white rounded-2xl shadow-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200" style={{ backgroundColor: colors.primary }}>
-              <div className="flex items-center gap-3">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                </svg>
-                <h2 className="text-2xl font-bold text-white">All Files</h2>
-                <span className="px-3 py-1 text-sm font-semibold bg-white rounded-full text-blakc bg-opacity-20">
-                  {allFiles.length} {allFiles.length === 1 ? 'file' : 'files'}
-                </span>
-              </div>
-              <button
-                onClick={() => setShowFilesModal(false)}
-                className="p-2 text-white transition-colors rounded-lg hover:bg-white hover:bg-opacity-20"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
-              {loadingFiles ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.primary }}></div>
-                    <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.secondary, animationDelay: "0.1s" }}></div>
-                    <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.accent, animationDelay: "0.2s" }}></div>
-                  </div>
-                </div>
-              ) : allFiles.length === 0 ? (
-                <div className="py-12 text-center">
-                  <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                  <p className="text-lg font-medium text-gray-500">No files uploaded yet</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  {allFiles.map((file) => (
-                    <div
-                      key={file.id}
-                      className="p-4 transition-all border border-gray-200 rounded-xl hover:shadow-md hover:border-gray-300"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="flex-shrink-0 p-3 rounded-lg" style={{ backgroundColor: `${colors.primary}20` }}>
-                          <div style={{ color: colors.primary }}>
-                            {getFileIcon(file.fileType)}
-                          </div>
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <h3 className="mb-1 text-sm font-semibold text-gray-900 truncate">
-                            {file.fileName}
-                          </h3>
-                          
-                          {file.caption && (
-                            <p className="mb-2 text-xs text-gray-600 line-clamp-2">{file.caption}</p>
-                          )}
-                          
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            <span className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded">
-                              {file.task.title}
-                            </span>
-                            
-                            {file.section && (
-                              <span className="px-2 py-1 text-xs font-medium rounded" style={{ 
-                                backgroundColor: `${colors.secondary}20`,
-                                color: colors.secondary 
-                              }}>
-                                {file.section}
-                              </span>
-                            )}
-                            
-                            {file.isCompleted && (
-                              <span className="px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded">
-                                ✓ Completed
-                              </span>
-                            )}
-                          </div>
-                          
-                          <p className="mb-3 text-xs text-gray-500">
-                            Uploaded {formatDate(file.uploadedAt)}
-                          </p>
-                          
-                          <a
-                            href={`http://localhost:4001/${file.fileUrl}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-white transition-colors rounded-lg"
-                            style={{ backgroundColor: colors.primary }}
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            View File
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+      <Modal
+        isOpen={showFilesModal}
+        onClose={() => setShowFilesModal(false)}
+        maxWidth="4xl"
+        title={
+          <div className="flex items-center gap-3">
+            <svg className="w-6 h-6 text-white/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+            <span>All Files</span>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold text-white/90">
+              {allFiles.length} {allFiles.length === 1 ? "file" : "files"}
+            </span>
+          </div>
+        }
+      >
+        {loadingFiles ? (
+          <div className="flex justify-center py-12">
+            <div className="flex gap-2">
+              <div className="h-3 w-3 rounded-full animate-bounce bg-accent" style={{ animationDelay: "0ms" }} />
+              <div className="h-3 w-3 rounded-full animate-bounce bg-accent/70" style={{ animationDelay: "0.1s" }} />
+              <div className="h-3 w-3 rounded-full animate-bounce bg-accent/50" style={{ animationDelay: "0.2s" }} />
             </div>
           </div>
-        </div>
-      )}
+        ) : allFiles.length === 0 ? (
+          <div className="py-12 text-center">
+            <svg className="mx-auto mb-4 h-16 w-16 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            </svg>
+            <p className="text-lg font-medium text-white/60">No files uploaded yet</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {allFiles.map((file) => (
+              <div
+                key={file.id}
+                className="rounded-xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-white/15 hover:bg-white/[0.07]"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0 rounded-lg p-3 bg-accent/20 text-accent">
+                    {getFileIcon(file.fileType)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="mb-1 truncate text-sm font-semibold text-white/95">{file.fileName}</h3>
+                    {file.caption && (
+                      <p className="mb-2 line-clamp-2 text-xs text-white/60">{file.caption}</p>
+                    )}
+                    <div className="mb-2 flex flex-wrap gap-2">
+                      <span className="rounded px-2 py-1 text-xs font-medium text-white/70 bg-white/10">
+                        {file.task.title}
+                      </span>
+                      {file.section && (
+                        <span className="rounded px-2 py-1 text-xs font-medium bg-accent/20 text-accent">
+                          {file.section}
+                        </span>
+                      )}
+                      {file.isCompleted && (
+                        <span className="rounded px-2 py-1 text-xs font-medium text-emerald-400 bg-emerald-500/20">
+                          ✓ Completed
+                        </span>
+                      )}
+                    </div>
+                    <p className="mb-3 text-xs text-white/50">Uploaded {formatDate(file.uploadedAt)}</p>
+                    <a
+                      href={`http://localhost:4001/${file.fileUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      View File
+                    </a>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

@@ -40,7 +40,7 @@ const ListDisplay = <T extends { id: number }>({
           <div
             key={item.id}
             onClick={() => navigate(`/clients/${item.id}`)}
-            className="flex items-center justify-between p-4 transition-colors bg-white border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50"
+            className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-white/15 hover:bg-white/[0.07]"
           >
             <div className="flex items-center flex-1 gap-3">
               {renderItem(item)}
@@ -48,8 +48,8 @@ const ListDisplay = <T extends { id: number }>({
                 <span
                   className={`px-3 py-1 text-xs font-semibold rounded-full ${
                     profileStatus.trim().toUpperCase() === "COMPLETE"
-                      ? "bg-green-100 text-green-700 border border-green-200"
-                      : "bg-amber-100 text-amber-700 border border-amber-200"
+                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                      : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                   }`}
                 >
                   {profileStatus.trim().toUpperCase() === "COMPLETE" ? "✓ Complete" : "⚠ Incomplete Profile"}
@@ -64,14 +64,14 @@ const ListDisplay = <T extends { id: number }>({
               {showProfileStatus && isIncomplete && onResendInvite && (
                 <button
                   onClick={() => onResendInvite(item.id)}
-                  className="px-3 py-1.5 text-sm font-semibold text-blue-600 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors"
+                  className="px-3 py-1.5 text-sm font-semibold text-blue-300 bg-blue-500/20 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-colors"
                 >
                   Resend Invite
                 </button>
               )}
               <button
                 onClick={() => onDelete(item.id)}
-                className="px-3 py-1.5 text-sm font-semibold text-red-600 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 transition-colors"
+                className="px-3 py-1.5 text-sm font-semibold text-red-300 bg-red-500/20 rounded-full border border-red-500/30 hover:bg-red-500/30 transition-colors"
               >
                 Delete
               </button>

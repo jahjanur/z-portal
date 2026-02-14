@@ -20,13 +20,17 @@ interface ProjectCardProps {
   primaryColor: string;
 }
 
+const cardStyle = {
+  backgroundColor: "rgba(42, 42, 42, 0.8)",
+  borderColor: "rgba(255, 255, 255, 0.08)",
+};
+
 const ProjectCard: React.FC<ProjectCardProps> = ({
   task,
   onClick,
   getStatusColor,
   formatDate,
   getDaysUntilDue,
-  primaryColor,
 }) => {
   const daysUntil = getDaysUntilDue(task.dueDate);
   const isOverdue = daysUntil !== null && daysUntil < 0;
@@ -35,17 +39,18 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className="p-6 transition-all bg-white border border-gray-200 shadow-sm cursor-pointer rounded-2xl hover:shadow-md hover:border-gray-300"
+      className="p-6 transition-all border rounded-2xl cursor-pointer backdrop-blur-sm hover:border-white/15"
+      style={cardStyle}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <h3 className="mb-2 text-xl font-bold text-gray-900">{task.title}</h3>
+          <h3 className="mb-2 text-xl font-bold text-white">{task.title}</h3>
           {task.description && (
-            <p className="mb-3 text-sm text-gray-600">{task.description}</p>
+            <p className="mb-3 text-sm text-gray-400">{task.description}</p>
           )}
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
             {task.worker && (
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-2 text-gray-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
@@ -56,9 +61,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
               <span
                 className={`flex items-center gap-2 ${
                   isOverdue
-                    ? "text-red-600 font-semibold"
+                    ? "text-red-400 font-semibold"
                     : isDueSoon
-                    ? "text-amber-600 font-semibold"
+                    ? "text-amber-400 font-semibold"
                     : ""
                 }`}
               >
@@ -74,7 +79,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 </span>
               </span>
             )}
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2 text-gray-500">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -90,13 +95,12 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           {task.status?.replace("_", " ") || "N/A"}
         </span>
       </div>
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-        <span className="text-sm font-medium text-gray-600">
+      <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
+        <span className="text-sm font-medium text-gray-500">
           {(task.files || []).length} files attached
         </span>
         <button
-          className="px-4 py-2 text-sm font-semibold text-white transition-opacity rounded-lg hover:opacity-90"
-          style={{ backgroundColor: primaryColor }}
+          className="px-4 py-2 text-sm font-semibold rounded-full bg-white text-app hover:bg-gray-200 transition-all"
         >
           View Details →
         </button>

@@ -264,20 +264,14 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+      <div className="flex items-center justify-center min-h-screen bg-app">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.primary }}></div>
-            <div
-              className="w-3 h-3 rounded-full animate-bounce"
-              style={{ backgroundColor: colors.secondary, animationDelay: "0.1s" }}
-            ></div>
-            <div
-              className="w-3 h-3 rounded-full animate-bounce"
-              style={{ backgroundColor: colors.accent, animationDelay: "0.2s" }}
-            ></div>
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/80" />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/60" style={{ animationDelay: "0.1s" }} />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/40" style={{ animationDelay: "0.2s" }} />
           </div>
-          <span className="text-lg font-medium text-gray-700">Loading...</span>
+          <span className="text-lg font-medium text-gray-400">Loading...</span>
         </div>
       </div>
     );
@@ -285,19 +279,18 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   if (error && !userData) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-        <div className="max-w-md p-8 bg-white border border-red-200 shadow-xl rounded-2xl">
-          <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
-            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="flex items-center justify-center min-h-screen bg-app">
+        <div className="max-w-md p-8 rounded-2xl border border-red-500/30 bg-card backdrop-blur-sm">
+          <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20">
+            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h2 className="mb-2 text-2xl font-bold text-center text-gray-900">Invalid Link</h2>
-          <p className="mb-6 text-center text-gray-600">{error}</p>
+          <h2 className="mb-2 text-2xl font-bold text-center text-white">Invalid Link</h2>
+          <p className="mb-6 text-center text-gray-400">{error}</p>
           <button
             onClick={() => navigate("/login")}
-            className="w-full px-4 py-3 font-semibold text-white transition-colors rounded-lg"
-            style={{ backgroundColor: colors.primary }}
+            className="w-full px-4 py-3 font-semibold rounded-full bg-white text-app hover:bg-gray-200 transition-colors"
           >
             Go to Login
           </button>
@@ -307,24 +300,24 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 
   return (
-    <div className="min-h-screen py-12 bg-gradient-to-br from-purple-50 to-blue-50">
+    <div className="min-h-screen py-12 bg-app">
       <div className="max-w-3xl px-4 mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="inline-block p-4 mb-4 bg-white rounded-full shadow-lg">
-            <svg className="w-12 h-12" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="inline-block p-4 mb-4 rounded-full border border-border-subtle bg-card">
+            <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="mb-2 text-4xl font-bold text-gray-900">
-            Welcome, <span style={{ color: colors.primary }}>{userData?.name}!</span>
+          <h1 className="mb-2 text-4xl font-bold text-white">
+            Welcome, <span className="text-gray-400">{userData?.name}!</span>
           </h1>
-          <p className="text-lg text-gray-600">Complete your company profile to get started</p>
+          <p className="text-lg text-gray-400">Complete your company profile to get started</p>
           <p className="mt-2 text-sm font-medium text-gray-500">{userData?.company}</p>
         </div>
 
         {/* Form */}
-        <div className="p-8 bg-white border border-gray-200 shadow-xl rounded-2xl">
+        <div className="p-8 rounded-2xl border border-border-subtle bg-card backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
               <div className="p-4 border border-red-200 bg-red-50 rounded-xl">

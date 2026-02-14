@@ -13,10 +13,10 @@ interface User {
 interface ClientSearchProps {
   clients: User[];
   onDelete: (id: number) => void;
-  colors: { primary: string };
+  colors?: { primary: string };
 }
 
-const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete, colors }) => {
+const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
   const [search, setSearch] = useState("");
   const [resendingId, setResendingId] = useState<number | null>(null);
   const navigate = useNavigate();
@@ -59,8 +59,7 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete, colors }
           placeholder="Search clients..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-4 py-3 bg-white border border-gray-300 pl-11 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent"
-          style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+          className="w-full px-4 py-3 pl-11 rounded-xl border border-border-subtle bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent"
         />
         <svg
           className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3.5 top-1/2"
@@ -77,7 +76,7 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete, colors }
         </svg>
 
         {search && (
-          <div className="absolute z-50 w-full mt-2 overflow-y-auto bg-white border border-gray-200 shadow-xl top-full rounded-xl max-h-80">
+          <div className="absolute z-50 w-full mt-2 overflow-y-auto border border-border-subtle top-full rounded-xl max-h-80 bg-card backdrop-blur-sm shadow-xl">
             {filtered.length > 0 ? (
               <div className="p-2">
                 {filtered.map((c) => {
@@ -86,7 +85,7 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete, colors }
                   return (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between p-3 transition-colors rounded-lg hover:bg-gray-50"
+                      className="flex items-center justify-between p-3 transition-colors rounded-lg hover:bg-white/10"
                     >
                       <div 
                         className="flex-1 cursor-pointer"
@@ -96,14 +95,14 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete, colors }
                         }}
                       >
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-gray-900">{c.name}</p>
+                          <p className="font-semibold text-white">{c.name}</p>
                           {isIncomplete && (
-                            <span className="px-2 py-0.5 text-xs font-semibold text-orange-700 bg-orange-100 rounded-full">
+                            <span className="px-2 py-0.5 text-xs font-semibold text-amber-400 bg-amber-500/20 rounded-full">
                               Incomplete
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-400">
                           {c.company} • {c.email}
                         </p>
                       </div>
@@ -116,12 +115,7 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete, colors }
                               handleResendInvite(c.id, c.email);
                             }}
                             disabled={resendingId === c.id}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors border rounded-lg disabled:opacity-50"
-                            style={{ 
-                              color: colors.primary, 
-                              borderColor: colors.primary,
-                              backgroundColor: 'white'
-                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors border rounded-lg disabled:opacity-50 text-white border-border-medium bg-white/10 hover:bg-white/20"
                             title="Resend invite email"
                           >
                             {resendingId === c.id ? (
@@ -150,7 +144,7 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete, colors }
                               setSearch("");
                             }
                           }}
-                          className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors border border-red-200"
+                          className="px-3 py-1.5 text-xs font-semibold text-red-300 bg-red-500/20 rounded-full hover:bg-red-500/30 transition-colors border border-red-500/30"
                           title="Delete client"
                         >
                           Delete
@@ -161,7 +155,7 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete, colors }
                 })}
               </div>
             ) : (
-              <div className="p-4 text-center text-gray-500">No clients found</div>
+              <div className="p-4 text-center text-gray-400">No clients found</div>
             )}
           </div>
         )}

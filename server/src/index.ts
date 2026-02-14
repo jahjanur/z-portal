@@ -11,7 +11,15 @@ import offersRoutes from "./routes/offers";
 import timesheetRoutes from "./routes/timesheet";
 import projectRoutes from "./routes/projects";
 
+// .env is also preloaded by "npm run dev" via node -r dotenv/config so it's set before Prisma is used
 dotenv.config();
+if (process.env.NODE_ENV === "production") {
+  dotenv.config({ path: ".env.production", override: true });
+}
+if (!process.env.DATABASE_URL) {
+  console.error("❌ DATABASE_URL is not set. Create server/.env from server/.env.example and set DATABASE_URL.");
+  process.exit(1);
+}
 const app = express();
 
 app.use(cors());

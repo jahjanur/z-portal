@@ -298,9 +298,10 @@ const RoleAdmin: React.FC = () => {
   const createDomain = async (domainData: {
     clientId: string;
     domainName: string;
-    domainExpiry: string;
-    hostingPlan: string;
-    hostingExpiry: string;
+    domainExpiry?: string;
+    hostingPlan?: string;
+    hostingExpiry?: string;
+    notes?: string;
   }) => {
     try {
       await API.post("/domains", {
@@ -320,9 +321,10 @@ const RoleAdmin: React.FC = () => {
 
   const updateDomain = async (domainId: number, domainData: {
     domainName: string;
-    domainExpiry: string;
-    hostingPlan: string;
-    hostingExpiry: string;
+    domainExpiry?: string;
+    hostingPlan?: string;
+    hostingExpiry?: string;
+    notes?: string;
   }) => {
     try {
       await API.put(`/domains/${domainId}`, {
@@ -370,20 +372,14 @@ const RoleAdmin: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-app">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.primary }}></div>
-            <div
-              className="w-3 h-3 rounded-full animate-bounce"
-              style={{ backgroundColor: colors.secondary, animationDelay: "0.1s" }}
-            ></div>
-            <div
-              className="w-3 h-3 rounded-full animate-bounce"
-              style={{ backgroundColor: colors.accent, animationDelay: "0.2s" }}
-            ></div>
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/80" />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/60" style={{ animationDelay: "0.1s" }} />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/40" style={{ animationDelay: "0.2s" }} />
           </div>
-          <span className="text-lg font-medium text-gray-700">Loading...</span>
+          <span className="text-lg font-medium text-gray-400">Loading...</span>
         </div>
       </div>
     );
@@ -391,24 +387,24 @@ const RoleAdmin: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="max-w-md p-6 border border-red-200 bg-red-50 rounded-xl">
-          <p className="mb-2 text-lg font-semibold text-red-800">Error:</p>
-          <p className="text-red-600">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-app">
+        <div className="max-w-md p-6 border border-red-500/30 bg-red-500/10 rounded-2xl">
+          <p className="mb-2 text-lg font-semibold text-red-300">Error:</p>
+          <p className="text-red-400">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-24 bg-gray-50">
+    <div className="min-h-screen py-24 bg-app">
       <div className="px-4 mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-bold text-gray-900">
-            Admin <span style={{ color: colors.primary }}>Dashboard</span>
+          <h1 className="mb-2 text-4xl font-bold tracking-tight text-white/95">
+            Admin <span className="text-white/60">Dashboard</span>
           </h1>
-          <p className="text-lg text-gray-600">Manage workers, clients, tasks, invoices, domains, and timesheets</p>
+          <p className="text-lg text-white/60">Manage workers, clients, tasks, invoices, domains, and timesheets</p>
         </div>
 
         {/* Tab Navigation */}
@@ -433,10 +429,10 @@ const RoleAdmin: React.FC = () => {
         )}
 
         {/* Dynamic Content */}
-        <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
           {activeTab === "workers" && (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-gray-900">Workers Management</h2>
+              <h2 className="mb-6 text-2xl font-bold text-white">Workers Management</h2>
               <WorkerForm onSubmit={createWorker} colors={colors} />
               <WorkersList workers={workers} onDelete={deleteUser} />
             </>
@@ -444,13 +440,13 @@ const RoleAdmin: React.FC = () => {
 
           {activeTab === "clients" && (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-gray-900">Clients Management</h2>
+              <h2 className="mb-6 text-2xl font-bold text-white">Clients Management</h2>
               <ClientForm onSubmit={createClient} colors={colors} />
               
               {/* Incomplete Profiles Section */}
               <div className="mt-8">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-xl font-bold text-white">
                     Incomplete Profiles 
                     <span className="ml-2 text-sm font-normal text-gray-500">
                       ({incompleteClients.length})
@@ -466,22 +462,22 @@ const RoleAdmin: React.FC = () => {
                     getProfileStatus={(client) => client.profileStatus}
                     renderItem={(c) => (
                       <div>
-                        <p className="font-semibold text-gray-900">{c.name}</p>
+                        <p className="font-semibold text-white">{c.name}</p>
                         <p className="text-sm text-gray-500">
                           {c.company} • {c.email}
                         </p>
                         {c.postalAddress && (
-                          <p className="mt-1 text-xs text-gray-400">📍 {c.postalAddress}</p>
+                          <p className="mt-1 text-xs text-gray-500">📍 {c.postalAddress}</p>
                         )}
                       </div>
                     )}
                   />
                 ) : (
-                  <div className="py-8 text-center bg-gray-50 rounded-xl">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="py-8 text-center rounded-xl bg-white/5 border border-border-subtle">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p className="text-sm font-medium text-gray-700">All profiles are complete! 🎉</p>
+                    <p className="text-sm font-medium text-gray-400">All profiles are complete! 🎉</p>
                   </div>
                 )}
               </div>
@@ -490,9 +486,9 @@ const RoleAdmin: React.FC = () => {
               <div className="mt-8">
                 <button
                   onClick={() => setShowCompletedProfiles(!showCompletedProfiles)}
-                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors bg-gray-50 rounded-xl hover:bg-gray-100"
+                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors rounded-xl bg-white/5 border border-border-subtle hover:bg-white/10"
                 >
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-xl font-bold text-white">
                     Complete Profiles 
                     <span className="ml-2 text-sm font-normal text-gray-500">
                       ({completeClients.length})
@@ -517,18 +513,18 @@ const RoleAdmin: React.FC = () => {
                         getProfileStatus={(client) => client.profileStatus}
                         renderItem={(c) => (
                           <div>
-                            <p className="font-semibold text-gray-900">{c.name}</p>
+                            <p className="font-semibold text-white">{c.name}</p>
                             <p className="text-sm text-gray-500">
                               {c.company} • {c.email}
                             </p>
                             {c.postalAddress && (
-                              <p className="mt-1 text-xs text-gray-400">📍 {c.postalAddress}</p>
+                              <p className="mt-1 text-xs text-gray-500">📍 {c.postalAddress}</p>
                             )}
                           </div>
                         )}
                       />
                     ) : (
-                      <p className="py-4 text-sm text-center text-gray-500 bg-gray-50 rounded-xl">No complete profiles yet</p>
+                      <p className="py-4 text-sm text-center text-gray-500 rounded-xl bg-white/5">No complete profiles yet</p>
                     )}
                   </div>
                 )}
@@ -538,7 +534,7 @@ const RoleAdmin: React.FC = () => {
 
           {activeTab === "tasks" && (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-gray-900">Tasks Management</h2>
+              <h2 className="mb-6 text-2xl font-bold text-white">Tasks Management</h2>
               <TaskForm
                 onSubmit={createTask}
                 clients={clients}
@@ -550,7 +546,7 @@ const RoleAdmin: React.FC = () => {
               
               {/* Active Tasks Section */}
               <div className="mt-8">
-                <h3 className="mb-4 text-xl font-bold text-gray-900">
+                <h3 className="mb-4 text-xl font-bold text-white">
                   Active Tasks 
                   <span className="ml-2 text-sm font-normal text-gray-500">
                     ({activeTasks.length})
@@ -559,11 +555,11 @@ const RoleAdmin: React.FC = () => {
                 {activeTasks.length > 0 ? (
                   <TasksList tasks={activeTasks} onDelete={deleteTask} colors={colors} />
                 ) : (
-                  <div className="py-8 text-center bg-gray-50 rounded-xl">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="py-8 text-center rounded-xl bg-white/5 border border-border-subtle">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
-                    <p className="text-sm font-medium text-gray-700">No active tasks</p>
+                    <p className="text-sm font-medium text-gray-400">No active tasks</p>
                   </div>
                 )}
               </div>
@@ -572,9 +568,9 @@ const RoleAdmin: React.FC = () => {
               <div className="mt-8">
                 <button
                   onClick={() => setShowCompletedTasks(!showCompletedTasks)}
-                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors bg-gray-50 rounded-xl hover:bg-gray-100"
+                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors rounded-xl bg-white/5 border border-border-subtle hover:bg-white/10"
                 >
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-xl font-bold text-white">
                     Completed Tasks 
                     <span className="ml-2 text-sm font-normal text-gray-500">
                       ({completedTasks.length})
@@ -594,7 +590,7 @@ const RoleAdmin: React.FC = () => {
                     {completedTasks.length > 0 ? (
                       <TasksList tasks={completedTasks} onDelete={deleteTask} colors={colors} />
                     ) : (
-                      <p className="py-4 text-sm text-center text-gray-500 bg-gray-50 rounded-xl">No completed tasks yet</p>
+                      <p className="py-4 text-sm text-center text-gray-500 rounded-xl bg-white/5">No completed tasks yet</p>
                     )}
                   </div>
                 )}
@@ -604,12 +600,12 @@ const RoleAdmin: React.FC = () => {
 
           {activeTab === "invoices" && (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-gray-900">Invoices Management</h2>
+              <h2 className="mb-6 text-2xl font-bold text-white">Invoices Management</h2>
               <InvoiceForm onSubmit={createInvoice} clients={clients} colors={colors} />
               
               {/* Pending Invoices Section */}
               <div className="mt-8">
-                <h3 className="mb-4 text-xl font-bold text-gray-900">
+                <h3 className="mb-4 text-xl font-bold text-white">
                   Pending Invoices 
                   <span className="ml-2 text-sm font-normal text-gray-500">
                     ({pendingInvoices.length})
@@ -618,11 +614,11 @@ const RoleAdmin: React.FC = () => {
                 {pendingInvoices.length > 0 ? (
                   <InvoicesList invoices={pendingInvoices} onDelete={deleteInvoice} colors={colors} />
                 ) : (
-                  <div className="py-8 text-center bg-gray-50 rounded-xl">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="py-8 text-center rounded-xl bg-white/5 border border-border-subtle">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p className="text-sm font-medium text-gray-700">All invoices are paid! 💰</p>
+                    <p className="text-sm font-medium text-gray-400">All invoices are paid! 💰</p>
                   </div>
                 )}
               </div>
@@ -631,9 +627,9 @@ const RoleAdmin: React.FC = () => {
               <div className="mt-8">
                 <button
                   onClick={() => setShowPaidInvoices(!showPaidInvoices)}
-                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors bg-gray-50 rounded-xl hover:bg-gray-100"
+                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors rounded-xl bg-white/5 border border-border-subtle hover:bg-white/10"
                 >
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-xl font-bold text-white">
                     Paid Invoices 
                     <span className="ml-2 text-sm font-normal text-gray-500">
                       ({paidInvoices.length})
@@ -653,7 +649,7 @@ const RoleAdmin: React.FC = () => {
                     {paidInvoices.length > 0 ? (
                       <InvoicesList invoices={paidInvoices} onDelete={deleteInvoice} colors={colors} />
                     ) : (
-                      <p className="py-4 text-sm text-center text-gray-500 bg-gray-50 rounded-xl">No paid invoices yet</p>
+                      <p className="py-4 text-sm text-center text-gray-500 rounded-xl bg-white/5">No paid invoices yet</p>
                     )}
                   </div>
                 )}
@@ -663,7 +659,7 @@ const RoleAdmin: React.FC = () => {
 
           {activeTab === "domains" && (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-gray-900">Domains Management</h2>
+              <h2 className="mb-6 text-2xl font-bold text-white">Domains Management</h2>
               <DomainForm 
                 onSubmit={createDomain}
                 onUpdate={updateDomain}

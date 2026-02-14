@@ -1,11 +1,4 @@
-import { Link } from "react-router-dom";
-
-const colors = {
-  primary: "#5B4FFF",
-  hover: "#7C73FF",
-  text: "#1A1A2E",
-  accent: "#FFA726",
-};
+import { Link, useLocation } from "react-router-dom";
 
 const name = localStorage.getItem("name");
 
@@ -13,6 +6,9 @@ export default function Navbar() {
   const role = localStorage.getItem("role");
   const token = localStorage.getItem("token");
   const isAdmin = role === "ADMIN";
+  const location = useLocation();
+  const isAnalytics = location.pathname === "/";
+  const isDashboard = location.pathname === "/dashboard";
 
   const logout = () => {
     localStorage.clear();
@@ -20,32 +16,39 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 z-50 w-full border-b border-gray-200 shadow-sm bg-white/95 backdrop-blur-md">
+    <nav className="fixed top-0 z-50 w-full border-b border-border-subtle bg-app/95 backdrop-blur-md">
       <div className="px-6 mx-auto max-w-7xl">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
             <Link to="/" className="flex items-center gap-2 group">
-              <img 
-                src="/ZPortalLogo.svg" 
-                alt="Z-Portal Logo" 
+              <img
+                src="/ZPortalLogo.svg"
+                alt="Z-Portal Logo"
                 className="h-16 transition-transform group-hover:scale-110"
               />
             </Link>
 
-            <div className="items-center hidden space-x-1 md:flex">
+            <div className="items-center hidden gap-1 md:flex">
               {token && isAdmin && (
-                <Link 
-                  to="/" 
-                  className="px-4 py-2 text-sm font-semibold text-gray-700 transition-all rounded-lg hover:text-gray-900 hover:bg-gray-100"
+                <Link
+                  to="/"
+                  className={`px-4 py-2 text-sm font-semibold transition-all rounded-full ${
+                    isAnalytics
+                      ? "bg-white text-app"
+                      : "text-gray-300 hover:text-white hover:bg-white/10"
+                  }`}
                 >
                   Analytics
                 </Link>
               )}
-              
               {token && (
-                <Link 
-                  to="/dashboard" 
-                  className="px-4 py-2 text-sm font-semibold text-gray-700 transition-all rounded-lg hover:text-gray-900 hover:bg-gray-100"
+                <Link
+                  to="/dashboard"
+                  className={`px-4 py-2 text-sm font-semibold transition-all rounded-full ${
+                    isDashboard
+                      ? "bg-white text-app"
+                      : "text-gray-300 hover:text-white hover:bg-white/10"
+                  }`}
                 >
                   Dashboard
                 </Link>
@@ -56,31 +59,26 @@ export default function Navbar() {
           <div className="flex items-center gap-3">
             {token ? (
               <>
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 border border-gray-200">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-gray-700">{name}</span>
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-glass border border-border-subtle">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-sm font-medium text-gray-300">{name}</span>
                 </div>
                 <button
                   onClick={logout}
-                  className="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg shadow-lg hover:scale-105 hover:shadow-xl"
-                  style={{ 
-                    backgroundColor: colors.primary,
-                    boxShadow: `0 4px 14px 0 ${colors.primary}40`
-                  }}
+                  className="px-4 py-2 text-sm font-semibold rounded-full bg-white text-app hover:bg-gray-200 transition-all"
                 >
                   Logout
                 </button>
               </>
             ) : (
-              <Link 
-                to="/login" 
-                className="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg shadow-lg hover:scale-105 hover:shadow-xl"
-                style={{ 
-                  backgroundColor: colors.primary,
-                  boxShadow: `0 4px 14px 0 ${colors.primary}40`
-                }}
+              <Link
+                to="/login"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border border-border-medium text-white hover:bg-white/10 transition-all"
               >
-                Login
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+                Log In
               </Link>
             )}
           </div>

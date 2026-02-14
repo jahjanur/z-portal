@@ -1,0 +1,26 @@
+# Z-Portal: PostgreSQL for local dev and production (internal only).
+# App connects via hostname `db` when running in Docker; for local host-based app
+# you can temporarily add: ports: ["127.0.0.1:5432:5432"] (never 0.0.0.0).
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: z-portal-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zportal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-zportal}
+    volumes:
+      - zportal_pgdata:/var/lib/postgresql/data
+    # No ports: DB internal only. For local dev with app on host, expose localhost only:
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zportal} -d ${POSTGRES_DB:-zportal}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  zportal_pgdata:
