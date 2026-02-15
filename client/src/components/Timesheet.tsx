@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import API from "../api";
+import { BTN_ACTION, CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT, CONTROL_TEXTAREA } from "./ui/controls";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -10,9 +11,7 @@ declare module "jspdf" {
 }
 
 const colors = {
-  primary: "#5B4FFF",
-  secondary: "#7C73FF",
-  accent: "#FFA726",
+  primary: "rgba(255,255,255,0.12)",
   light: "#F8F9FA",
   dark: "#1A1A2E",
 };
@@ -363,8 +362,8 @@ const Timesheets = () => {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="w-12 h-12 mx-auto mb-4 border-4 border-purple-200 rounded-full animate-spin border-t-purple-600"></div>
-          <p className="text-sm text-gray-600">Loading projects...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[var(--color-border)] border-t-[var(--color-text-primary)]"></div>
+          <p className="text-sm text-[var(--color-text-muted)]">Loading projects...</p>
         </div>
       </div>
     );
@@ -372,18 +371,18 @@ const Timesheets = () => {
 
   return (
     <>
-      <h2 className="mb-6 text-2xl font-bold text-gray-900">
+      <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">
         Timesheets Management
       </h2>
 
       {/* New Project Button */}
       <div className="mb-6">
         <button
+          type="button"
           onClick={() => setShowNewProjectForm(!showNewProjectForm)}
-          className="flex items-center gap-2 px-6 py-3 text-sm font-semibold text-white transition-all rounded-xl hover:shadow-lg"
-          style={{ background: `linear-gradient(to right, ${colors.primary}, ${colors.secondary})` }}
+          className="inline-flex h-11 min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] px-4 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-0"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5 text-[var(--color-text-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           New Project
@@ -392,12 +391,12 @@ const Timesheets = () => {
 
       {/* New Project Form */}
       {showNewProjectForm && (
-        <div className="p-6 mb-6 border border-gray-200 shadow-lg bg-gradient-to-br from-white to-gray-50 rounded-2xl">
-          <h3 className="mb-4 text-lg font-bold text-gray-900">Create New Project</h3>
+        <div className="mb-6 rounded-2xl card-panel p-6 shadow-lg backdrop-blur-md">
+          <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Create New Project</h3>
           
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="block mb-2 text-sm font-medium text-gray-700">
+              <label className={CONTROL_LABEL}>
                 Project Name *
               </label>
               <input
@@ -405,19 +404,19 @@ const Timesheets = () => {
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
                 placeholder="Website Redesign"
-                className="w-full px-4 py-3 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+                className={CONTROL_INPUT}
                 required
               />
             </div>
 
             <div>
-              <label className="block mb-2 text-sm font-medium text-gray-700">
+              <label className={CONTROL_LABEL}>
                 Client (Optional)
               </label>
               <select
                 value={selectedClientId}
                 onChange={(e) => setSelectedClientId(e.target.value)}
-                className="w-full px-4 py-3 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+                className={CONTROL_SELECT}
               >
                 <option value="">No Client</option>
                 {clients.map((client) => (
@@ -430,7 +429,7 @@ const Timesheets = () => {
           </div>
 
           <div className="mt-4">
-            <label className="block mb-2 text-sm font-medium text-gray-700">
+            <label className={CONTROL_LABEL}>
               Description (Optional)
             </label>
             <textarea
@@ -438,26 +437,27 @@ const Timesheets = () => {
               onChange={(e) => setProjectDescription(e.target.value)}
               placeholder="Brief project description..."
               rows={3}
-              className="w-full px-4 py-3 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className={CONTROL_TEXTAREA}
             />
           </div>
 
-          <div className="flex gap-3 mt-6">
+          <div className="mt-6 flex gap-3">
             <button
+              type="button"
               onClick={createProject}
-              className="px-6 py-3 text-sm font-semibold text-white transition-all rounded-xl hover:shadow-md"
-              style={{ backgroundColor: colors.primary }}
+              className="btn-primary inline-flex h-11 min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold"
             >
               Create Project
             </button>
             <button
+              type="button"
               onClick={() => {
                 setShowNewProjectForm(false);
                 setProjectName("");
                 setSelectedClientId("");
                 setProjectDescription("");
               }}
-              className="px-6 py-3 text-sm font-semibold text-gray-700 transition-all bg-gray-200 rounded-xl hover:bg-gray-300"
+              className="btn-secondary inline-flex h-11 min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold"
             >
               Cancel
             </button>
@@ -468,9 +468,9 @@ const Timesheets = () => {
       {/* Pending Projects */}
       <div className="mt-8">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-gray-900">
+          <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
             Pending Projects
-            <span className="ml-2 text-sm font-normal text-gray-500">
+            <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
               ({pendingProjects.length})
             </span>
           </h3>
@@ -485,8 +485,7 @@ const Timesheets = () => {
             {pendingProjects.length > 0 && (
               <button
                 onClick={() => exportAllProjects(false)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg hover:shadow-md"
-                style={{ backgroundColor: colors.primary }}
+                className="btn-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -523,8 +522,8 @@ const Timesheets = () => {
             ))}
           </div>
         ) : (
-          <div className="py-8 text-center bg-gray-50 rounded-xl">
-            <p className="text-sm font-medium text-gray-700">No pending projects</p>
+          <div className="rounded-xl card-panel py-8 text-center">
+            <p className="text-sm font-medium text-[var(--color-text-muted)]">No pending projects</p>
           </div>
         )}
       </div>
@@ -533,11 +532,11 @@ const Timesheets = () => {
       <div className="mt-8">
         <button
           onClick={() => setShowPaidProjects(!showPaidProjects)}
-          className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors bg-gray-50 rounded-xl hover:bg-gray-100"
+          className="mb-4 flex w-full items-center justify-between rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] p-4 text-left transition hover:-translate-y-[1px] card-panel-hover"
         >
-          <h3 className="text-xl font-bold text-gray-900">
+          <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
             Paid Projects
-            <span className="ml-2 text-sm font-normal text-gray-500">
+            <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
               ({paidProjects.length})
             </span>
           </h3>
@@ -548,8 +547,7 @@ const Timesheets = () => {
                   e.stopPropagation();
                   exportAllProjects(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg hover:shadow-md"
-                style={{ backgroundColor: colors.accent }}
+                className="btn-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -558,7 +556,7 @@ const Timesheets = () => {
               </button>
             )}
             <svg
-              className={`w-5 h-5 text-gray-500 transition-transform ${showPaidProjects ? "rotate-180" : ""}`}
+              className={`h-5 w-5 text-[var(--color-text-muted)] transition-transform ${showPaidProjects ? "rotate-180" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -596,8 +594,8 @@ const Timesheets = () => {
                 ))}
               </div>
             ) : (
-              <p className="py-4 text-sm text-center text-gray-500 bg-gray-50 rounded-xl">
-                No paid projects yet
+<p className="rounded-xl bg-[var(--color-surface-2)] py-4 text-center text-sm text-[var(--color-text-muted)]">
+              No paid projects yet
               </p>
             )}
           </div>
@@ -649,12 +647,12 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   const [showEntries, setShowEntries] = useState(false);
 
   return (
-    <div className="p-6 transition-all border border-gray-200 shadow-sm bg-gradient-to-br from-white to-gray-50 rounded-2xl hover:shadow-md">
+    <div className="rounded-2xl card-panel p-6 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover">
       {/* Project Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h4 className="text-xl font-bold text-gray-900">{project.projectName}</h4>
+            <h4 className="text-xl font-bold text-[var(--color-text-primary)]">{project.projectName}</h4>
             <span
               className={`px-3 py-1 text-xs font-semibold rounded-full ${
                 project.isPaid
@@ -667,17 +665,17 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           </div>
           
           {project.client && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-[var(--color-text-muted)]">
               Client: {project.client.name} {project.client.company && `(${project.client.company})`}
             </p>
           )}
           
           {project.description && (
-            <p className="mt-1 text-sm text-gray-500">{project.description}</p>
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">{project.description}</p>
           )}
 
           {project.dateRange && (
-            <p className="mt-2 text-sm font-medium text-purple-600">
+            <p className="mt-2 text-sm font-medium text-[var(--color-text-secondary)]">
               📅 {new Date(project.dateRange.startDate).toLocaleDateString()} - {new Date(project.dateRange.endDate).toLocaleDateString()}
             </p>
           )}
@@ -686,7 +684,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
         <div className="flex gap-2 ml-4">
           <button
             onClick={() => exportProjectToPDF(project)}
-            className="p-2 text-purple-600 transition-colors rounded-lg bg-purple-50 hover:bg-purple-100"
+            className="rounded-lg bg-[var(--color-surface-3)] p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-2)]"
             title="Export PDF"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -721,18 +719,18 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
       </div>
 
       {/* Project Summary */}
-      <div className="grid grid-cols-3 gap-4 p-4 mb-4 border-2 border-purple-200 bg-purple-50 rounded-xl">
+      <div className="mb-4 grid grid-cols-3 gap-4 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
         <div>
-          <p className="text-xs text-gray-600">Entries</p>
-          <p className="text-lg font-bold text-gray-900">{project.entries.length}</p>
+          <p className="text-xs text-[var(--color-text-muted)]">Entries</p>
+          <p className="text-lg font-bold text-[var(--color-text-primary)]">{project.entries.length}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-600">Total Hours</p>
-          <p className="text-lg font-bold text-gray-900">{project.totalHours?.toFixed(1) || 0}h</p>
+          <p className="text-xs text-[var(--color-text-muted)]">Total Hours</p>
+          <p className="text-lg font-bold text-[var(--color-text-primary)]">{project.totalHours?.toFixed(1) || 0}h</p>
         </div>
         <div>
-          <p className="text-xs text-gray-600">Total Pay</p>
-          <p className="text-2xl font-bold" style={{ color: colors.primary }}>
+          <p className="text-xs text-[var(--color-text-muted)]">Total Pay</p>
+          <p className="text-2xl font-bold text-[var(--color-text-primary)]">
             ${project.totalPay?.toFixed(2) || 0}
           </p>
         </div>
@@ -742,32 +740,29 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
       <button
         onClick={() => setActiveProjectId(activeProjectId === project.id ? null : project.id)}
         className="w-full px-4 py-3 mb-4 text-sm font-semibold transition-all rounded-xl"
-        style={{
-          backgroundColor: activeProjectId === project.id ? colors.secondary : colors.light,
-          color: activeProjectId === project.id ? "white" : colors.dark,
-        }}
+        className={activeProjectId === project.id ? "btn-primary w-full rounded-xl px-4 py-3 text-sm font-semibold" : "btn-secondary w-full rounded-xl px-4 py-3 text-sm font-semibold"}
       >
         {activeProjectId === project.id ? "Cancel" : "+ Add Entry"}
       </button>
 
       {/* Add Entry Form */}
       {activeProjectId === project.id && (
-        <div className="p-4 mb-4 border border-gray-200 bg-gray-50 rounded-xl">
-          <h5 className="mb-3 text-sm font-bold text-gray-900">New Entry</h5>
+        <div className="mb-4 rounded-xl card-panel p-4">
+          <h5 className="mb-3 text-sm font-bold text-[var(--color-text-primary)]">New Entry</h5>
           
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
-              <label className="block mb-1 text-xs font-medium text-gray-700">Date *</label>
+              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Date *</label>
               <input
                 type="date"
                 value={entryDate}
                 onChange={(e) => setEntryDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+                className="input-dark w-full rounded-lg px-3 py-2 text-sm"
               />
             </div>
             
             <div>
-              <label className="block mb-1 text-xs font-medium text-gray-700">Hours *</label>
+              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Hours *</label>
               <input
                 type="number"
                 step="0.5"
@@ -775,12 +770,12 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 value={entryHours || ""}
                 onChange={(e) => setEntryHours(Number(e.target.value))}
                 placeholder="8.0"
-                className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+                className="input-dark w-full rounded-lg px-3 py-2 text-sm"
               />
             </div>
             
             <div>
-              <label className="block mb-1 text-xs font-medium text-gray-700">Rate ($) *</label>
+              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Rate ($) *</label>
               <input
                 type="number"
                 step="0.01"
@@ -788,36 +783,35 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 value={entryRate || ""}
                 onChange={(e) => setEntryRate(Number(e.target.value))}
                 placeholder="70.00"
-                className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+                className="input-dark w-full rounded-lg px-3 py-2 text-sm"
               />
             </div>
             
             <div>
-              <label className="block mb-1 text-xs font-medium text-gray-700">Total</label>
+              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Total</label>
               <input
                 type="text"
                 value={`$${(entryHours * entryRate).toFixed(2)}`}
                 disabled
-                className="w-full px-3 py-2 text-sm font-bold text-purple-700 bg-gray-100 border border-gray-200 rounded-lg"
+                className="input-dark w-full rounded-lg px-3 py-2 text-sm font-bold bg-[var(--color-surface-3)]"
               />
             </div>
           </div>
           
           <div className="mt-3">
-            <label className="block mb-1 text-xs font-medium text-gray-700">Notes</label>
+            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Notes</label>
             <textarea
               value={entryNotes}
               onChange={(e) => setEntryNotes(e.target.value)}
               placeholder="Optional notes..."
               rows={2}
-              className="w-full px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="input-dark w-full rounded-lg px-3 py-2 text-sm min-h-[60px]"
             />
           </div>
           
           <button
             onClick={() => addEntry(project.id)}
-            className="w-full px-4 py-2 mt-3 text-sm font-semibold text-white transition-all rounded-lg hover:shadow-md"
-            style={{ backgroundColor: colors.primary }}
+            className="btn-primary w-full mt-3 rounded-lg px-4 py-2 text-sm font-semibold"
           >
             Add Entry
           </button>
@@ -829,13 +823,13 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
         <>
           <button
             onClick={() => setShowEntries(!showEntries)}
-            className="flex items-center justify-between w-full px-4 py-2 mb-2 text-left transition-colors bg-gray-100 rounded-lg hover:bg-gray-200"
+            className="mb-2 flex w-full items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2 text-left transition hover:bg-[var(--color-surface-3)]"
           >
-            <span className="text-sm font-semibold text-gray-700">
+            <span className="text-sm font-semibold text-[var(--color-text-primary)]">
               View Entries ({project.entries.length})
             </span>
             <svg
-              className={`w-4 h-4 text-gray-500 transition-transform ${showEntries ? "rotate-180" : ""}`}
+              className={`h-4 w-4 text-[var(--color-text-muted)] transition-transform ${showEntries ? "rotate-180" : ""}`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -849,23 +843,23 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
               {project.entries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
+                  className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
-                      <span className="text-sm font-semibold text-gray-900">
+                      <span className="text-sm font-semibold text-[var(--color-text-primary)]">
                         {new Date(entry.date).toLocaleDateString()}
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-[var(--color-text-muted)]">
                         {entry.hoursWorked}h × ${entry.hourlyRate}
                       </span>
                     </div>
                     {entry.notes && (
-                      <p className="text-xs text-gray-600">{entry.notes}</p>
+                      <p className="text-xs text-[var(--color-text-muted)]">{entry.notes}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold" style={{ color: colors.primary }}>
+                    <span className="text-lg font-bold text-[var(--color-text-primary)]">
                       ${entry.totalPay.toFixed(2)}
                     </span>
                     <button

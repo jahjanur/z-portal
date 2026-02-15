@@ -28,13 +28,13 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
       case "PAID":
-        return "bg-green-100 text-green-700 border-green-200";
+        return "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)] border border-[var(--color-border-hover)]";
       case "PENDING":
-        return "bg-amber-100 text-amber-700 border-amber-200";
+        return "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)] border border-[var(--color-border-hover)]";
       case "OVERDUE":
-        return "bg-red-100 text-red-700 border-red-200";
+        return "bg-[var(--color-destructive-bg)] text-[var(--color-destructive-text)] border border-[var(--color-destructive-border)]";
       default:
-        return "bg-gray-100 text-gray-700 border-gray-200";
+        return "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)] border border-[var(--color-border-hover)]";
     }
   };
 
@@ -52,12 +52,12 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
 
   if (invoices.length === 0) {
     return (
-      <div className="py-12 text-center bg-white border border-gray-200 rounded-2xl">
-        <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="rounded-2xl card-panel py-12 text-center shadow-lg backdrop-blur-md">
+        <svg className="mx-auto mb-4 h-16 w-16 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <p className="text-lg font-medium text-gray-700">No invoices yet</p>
-        <p className="text-sm text-gray-500">Create your first invoice above</p>
+        <p className="text-lg font-medium text-[var(--color-text-secondary)]">No invoices yet</p>
+        <p className="text-sm text-[var(--color-text-muted)]">Create your first invoice above</p>
       </div>
     );
   }
@@ -70,13 +70,13 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
         return (
           <div
             key={inv.id}
-            className="p-5 transition-all bg-white border border-gray-200 shadow-sm rounded-xl hover:shadow-md"
+            className="rounded-xl card-panel p-5 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover"
           >
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               {/* Invoice Info */}
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h4 className="text-lg font-bold text-gray-900">
+                <div className="mb-2 flex items-center gap-3">
+                  <h4 className="text-lg font-bold text-[var(--color-text-primary)]">
                     Invoice #{inv.invoiceNumber}
                   </h4>
                   <span
@@ -89,21 +89,21 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 gap-2 text-sm md:grid-cols-2 lg:grid-cols-4">
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-[var(--color-text-muted)]">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                     <span className="font-medium">{inv.client?.name || `Client #${inv.clientId}`}</span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className="font-bold text-gray-900">${inv.amount.toFixed(2)}</span>
+                    <span className="font-bold text-[var(--color-text-primary)]">${inv.amount.toFixed(2)}</span>
                   </div>
 
-                  <div className={`flex items-center gap-2 ${overdue ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
+                  <div className={`flex items-center gap-2 ${overdue ? "font-semibold text-red-600" : "text-[var(--color-text-muted)]"}`}>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
@@ -111,7 +111,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                   </div>
 
                   {inv.paidAt && (
-                    <div className="flex items-center gap-2 font-semibold text-green-600">
+                    <div className="flex items-center gap-2 font-semibold text-[var(--color-text-secondary)]">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
@@ -121,7 +121,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                 </div>
 
                 {inv.client?.email && (
-                  <p className="mt-2 text-xs text-gray-500">
+                  <p className="mt-2 text-xs text-[var(--color-text-muted)]">
                     <svg className="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                     </svg>
@@ -135,8 +135,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                       href={inv.paymentLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-medium transition-colors"
-                      style={{ color: colors.primary }}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] transition-colors"
                     >
                       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
@@ -154,8 +153,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                     href={inv.paymentLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg hover:opacity-90"
-                    style={{ backgroundColor: colors.primary }}
+                    className="btn-primary flex gap-2 rounded-lg px-4 py-2 text-sm font-semibold"
                   >
                     <div className="flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,8 +169,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                     href={`http://localhost:4001${inv.fileUrl}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 text-sm font-semibold transition-all bg-white border-2 rounded-lg hover:bg-gray-50"
-                    style={{ color: colors.primary, borderColor: colors.primary }}
+                    className="btn-secondary rounded-lg px-4 py-2 text-sm font-semibold"
                   >
                     <div className="flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +184,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                 {inv.status.toUpperCase() === "PENDING" && onRequestPayment && (
                   <button
                     onClick={() => onRequestPayment(inv)}
-                    className="px-4 py-2 text-sm font-semibold text-gray-700 transition-all bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50"
+                    className="btn-secondary rounded-lg px-4 py-2 text-sm font-semibold"
                   >
                     <div className="flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -204,7 +201,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                       onDelete(inv.id);
                     }
                   }}
-                  className="px-4 py-2 text-sm font-semibold text-red-600 transition-all bg-white border border-red-200 rounded-lg hover:bg-red-50"
+                  className="rounded-lg border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] px-4 py-2 text-sm font-semibold text-[var(--color-destructive-text)] transition hover:opacity-90"
                 >
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

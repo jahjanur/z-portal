@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT } from "../ui/controls";
 
 interface User {
   id: number;
@@ -100,35 +101,27 @@ const DomainForm: React.FC<DomainFormProps> = ({
     }
   };
 
-  const inputClass =
-    "w-full px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent";
-
   return (
-    <div 
+    <div
       ref={formRef}
-      className={`p-5 mb-6 border-2 rounded-xl transition-all ${
-        editingDomain 
-          ? 'border-blue-300 bg-blue-50 shadow-lg' 
-          : 'border-gray-200 bg-gray-50'
-      }`}
+      className="mb-6 rounded-xl card-panel p-5 shadow-lg shadow-[var(--color-shadow)] backdrop-blur-md transition"
     >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-700">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-theme-primary">
           {editingDomain ? "✏️ Edit Domain" : "Add New Domain"}
         </h3>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 md:items-end">
           {!editingDomain && (
-            <div>
-              <label className="block mb-2 text-xs font-semibold text-gray-600">Select Client *</label>
+            <div className="w-full">
+              <label className={CONTROL_LABEL}>Select Client *</label>
               <select
                 name="clientId"
                 value={formData.clientId}
                 onChange={handleChange}
-                className={inputClass}
-                style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                className={CONTROL_SELECT}
               >
                 <option value="">Select Client</option>
                 {clients.map((client) => (
@@ -140,36 +133,34 @@ const DomainForm: React.FC<DomainFormProps> = ({
             </div>
           )}
 
-          <div>
-            <label className="block mb-2 text-xs font-semibold text-gray-600">Domain Name *</label>
+          <div className="w-full">
+            <label className={CONTROL_LABEL}>Domain Name *</label>
             <input
               type="text"
               name="domainName"
               value={formData.domainName}
               onChange={handleChange}
               placeholder="example.com"
-              className={inputClass}
-              style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+              className={CONTROL_INPUT}
             />
           </div>
 
-          <div>
-            <label className="block mb-2 text-xs font-semibold text-gray-600">Notes</label>
+          <div className="w-full">
+            <label className={CONTROL_LABEL}>Notes</label>
             <input
               type="text"
               name="notes"
               value={formData.notes}
               onChange={handleChange}
               placeholder="Optional notes about this domain"
-              className={inputClass}
+              className={CONTROL_INPUT}
             />
           </div>
 
-          <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2">
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity"
-              style={{ backgroundColor: colors.primary }}
+              className="btn-primary inline-flex h-11 min-h-[44px] flex-1 items-center justify-center rounded-xl px-4 text-sm font-semibold"
             >
               {editingDomain ? "Update" : "Add"} Domain
             </button>
@@ -177,7 +168,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
               <button
                 type="button"
                 onClick={onCancelEdit}
-                className="px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all"
+                className="btn-secondary inline-flex h-11 min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold"
               >
                 Cancel
               </button>

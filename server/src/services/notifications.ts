@@ -25,7 +25,7 @@ export async function notifyNewTask(task: any, worker: { email: string; name: st
       subject: `New Task Assigned: ${task.title}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #5B4FFF;">New Task Assigned</h2>
+          <h2 style="color: #0b0f14;">New Task Assigned</h2>
           <p>Hi ${worker.name},</p>
           <p>You have been assigned a new task.</p>
           
@@ -39,7 +39,7 @@ export async function notifyNewTask(task: any, worker: { email: string; name: st
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${FRONTEND_URL}/tasks/${task.id}" 
-               style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
               View Task
             </a>
           </div>
@@ -178,7 +178,7 @@ export async function notifyClientNewTask(task: any, client: { email: string; na
       subject: `New Project Started: ${task.title}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #5B4FFF;">New Project Started</h2>
+          <h2 style="color: #374151;">New Project Started</h2>
           <p>Dear ${client.name},</p>
           <p>We've started working on a new project for you.</p>
           
@@ -191,7 +191,7 @@ export async function notifyClientNewTask(task: any, client: { email: string; na
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${FRONTEND_URL}/tasks/${task.id}" 
-               style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
               View Project
             </a>
           </div>
@@ -307,7 +307,7 @@ export async function notifyNewDomain(domain: any, client: { email: string; name
         subject: `Domain Added: ${domain.domainName}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #5B4FFF;">Domain Added</h2>
+            <h2 style="color: #374151;">Domain Added</h2>
             <p>Hi ${recipient.name},</p>
             <p>${recipient.role === 'client' ? 'A domain has been added to your account.' : 'A new domain has been added.'}</p>
             
@@ -318,7 +318,7 @@ export async function notifyNewDomain(domain: any, client: { email: string; name
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${FRONTEND_URL}/dashboard" 
-                 style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                 style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
                 View Dashboard
               </a>
             </div>
@@ -528,7 +528,7 @@ export async function notifyProfileCompleted(client: { name: string; email: stri
       subject: `Client Profile Completed: ${client.name}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #5B4FFF;">Client Profile Completed</h2>
+          <h2 style="color: #374151;">Client Profile Completed</h2>
           <p>A client has completed their profile setup.</p>
           
           <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -540,7 +540,7 @@ export async function notifyProfileCompleted(client: { name: string; email: stri
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${FRONTEND_URL}/dashboard" 
-               style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
               View Dashboard
             </a>
           </div>
@@ -564,7 +564,7 @@ export async function notifyNewInvoice(invoice: any, client: { email: string; na
       subject: `New Invoice: ${invoice.invoiceNumber}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #5B4FFF;">New Invoice</h2>
+          <h2 style="color: #374151;">New Invoice</h2>
           <p>Dear ${client.name},</p>
           <p>A new invoice has been created for your account.</p>
           
@@ -578,7 +578,7 @@ export async function notifyNewInvoice(invoice: any, client: { email: string; na
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${FRONTEND_URL}/dashboard" 
-               style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
               View Invoice
             </a>
           </div>
@@ -717,7 +717,7 @@ export async function sendWelcomeEmail(client: { email: string; name: string; co
       subject: `Welcome to Our Platform!`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #5B4FFF;">Welcome Aboard! 🎉</h2>
+          <h2 style="color: #374151;">Welcome Aboard! 🎉</h2>
           <p>Dear ${client.name},</p>
           <p>Welcome to our platform! We're excited to have you${client.company ? ` and ${client.company}` : ''} as part of our community.</p>
           
@@ -735,7 +735,7 @@ export async function sendWelcomeEmail(client: { email: string; name: string; co
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${FRONTEND_URL}/dashboard" 
-               style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
               Go to Dashboard
             </a>
           </div>
@@ -761,7 +761,7 @@ export async function sendWorkerWelcomeEmail(worker: { email: string; name: stri
       subject: `Welcome to the Team!`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #5B4FFF;">Welcome to the Team! 🎉</h2>
+          <h2 style="color: #374151;">Welcome to the Team! 🎉</h2>
           <p>Hi ${worker.name},</p>
           <p>Welcome aboard! We're thrilled to have you join our team.</p>
           
@@ -779,7 +779,7 @@ export async function sendWorkerWelcomeEmail(worker: { email: string; name: stri
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${FRONTEND_URL}/dashboard" 
-               style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
               Go to Dashboard
             </a>
           </div>
@@ -805,7 +805,7 @@ export async function notifyAdminNewUser(user: { email: string; name: string; ro
       subject: `New User Registration: ${user.name}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #5B4FFF;">New User Registration</h2>
+          <h2 style="color: #374151;">New User Registration</h2>
           <p>A new user has registered on the platform.</p>
           
           <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -818,7 +818,7 @@ export async function notifyAdminNewUser(user: { email: string; name: string; ro
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${FRONTEND_URL}/dashboard" 
-               style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
               Review User
             </a>
           </div>
@@ -842,7 +842,7 @@ export async function notifyFileUploaded(task: any, client: { email: string; nam
       subject: `New File Uploaded: ${task.title}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #5B4FFF;">New File Uploaded</h2>
+          <h2 style="color: #374151;">New File Uploaded</h2>
           <p>Dear ${client.name},</p>
           <p>A new file has been uploaded to your project.</p>
           
@@ -855,7 +855,7 @@ export async function notifyFileUploaded(task: any, client: { email: string; nam
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${FRONTEND_URL}/tasks/${task.id}" 
-               style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
               View Project
             </a>
           </div>
@@ -884,7 +884,7 @@ export async function sendWeeklySummary(client: { email: string; name: string },
       subject: `Your Weekly Summary`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #5B4FFF;">Your Weekly Summary</h2>
+          <h2 style="color: #374151;">Your Weekly Summary</h2>
           <p>Dear ${client.name},</p>
           <p>Here's what happened this week:</p>
           
@@ -911,7 +911,7 @@ export async function sendWeeklySummary(client: { email: string; name: string },
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${FRONTEND_URL}/dashboard" 
-               style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
               View Dashboard
             </a>
           </div>
@@ -941,14 +941,14 @@ export async function sendMonthlyAdminSummary(summary: {
       subject: `Monthly Admin Summary`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #5B4FFF;">Monthly Summary - Admin Dashboard</h2>
+          <h2 style="color: #374151;">Monthly Summary - Admin Dashboard</h2>
           <p>Here's your monthly business overview:</p>
           
           <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin-top: 0;">Key Metrics</h3>
             
             <div style="margin-bottom: 15px; padding: 15px; background: white; border-radius: 8px;">
-              <div style="font-size: 24px; font-weight: bold; color: #5B4FFF;">${summary.newClients}</div>
+              <div style="font-size: 24px; font-weight: bold; color: #374151;">${summary.newClients}</div>
               <div style="font-size: 12px; color: #6B7280;">New Clients This Month</div>
             </div>
             
@@ -977,7 +977,7 @@ export async function sendMonthlyAdminSummary(summary: {
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${FRONTEND_URL}/dashboard" 
-               style="display: inline-block; padding: 12px 30px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
               View Dashboard
             </a>
           </div>

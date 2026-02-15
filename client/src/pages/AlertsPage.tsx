@@ -8,7 +8,7 @@ interface Task {
   status: string;
   dueDate?: string;
   client?: { name: string };
-  worker?: { name: string };
+  workers?: { user: { name: string } }[];
 }
 
 interface Invoice {
@@ -44,7 +44,7 @@ interface Domain {
 }
 
 const colors = {
-  primary: "#5B4FFF",
+  primary: "rgba(255,255,255,0.9)",
   success: "#10B981",
   warning: "#F59E0B",
   danger: "#EF4444",
@@ -169,7 +169,7 @@ export default function AlertsPage() {
       <div className="flex items-center justify-center min-h-screen bg-app">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.primary }}></div>
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/80"></div>
             <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.danger, animationDelay: '0.1s' }}></div>
             <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.warning, animationDelay: '0.2s' }}></div>
           </div>
@@ -261,8 +261,8 @@ export default function AlertsPage() {
           {expiringHosting.length > 0 && (
             <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-indigo-50">
-                  <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="rounded-lg bg-white/10 p-2">
+                  <svg className="h-6 w-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                   </svg>
                 </div>
@@ -278,7 +278,7 @@ export default function AlertsPage() {
                   return (
                     <div
                       key={domain.id}
-                      className="flex items-center justify-between p-4 transition-all border-l-4 border-indigo-500 rounded-r-lg cursor-pointer bg-indigo-50 hover:shadow-md"
+                      className="flex cursor-pointer items-center justify-between rounded-r-lg border-l-4 border-white/25 bg-white/5 p-4 transition-all hover:bg-white/10"
                       onClick={() => navigate("/dashboard", { state: { activeTab: "domains" } })}
                     >
                       <div className="flex-1">
@@ -341,8 +341,8 @@ export default function AlertsPage() {
           {pendingApprovalTasks.length > 0 && (
             <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 rounded-lg bg-purple-50">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="rounded-lg bg-white/10 p-2">
+                  <svg className="h-6 w-6 text-white/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -356,13 +356,13 @@ export default function AlertsPage() {
                 {pendingApprovalTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center justify-between p-4 transition-all border-l-4 border-purple-500 rounded-r-lg cursor-pointer bg-purple-50 hover:shadow-md"
+                    className="flex cursor-pointer items-center justify-between rounded-r-lg border-l-4 border-white/25 bg-white/5 p-4 transition-all hover:bg-white/10"
                     onClick={() => navigate("/dashboard", { state: { activeTab: "tasks" } })}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">{task.title}</h4>
                       <p className="text-sm text-gray-400">
-                        Worker: {task.worker?.name || "Unassigned"} • Client: {task.client?.name || "Unknown"}
+                        Worker: {task.workers?.length ? task.workers.map((tw) => tw.user.name).join(", ") : "Unassigned"} • Client: {task.client?.name || "Unknown"}
                       </p>
                     </div>
                     <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -3,19 +3,19 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   Global: dark theme, grid background, surfaces
+   Global: theme-aware body and grid (tokens from theme.css)
    --------------------------------------------------------------------------- */
 body {
-  background-color: #0f0f12;
-  color: rgba(255, 255, 255, 0.9);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
 }
 
 /* Page background: grid + vignette (use on login and main layout) */
 .bg-app-grid {
-  background-color: #0f0f12;
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(var(--color-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid-line) 1px, transparent 1px);
   background-size: 32px 32px;
   position: relative;
 }
@@ -27,7 +27,7 @@ body {
   background: radial-gradient(
     ellipse 80% 80% at 50% 50%,
     transparent 0%,
-    rgba(0, 0, 0, 0.35) 100%
+    var(--color-vignette) 100%
   );
   z-index: 0;
 }
@@ -44,13 +44,12 @@ body {
 }
 
 /* Surface utilities */
-.surface-1 { background-color: #0f0f12; }
-.surface-2 { background-color: rgba(255, 255, 255, 0.05); }
-.surface-3 { background-color: rgba(255, 255, 255, 0.08); }
+.surface-1 { background-color: var(--color-surface-1); }
+.surface-2 { background-color: var(--color-surface-2); }
+.surface-3 { background-color: var(--color-surface-3); }
 
 /* ---------------------------------------------------------------------------
-   Form inputs: dark-theme readable (labels, placeholders, focus)
-   Used across login and dashboard forms.
+   Form inputs: theme-aware (labels, placeholders, focus)
    --------------------------------------------------------------------------- */
 input,
 input[type="text"],
@@ -67,34 +66,147 @@ input[type="month"],
 input[type="week"],
 textarea,
 select {
-  color: rgba(255, 255, 255, 0.9);
-  background-color: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--color-text-primary);
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
   border-radius: 0.75rem;
 }
 input::placeholder,
 textarea::placeholder {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--color-placeholder);
   opacity: 1;
 }
 input:hover,
 textarea:hover,
 select:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--color-border-hover);
 }
 input:focus,
 textarea:focus,
 select:focus {
   outline: none;
-  border-color: rgba(91, 79, 255, 0.6);
-  box-shadow: 0 0 0 2px rgba(91, 79, 255, 0.25);
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
 }
 select option {
-  color: #111827;
-  background-color: #ffffff;
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-1);
 }
 
-/* Form context: ensure labels/helper text are visible */
+/* Form context: labels/helper text */
 form label {
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--color-text-secondary);
 }
+
+/* ---------------------------------------------------------------------------
+   Design system: glass card, input-dark, buttons (token-based)
+   --------------------------------------------------------------------------- */
+
+/* Glass card: theme-aware panel with border and blur */
+.glass-card {
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  backdrop-filter: blur(12px);
+}
+
+/* Theme-aware input (used where control classes are not) */
+.input-dark {
+  color: var(--color-text-primary);
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
+  border-radius: 0.75rem;
+}
+.input-dark::placeholder {
+  color: var(--color-placeholder);
+}
+.input-dark:hover {
+  border-color: var(--color-border-hover);
+}
+.input-dark:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+/* Primary button */
+.btn-primary {
+  background-color: var(--color-btn-primary-bg);
+  color: var(--color-btn-primary-text);
+  border: 1px solid var(--color-btn-primary-border);
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.btn-primary:hover {
+  background-color: var(--color-btn-primary-hover-bg);
+  border-color: var(--color-btn-primary-hover-border);
+}
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Secondary button */
+.btn-secondary {
+  background-color: var(--color-btn-secondary-bg);
+  color: var(--color-btn-secondary-text);
+  border: 1px solid var(--color-btn-secondary-border);
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.btn-secondary:hover {
+  background-color: var(--color-btn-secondary-hover-bg);
+  border-color: var(--color-btn-secondary-hover-border);
+}
+.btn-secondary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Ghost button */
+.btn-ghost {
+  background-color: var(--color-btn-ghost-bg);
+  color: var(--color-btn-ghost-text);
+  border: 1px solid var(--color-btn-ghost-border);
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.btn-ghost:hover {
+  background-color: var(--color-btn-ghost-hover-bg);
+  border-color: var(--color-btn-ghost-hover-border);
+}
+.btn-ghost:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+.btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Theme-aware card/panel: visible in both themes */
+.card-panel {
+  background-color: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: var(--color-card-shadow);
+}
+.card-panel-hover:hover {
+  border-color: var(--color-border-hover);
+  background-color: var(--color-surface-3);
+}
+.text-theme-primary { color: var(--color-text-primary); }
+.text-theme-secondary { color: var(--color-text-secondary); }
+.text-theme-muted { color: var(--color-text-muted); }

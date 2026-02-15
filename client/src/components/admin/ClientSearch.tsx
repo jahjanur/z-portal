@@ -59,10 +59,10 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
           placeholder="Search clients..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full px-4 py-3 pl-11 rounded-xl border border-border-subtle bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent"
+          className="input-dark w-full rounded-xl px-4 py-3 pl-11"
         />
         <svg
-          className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3.5 top-1/2"
+          className="absolute w-5 h-5 text-[var(--color-text-muted)] transform -translate-y-1/2 left-3.5 top-1/2"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -76,7 +76,7 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
         </svg>
 
         {search && (
-          <div className="absolute z-50 w-full mt-2 overflow-y-auto border border-border-subtle top-full rounded-xl max-h-80 bg-card backdrop-blur-sm shadow-xl">
+          <div className="absolute z-50 w-full mt-2 overflow-y-auto border border-[var(--color-border)] top-full rounded-xl max-h-80 bg-[var(--color-surface-1)] backdrop-blur-sm shadow-xl shadow-[var(--color-card-shadow)]">
             {filtered.length > 0 ? (
               <div className="p-2">
                 {filtered.map((c) => {
@@ -85,7 +85,7 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
                   return (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between p-3 transition-colors rounded-lg hover:bg-white/10"
+                      className="flex items-center justify-between p-3 transition-colors rounded-lg hover:bg-[var(--color-surface-2)]"
                     >
                       <div 
                         className="flex-1 cursor-pointer"
@@ -95,14 +95,14 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
                         }}
                       >
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-white">{c.name}</p>
+                          <p className="font-semibold text-[var(--color-text-primary)]">{c.name}</p>
                           {isIncomplete && (
                             <span className="px-2 py-0.5 text-xs font-semibold text-amber-400 bg-amber-500/20 rounded-full">
                               Incomplete
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-400">
+                        <p className="text-sm text-[var(--color-text-muted)]">
                           {c.company} • {c.email}
                         </p>
                       </div>
@@ -115,7 +115,7 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
                               handleResendInvite(c.id, c.email);
                             }}
                             disabled={resendingId === c.id}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors border rounded-lg disabled:opacity-50 text-white border-border-medium bg-white/10 hover:bg-white/20"
+                            className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg disabled:opacity-50"
                             title="Resend invite email"
                           >
                             {resendingId === c.id ? (
@@ -155,7 +155,7 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
                 })}
               </div>
             ) : (
-              <div className="p-4 text-center text-gray-400">No clients found</div>
+              <div className="p-4 text-center text-[var(--color-text-muted)]">No clients found</div>
             )}
           </div>
         )}

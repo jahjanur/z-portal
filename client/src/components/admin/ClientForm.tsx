@@ -23,7 +23,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
     company: "",
     email: "",
     password: "",
-    colorHex: "#5B4FFF",
+    colorHex: "#6b7280",
     postalAddress: "",
     domainName: "",
     domainExpiry: "",
@@ -45,7 +45,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
       company: "",
       email: "",
       password: "",
-      colorHex: "#5B4FFF",
+      colorHex: "#6b7280",
       postalAddress: "",
       domainName: "",
       domainExpiry: "",
@@ -71,13 +71,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
   };
 
   return (
-    <div className="mb-6 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+    <div className="mb-6 rounded-2xl card-panel p-6 backdrop-blur-sm">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold text-white/95">Add New Client</h3>
-          <p className="text-sm text-white/60">Create a new client account and send invitation</p>
+          <h3 className="text-xl font-bold text-[var(--color-text-primary)]">Add New Client</h3>
+          <p className="text-sm text-[var(--color-text-muted)]">Create a new client account and send invitation</p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent">
+        <div className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)]">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -89,26 +89,26 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white/80">
+            <label className="mb-2 block text-sm font-semibold text-[var(--color-text-secondary)]">
               Contact Person <span className="text-red-400">*</span>
             </label>
             <input
               placeholder="John Doe"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
+              className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
               required
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white/80">
+            <label className="mb-2 block text-sm font-semibold text-[var(--color-text-secondary)]">
               Company Name <span className="text-red-400">*</span>
             </label>
             <input
               placeholder="Acme Corporation"
               value={formData.company}
               onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
+              className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
               required
             />
           </div>
@@ -116,7 +116,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="block mb-2 text-sm font-semibold text-white/80">
+            <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
               Email Address <span className="text-red-400">*</span>
             </label>
             <input
@@ -124,12 +124,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
+              className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
               required
             />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-semibold text-white/80">
+            <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
               Password <span className="text-red-400">*</span>
             </label>
             <input
@@ -137,22 +137,21 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
               placeholder="••••••••"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
+              className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
               required
             />
           </div>
         </div>
 
         <div>
-          <label className="block mb-2 text-sm font-semibold text-white/80">
+          <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
             Postal Address <span className="text-red-400">*</span>
           </label>
           <input
             placeholder="P.O. Box 123, City, Postal Code"
             value={formData.postalAddress}
             onChange={(e) => setFormData({ ...formData, postalAddress: e.target.value })}
-            className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
-            style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+            className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
             required
           />
         </div>
@@ -164,8 +163,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
             onClick={() => setShowHostingFields(!showHostingFields)}
             className={`flex items-center gap-2 rounded-xl border-2 px-4 py-3 text-sm font-semibold transition-all ${
               showHostingFields
-                ? "border-accent bg-accent/15 text-accent"
-                : "border-white/20 bg-white/5 text-white/90 hover:bg-white/10"
+                ? "border-[var(--color-border-focus)] bg-[var(--color-surface-3)] text-[var(--color-text-primary)]"
+                : "border-[var(--color-border-hover)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-3)]"
             }`}
           >
             {showHostingFields ? (
@@ -189,13 +188,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
 
       {/* Domain & Hosting Fields (Optional) */}
       {showHostingFields && (
-        <div className="mt-4 rounded-xl border-2 border-dashed border-accent/40 bg-accent/10 p-5">
+        <div className="mt-4 rounded-xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)] p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h4 className="text-sm font-bold text-white/95">Domain & Hosting Information</h4>
+            <h4 className="text-sm font-bold text-[var(--color-text-primary)]">Domain & Hosting Information</h4>
             <button
               type="button"
               onClick={setDefaultDates}
-              className="flex items-center gap-2 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+              className="flex items-center gap-2 btn-primary rounded-lg px-3 py-2 text-xs"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -207,54 +206,50 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="block mb-2 text-sm font-semibold text-white/80">
+                <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
                   Domain Name
                 </label>
                 <input
                   placeholder="example.com"
                   value={formData.domainName}
                   onChange={(e) => setFormData({ ...formData, domainName: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
-                  style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                  className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-semibold text-white/80">
+                <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
                   Domain Expiry Date
                 </label>
                 <input
                   type="date"
                   value={formData.domainExpiry}
                   onChange={(e) => setFormData({ ...formData, domainExpiry: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
-                  style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                  className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
-                <label className="block mb-2 text-sm font-semibold text-white/80">
+                <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
                   Hosting Plan
                 </label>
                 <input
                   placeholder="Basic / Premium / Enterprise"
                   value={formData.hostingPlan}
                   onChange={(e) => setFormData({ ...formData, hostingPlan: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
-                  style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                  className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
                 />
               </div>
               <div>
-                <label className="block mb-2 text-sm font-semibold text-white/80">
+                <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
                   Hosting Expiry Date
                 </label>
                 <input
                   type="date"
                   value={formData.hostingExpiry}
                   onChange={(e) => setFormData({ ...formData, hostingExpiry: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0"
-                  style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                  className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
                 />
               </div>
             </div>
@@ -263,11 +258,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
       )}
 
       {/* Submit Button */}
-      <div className="mt-6 border-t border-white/10 pt-6">
+      <div className="mt-6 border-t border-[var(--color-border)] pt-6">
         <button
           type="button"
           onClick={handleSubmit}
-          className="w-full rounded-xl bg-accent px-6 py-4 text-sm font-semibold text-white shadow-lg shadow-accent/20 transition-all hover:opacity-90 hover:shadow-accent/30"
+          className="btn-primary w-full rounded-xl px-6 py-4 text-sm shadow-lg transition-all"
         >
           <span className="flex items-center justify-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -276,7 +271,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
             Add Client & Send Invite
           </span>
         </button>
-        <p className="mt-3 text-center text-xs text-white/50">
+        <p className="mt-3 text-center text-xs text-[var(--color-text-muted)]">
           <span className="text-red-400">*</span> Required fields • Client will receive an email to complete their profile
         </p>
       </div>

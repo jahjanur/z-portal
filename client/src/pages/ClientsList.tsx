@@ -169,7 +169,7 @@ export default function ClientsList() {
             <button
               onClick={() => setFilter("all")}
               className={`px-4 py-2 text-sm font-semibold rounded-full transition-all ${
-                filter === "all" ? "bg-white text-app" : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
+                filter === "all" ? "bg-white/12 text-white border border-white/20" : "text-white/70 border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white/90"
               }`}
             >
               All ({clients.length})
@@ -177,7 +177,7 @@ export default function ClientsList() {
             <button
               onClick={() => setFilter("complete")}
               className={`px-4 py-2 text-sm font-semibold rounded-full transition-all ${
-                filter === "complete" ? "bg-green-500 text-white" : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
+                filter === "complete" ? "bg-white/12 text-white border border-white/20" : "text-white/70 border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white/90"
               }`}
             >
               Complete ({completeCount})
@@ -185,7 +185,7 @@ export default function ClientsList() {
             <button
               onClick={() => setFilter("incomplete")}
               className={`px-4 py-2 text-sm font-semibold rounded-full transition-all ${
-                filter === "incomplete" ? "bg-amber-500 text-white" : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
+                filter === "incomplete" ? "bg-white/12 text-white border border-white/20" : "text-white/70 border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white/90"
               }`}
             >
               Incomplete ({incompleteCount})
@@ -198,7 +198,7 @@ export default function ClientsList() {
               placeholder="Search clients..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 pl-10 text-sm bg-white text-gray-900 border border-gray-300 rounded-xl md:w-64 focus:outline-none focus:ring-2 focus:ring-white/30"
+              className="input-dark w-full rounded-xl px-4 py-2 pl-10 text-sm md:w-64"
             />
             <svg className="absolute w-5 h-5 text-gray-500 transform -translate-y-1/2 left-3 top-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -272,7 +272,7 @@ export default function ClientsList() {
                         e.stopPropagation();
                         resendInvite(client.id);
                       }}
-                      className="px-3 py-1.5 mt-2 text-xs font-semibold rounded-full bg-white text-app hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="btn-secondary mt-2 px-3 py-1.5 text-xs rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={sendingInviteId === client.id}
                     >
                       {sendingInviteId === client.id ? "Sending..." : "Resend Invite"}

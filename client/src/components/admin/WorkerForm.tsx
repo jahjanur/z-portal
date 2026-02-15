@@ -3,10 +3,9 @@ import toast from "react-hot-toast";
 
 interface WorkerFormProps {
   onSubmit: (data: { email: string; password: string; name: string }) => Promise<void>;
-  colors: { primary: string };
 }
 
-const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, colors }) => {
+const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit }) => {
   const [formData, setFormData] = useState({ email: "", password: "", name: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -56,12 +55,12 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, colors }) => {
   };
 
   return (
-    <div className="mb-6 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
-      <h3 className="mb-4 text-sm font-semibold text-white/90">Add New Worker</h3>
+    <div className="mb-6 rounded-xl card-panel p-5 backdrop-blur-sm">
+      <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-primary)]">Add New Worker</h3>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-white/80">Full Name *</label>
+            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Full Name *</label>
             <input
               placeholder="e.g., John Doe"
               value={formData.name}
@@ -69,11 +68,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, colors }) => {
               onKeyPress={handleKeyPress}
               disabled={isSubmitting}
               required
-              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+              className="input-dark w-full rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-white/80">Email Address *</label>
+            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Email Address *</label>
             <input
               type="email"
               placeholder="e.g., john@example.com"
@@ -82,11 +81,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, colors }) => {
               onKeyPress={handleKeyPress}
               disabled={isSubmitting}
               required
-              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+              className="input-dark w-full rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-white/80">Password *</label>
+            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Password *</label>
             <input
               type="password"
               placeholder="Minimum 6 characters"
@@ -96,14 +95,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, colors }) => {
               disabled={isSubmitting}
               required
               minLength={6}
-              className="w-full rounded-xl border border-white/10 bg-white/10 px-4 py-2.5 text-sm text-white/95 placeholder:text-white/35 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+              className="input-dark w-full rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div className="flex items-end">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-primary w-full rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting ? "Adding..." : "Add Worker"}
             </button>

@@ -36,39 +36,34 @@ export default function AuthPage() {
 
   return (
     <div className="relative flex items-center justify-center min-h-screen p-6 bg-app-grid">
-      {/* Dark overlay behind card for readability */}
       <div
-        className="fixed inset-0 z-0 bg-gradient-to-b from-black/50 via-black/30 to-black/50"
+        className="fixed inset-0 z-0 bg-gradient-to-b from-[var(--color-overlay)] via-[var(--color-overlay)]/70 to-[var(--color-overlay)]"
         aria-hidden
       />
       <div className="relative z-10 w-full max-w-md">
-        {/* Glass card */}
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-xl backdrop-blur-2xl">
-          {/* Soft inner highlight */}
+        <div className="relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-2)] shadow-xl backdrop-blur-2xl">
           <div
-            className="pointer-events-none absolute inset-0 rounded-3xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]"
+            className="pointer-events-none absolute inset-0 rounded-3xl shadow-[inset_0_1px_0_0_var(--color-border)]"
             aria-hidden
           />
           <div className="relative p-10">
-            {/* Secure Portal pill */}
             <div className="mb-8 flex justify-center">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2">
                 <div className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
-                <span className="text-sm font-medium text-white/80">Secure Portal</span>
+                <span className="text-sm font-medium text-[var(--color-text-secondary)]">Secure Portal</span>
               </div>
             </div>
 
-            {/* Headline + subtext */}
             <div className="mb-8 text-center">
-              <h1 className="mb-2 text-3xl font-bold tracking-tight text-white/95 sm:text-4xl">
-                Welcome <span className="text-white/70">Back</span>
+              <h1 className="mb-2 text-3xl font-bold tracking-tight text-[var(--color-text-primary)] sm:text-4xl">
+                Welcome <span className="text-[var(--color-text-muted)]">Back</span>
               </h1>
-              <p className="text-sm text-white/60">Sign in to your account</p>
+              <p className="text-sm text-[var(--color-text-muted)]">Sign in to your account</p>
             </div>
 
             <form onSubmit={handleLogin} className="flex flex-col gap-5">
               <div>
-                <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-white/80">
+                <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-[var(--color-text-secondary)]">
                   Email
                 </label>
                 <input
@@ -79,11 +74,11 @@ export default function AuthPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
-                  className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/10 text-white/95 placeholder:text-white/30 transition-colors hover:border-white/20 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0 focus:ring-offset-transparent"
+                  className="input-dark w-full px-4 py-3"
                 />
               </div>
               <div>
-                <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-white/80">
+                <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-[var(--color-text-secondary)]">
                   Password
                 </label>
                 <input
@@ -94,13 +89,13 @@ export default function AuthPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
-                  className="w-full px-4 py-3 rounded-xl border border-white/10 bg-white/10 text-white/95 placeholder:text-white/30 transition-colors hover:border-white/20 focus:border-accent focus:ring-2 focus:ring-accent/40 focus:ring-offset-0 focus:ring-offset-transparent"
+                  className="input-dark w-full px-4 py-3"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-1 w-full rounded-2xl bg-accent py-3.5 text-base font-semibold text-white shadow-lg shadow-accent/20 transition-all hover:bg-accent/90 hover:shadow-accent/30 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-accent"
+                className="btn-primary mt-1 w-full rounded-2xl py-3.5 text-base shadow-lg transition-all disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -117,17 +112,17 @@ export default function AuthPage() {
             </form>
 
             {message && (
-              <div className="mt-5 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-                <svg className="h-5 w-5 shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <div className="mt-5 flex items-start gap-3 rounded-xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] p-4">
+                <svg className="h-5 w-5 shrink-0 text-[var(--color-destructive-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p className="text-sm font-medium text-red-300">{message}</p>
+                <p className="text-sm font-medium text-[var(--color-destructive-text)]">{message}</p>
               </div>
             )}
 
-            <div className="mt-6 border-t border-white/10 pt-6 text-center">
-              <p className="text-sm text-white/55">
-                Need an account? <span className="font-semibold text-white/75">Contact your administrator</span>
+            <div className="mt-6 border-t border-[var(--color-border)] pt-6 text-center">
+              <p className="text-sm text-[var(--color-text-muted)]">
+                Need an account? <span className="font-semibold text-[var(--color-text-secondary)]">Contact your administrator</span>
               </p>
             </div>
           </div>

@@ -4,7 +4,7 @@ interface Task {
   id: number;
   title: string;
   status?: string | null;
-  worker?: { name: string } | null;
+  workers?: { user: { name: string } }[];
 }
 
 interface RecentProjectCardProps {
@@ -30,7 +30,7 @@ const RecentProjectCard: React.FC<RecentProjectCardProps> = ({
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <h4 className="font-semibold text-white">{task.title}</h4>
-          <p className="text-sm text-gray-500">{task.worker?.name || "Unassigned"}</p>
+          <p className="text-sm text-[var(--color-text-muted)]">{task.workers?.length ? task.workers.map((tw) => tw.user.name).join(", ") : "Unassigned"}</p>
         </div>
         <span
           className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(

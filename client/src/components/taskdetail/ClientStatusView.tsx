@@ -47,15 +47,15 @@ const ClientStatusView: React.FC<ClientStatusViewProps> = ({ currentStatus }) =>
   const color = getProgressColor();
 
   return (
-    <div className="p-6 mt-6 border border-gray-200 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="card-panel mt-6 rounded-lg p-6 shadow-lg">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-gray-900">Project Progress</h3>
+        <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Project Progress</h3>
         <span className="text-2xl font-bold" style={{ color }}>
           {progress}%
         </span>
       </div>
       
-      <div className="w-full h-4 mb-3 overflow-hidden bg-gray-200 rounded-full">
+      <div className="w-full h-4 mb-3 overflow-hidden bg-[var(--color-surface-3)] rounded-full">
         <div
           className="h-full transition-all duration-500 rounded-full"
           style={{ width: `${progress}%`, backgroundColor: color }}
@@ -67,7 +67,7 @@ const ClientStatusView: React.FC<ClientStatusViewProps> = ({ currentStatus }) =>
           className="w-2 h-2 rounded-full animate-pulse" 
           style={{ backgroundColor: color }}
         ></div>
-        <p className="text-sm font-medium text-gray-700">{getStatusLabel()}</p>
+        <p className="text-sm font-medium text-[var(--color-text-secondary)]">{getStatusLabel()}</p>
       </div>
     </div>
   );

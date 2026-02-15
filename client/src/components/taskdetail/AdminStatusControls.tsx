@@ -11,10 +11,6 @@ const AdminStatusControls: React.FC<AdminStatusControlsProps> = ({
   onStatusChange,
   onApproveCompletion,
 }) => {
-  const colors = {
-    primary: "#5B4FFF",
-  };
-
   return (
     <div className="flex flex-wrap gap-2 mt-6">
       <button
@@ -38,8 +34,7 @@ const AdminStatusControls: React.FC<AdminStatusControlsProps> = ({
       {currentStatus === "PENDING_APPROVAL" && (
         <button
           onClick={onApproveCompletion}
-          className="px-4 py-2 text-sm font-semibold text-white transition-opacity rounded-lg hover:opacity-90"
-          style={{ backgroundColor: colors.primary }}
+          className="btn-primary px-4 py-2 text-sm font-semibold"
         >
           ✓ Approve Completion
         </button>

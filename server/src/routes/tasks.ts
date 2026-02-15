@@ -26,6 +26,20 @@ router.get("/", verifyJWT, async (req: any, res) => {
     const { role, userId } = req.user;
     let tasks;
 
+    const workersInclude = {
+          workers: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  name: true,
+                  role: true
+                }
+              }
+            }
+          }
+        };
     if (role === "ADMIN") {
       tasks = await prisma.task.findMany({ 
         include: { 
@@ -38,15 +52,8 @@ router.get("/", verifyJWT, async (req: any, res) => {
               role: true
             }
           }, 
-          worker: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              role: true
-            }
-          },
-          project: {  // ADD PROJECT
+          ...workersInclude,
+          project: {
             select: {
               id: true,
               name: true,
@@ -59,7 +66,7 @@ router.get("/", verifyJWT, async (req: any, res) => {
       });
     } else if (role === "WORKER") {
       tasks = await prisma.task.findMany({ 
-        where: { workerId: userId }, 
+        where: { workers: { some: { userId } } }, 
         include: { 
           client: {
             select: {
@@ -70,7 +77,8 @@ router.get("/", verifyJWT, async (req: any, res) => {
               role: true
             }
           },
-          project: {  // ADD PROJECT
+          ...workersInclude,
+          project: {
             select: {
               id: true,
               name: true,
@@ -85,15 +93,8 @@ router.get("/", verifyJWT, async (req: any, res) => {
       tasks = await prisma.task.findMany({ 
         where: { clientId: userId }, 
         include: { 
-          worker: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              role: true
-            }
-          },
-          project: {  // ADD PROJECT
+          ...workersInclude,
+          project: {
             select: {
               id: true,
               name: true,
@@ -133,15 +134,19 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
             role: true
           }
         },
-        worker: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true
+        workers: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true
+              }
+            }
           }
         },
-        project: {  // ADD PROJECT
+        project: {
           select: {
             id: true,
             name: true,
@@ -186,7 +191,8 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
       return res.status(404).json({ error: "Task not found" });
     }
 
-    if (role === "WORKER" && task.workerId !== userId) {
+    const isAssignedWorker = task.workers.some((tw) => tw.userId === userId);
+    if (role === "WORKER" && !isAssignedWorker) {
       return res.status(403).json({ error: "Not authorized to view this task" });
     }
     if (role === "CLIENT" && task.clientId !== userId) {
@@ -208,7 +214,8 @@ router.post("/", verifyJWT, async (req: any, res) => {
       return res.status(403).json({ error: "Only admins can create tasks" });
     }
 
-    const { title, description, clientId, workerId, status, dueDate, projectId } = req.body;  // ADD projectId
+    const { title, description, clientId, workerIds, status, dueDate, projectId } = req.body;
+    const workerIdList = Array.isArray(workerIds) ? workerIds : [];
 
     if (!title || !clientId) {
       return res.status(400).json({ error: "Title and clientId are required" });
@@ -221,16 +228,15 @@ router.post("/", verifyJWT, async (req: any, res) => {
       return res.status(400).json({ error: "Invalid client ID" });
     }
 
-    if (workerId) {
+    for (const wid of workerIdList) {
       const worker = await prisma.user.findUnique({
-        where: { id: workerId }
+        where: { id: Number(wid) }
       });
       if (!worker || worker.role !== "WORKER") {
-        return res.status(400).json({ error: "Invalid worker ID" });
+        return res.status(400).json({ error: `Invalid worker ID: ${wid}` });
       }
     }
 
-    // Validate projectId if provided
     if (projectId) {
       const project = await prisma.project.findUnique({
         where: { id: projectId }
@@ -240,21 +246,18 @@ router.post("/", verifyJWT, async (req: any, res) => {
       }
     }
 
-    const taskData: any = {
-      title,
-      description: description || null,
-      clientId,
-      workerId: workerId || null,
-      projectId: projectId || null,  // ADD projectId
-      status: status || "PENDING",
-    };
-
-    if (dueDate) {
-      taskData.dueDate = new Date(dueDate);
-    }
-
     const task = await prisma.task.create({ 
-      data: taskData,
+      data: {
+        title,
+        description: description || null,
+        clientId,
+        projectId: projectId || null,
+        status: status || "PENDING",
+        ...(dueDate && { dueDate: new Date(dueDate) }),
+        workers: workerIdList.length
+          ? { create: workerIdList.map((userId: number) => ({ userId: Number(userId) })) }
+          : undefined,
+      },
       include: {
         client: {
           select: {
@@ -265,15 +268,19 @@ router.post("/", verifyJWT, async (req: any, res) => {
             role: true
           }
         },
-        worker: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true
+        workers: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true
+              }
+            }
           }
         },
-        project: {  // ADD PROJECT
+        project: {
           select: {
             id: true,
             name: true,
@@ -283,8 +290,8 @@ router.post("/", verifyJWT, async (req: any, res) => {
       }
     });
 
-    if (task.worker) {
-      await notifyNewTask(task, { email: task.worker.email, name: task.worker.name });
+    for (const tw of task.workers) {
+      await notifyNewTask(task, { email: tw.user.email, name: tw.user.name });
     }
 
     res.status(201).json(task);
@@ -302,14 +309,16 @@ router.patch("/:id/status", verifyJWT, async (req: any, res) => {
     const { status } = req.body;
 
     const existingTask = await prisma.task.findUnique({
-      where: { id: taskId }
+      where: { id: taskId },
+      include: { workers: { include: { user: true } } }
     });
 
     if (!existingTask) {
       return res.status(404).json({ error: "Task not found" });
     }
 
-    if (role === "WORKER" && existingTask.workerId !== userId) {
+    const isAssignedWorker = existingTask.workers.some((tw) => tw.userId === userId);
+    if (role === "WORKER" && !isAssignedWorker) {
       return res.status(403).json({ error: "Not authorized to update this task" });
     }
     if (role === "CLIENT") {
@@ -329,15 +338,19 @@ router.patch("/:id/status", verifyJWT, async (req: any, res) => {
             role: true
           }
         },
-        worker: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true
+        workers: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true
+              }
+            }
           }
         },
-        project: {  // ADD PROJECT
+        project: {
           select: {
             id: true,
             name: true,
@@ -349,16 +362,20 @@ router.patch("/:id/status", verifyJWT, async (req: any, res) => {
 
     if (status && status !== existingTask.status) {
       if (status === 'PENDING_APPROVAL') {
-        if (updatedTask.worker) {
-          await notifyTaskPendingApproval(updatedTask, { name: updatedTask.worker.name });
+        for (const tw of existingTask.workers) {
+          await notifyTaskPendingApproval(updatedTask, { name: tw.user.name });
         }
       } else if (status === 'COMPLETED') {
-        const recipients = [];
-        if (updatedTask.worker) {
-          recipients.push({ email: updatedTask.worker.email, name: updatedTask.worker.name, role: 'WORKER' });
+        const recipients: { email: string; name: string; role: string }[] = [];
+        for (const tw of existingTask.workers) {
+          recipients.push({ email: tw.user.email, name: tw.user.name, role: 'WORKER' });
         }
         if (updatedTask.client) {
-          recipients.push({ email: updatedTask.client.email, name: updatedTask.client.name, role: 'CLIENT' });
+          recipients.push({
+            email: updatedTask.client.email,
+            name: updatedTask.client.name,
+            role: 'CLIENT'
+          });
         }
         if (recipients.length > 0) {
           await notifyTaskCompleted(updatedTask, recipients);
@@ -420,7 +437,8 @@ router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) 
     }
 
     const task = await prisma.task.findUnique({
-      where: { id: parseInt(taskId) }
+      where: { id: parseInt(taskId) },
+      include: { workers: true }
     });
 
     if (!task) {
@@ -428,8 +446,8 @@ router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) 
     }
 
     const { role, userId: authUserId } = req.user;
-    
-    if (role === "WORKER" && task.workerId !== authUserId) {
+    const canComment = task.workers.some((tw) => tw.userId === authUserId);
+    if (role === "WORKER" && !canComment) {
       return res.status(403).json({ error: "Not authorized to comment on this task" });
     }
     if (role === "CLIENT" && task.clientId !== authUserId) {
@@ -499,32 +517,41 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
     const taskId = Number(req.params.id);
 
     const existingTask = await prisma.task.findUnique({
-      where: { id: taskId }
+      where: { id: taskId },
+      include: { workers: { include: { user: true } } }
     });
 
     if (!existingTask) {
       return res.status(404).json({ error: "Task not found" });
     }
 
-    if (role === "WORKER" && existingTask.workerId !== userId) {
+    const isAssignedWorker = existingTask.workers.some((tw) => tw.userId === userId);
+    if (role === "WORKER" && !isAssignedWorker) {
       return res.status(403).json({ error: "Not authorized to update this task" });
     }
     if (role === "CLIENT") {
       return res.status(403).json({ error: "Clients cannot update tasks" });
     }
 
-    const { title, description, status, dueDate, workerId, clientId, projectId } = req.body;  // ADD projectId
+    const { title, description, status, dueDate, workerIds, clientId, projectId } = req.body;
     const updateData: any = {};
 
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
     if (status !== undefined) updateData.status = status;
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
-    if (projectId !== undefined) updateData.projectId = projectId;  // ADD projectId
+    if (projectId !== undefined) updateData.projectId = projectId;
 
     if (role === "ADMIN") {
-      if (workerId !== undefined) updateData.workerId = workerId;
       if (clientId !== undefined) updateData.clientId = clientId;
+      if (workerIds !== undefined && Array.isArray(workerIds)) {
+        await prisma.taskWorker.deleteMany({ where: { taskId } });
+        if (workerIds.length > 0) {
+          await prisma.taskWorker.createMany({
+            data: workerIds.map((uid: number) => ({ taskId, userId: Number(uid) }))
+          });
+        }
+      }
     }
 
     const updatedTask = await prisma.task.update({
@@ -540,12 +567,16 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
             role: true
           }
         },
-        worker: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true
+        workers: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+                role: true
+              }
+            }
           }
         },
         project: {
@@ -559,15 +590,13 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
     });
 
     if (status && status !== existingTask.status) {
+      const workersList = updatedTask.workers.map((tw) => tw.user);
       if (status === 'PENDING_APPROVAL') {
-        if (updatedTask.worker) {
-          await notifyTaskPendingApproval(updatedTask, { name: updatedTask.worker.name });
+        for (const w of workersList) {
+          await notifyTaskPendingApproval(updatedTask, { name: w.name });
         }
       } else if (status === 'COMPLETED') {
-        const recipients = [];
-        if (updatedTask.worker) {
-          recipients.push({ email: updatedTask.worker.email, name: updatedTask.worker.name, role: 'WORKER' });
-        }
+        const recipients = workersList.map((w) => ({ email: w.email, name: w.name, role: 'WORKER' as const }));
         if (updatedTask.client) {
           recipients.push({ email: updatedTask.client.email, name: updatedTask.client.name, role: 'CLIENT' });
         }

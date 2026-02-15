@@ -9,22 +9,17 @@ const WorkerStatusControls: React.FC<WorkerStatusControlsProps> = ({
   currentStatus,
   onRequestCompletion,
 }) => {
-  const colors = {
-    primary: "#5B4FFF",
-  };
-
   return (
     <div className="flex flex-wrap gap-2 mt-6">
       {currentStatus !== "COMPLETED" && currentStatus !== "PENDING_APPROVAL" ? (
         <button
           onClick={onRequestCompletion}
-          className="px-4 py-2 text-sm font-semibold text-white transition-opacity rounded-lg hover:opacity-90"
-          style={{ backgroundColor: colors.primary }}
+          className="btn-primary px-4 py-2 text-sm font-semibold"
         >
           Request Completion
         </button>
       ) : currentStatus === "PENDING_APPROVAL" ? (
-        <div className="px-4 py-2 text-sm font-medium text-purple-700 border border-purple-200 rounded-lg bg-purple-50">
+        <div className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white/80">
           ⏳ Waiting for admin approval
         </div>
       ) : (

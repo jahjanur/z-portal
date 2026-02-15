@@ -52,7 +52,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--color-overlay)] backdrop-blur-sm"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -60,19 +60,19 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         ref={panelRef}
-        className={`relative w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-xl shadow-black/20 backdrop-blur-2xl ${className}`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-modal-surface)] shadow-xl shadow-[var(--color-card-shadow)] backdrop-blur-2xl ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)] pointer-events-none" />
+        <div className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_0_var(--color-border)] pointer-events-none" />
         {title !== undefined ? (
-          <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-            <div id="modal-title" className="text-lg font-semibold text-white/95">
+          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-6 py-4">
+            <div id="modal-title" className="text-lg font-semibold text-[var(--color-text-primary)]">
               {title}
             </div>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white/90 focus:outline-none focus:ring-2 focus:ring-accent/40"
+              className="rounded-lg p-2 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
               aria-label="Close"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,7 +84,7 @@ export const Modal: React.FC<ModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-3 right-3 z-10 rounded-lg p-2 text-white/60 transition-colors hover:bg-white/10 hover:text-white/90 focus:outline-none focus:ring-2 focus:ring-accent/40"
+            className="absolute top-3 right-3 z-10 rounded-lg p-2 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
             aria-label="Close"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

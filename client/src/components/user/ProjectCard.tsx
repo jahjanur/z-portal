@@ -100,7 +100,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           {(task.files || []).length} files attached
         </span>
         <button
-          className="px-4 py-2 text-sm font-semibold rounded-full bg-white text-app hover:bg-gray-200 transition-all"
+          className="btn-secondary rounded-full px-4 py-2 text-sm transition-all"
         >
           View Details →
         </button>

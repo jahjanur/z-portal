@@ -46,12 +46,11 @@ interface Task {
   id: number;
   title: string;
   description?: string;
-  workerId?: number;
   clientId: number;
   projectId?: number;
   status: string;
   dueDate?: string;
-  worker?: User;
+  workers?: { user: User }[];
   client?: User;
   project?: Project;
 }
@@ -86,9 +85,9 @@ interface Domain {
 }
 
 const colors = {
-  primary: "#5B4FFF",
-  secondary: "#7C73FF",
-  accent: "#FFA726",
+  primary: "rgba(255,255,255,0.12)",
+  secondary: "#374151",
+  accent: "#6B7280",
   light: "#F8F9FA",
   dark: "#1A1A2E",
 };
@@ -232,15 +231,17 @@ const RoleAdmin: React.FC = () => {
     title: string;
     description: string;
     clientId: string;
-    workerId: string;
+    workerIds: number[];
     dueDate: string;
     projectId: string;
   }) => {
     try {
       await API.post("/tasks", {
-        ...taskData,
+        title: taskData.title,
+        description: taskData.description,
         clientId: parseInt(taskData.clientId, 10),
-        workerId: taskData.workerId ? parseInt(taskData.workerId, 10) : null,
+        workerIds: taskData.workerIds || [],
+        dueDate: taskData.dueDate || null,
         projectId: taskData.projectId ? parseInt(taskData.projectId, 10) : null,
       });
       fetchAll();
@@ -372,14 +373,14 @@ const RoleAdmin: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-app">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg)]">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-bounce bg-white/80" />
-            <div className="w-3 h-3 rounded-full animate-bounce bg-white/60" style={{ animationDelay: "0.1s" }} />
-            <div className="w-3 h-3 rounded-full animate-bounce bg-white/40" style={{ animationDelay: "0.2s" }} />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-80" />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-60" style={{ animationDelay: "0.1s" }} />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-40" style={{ animationDelay: "0.2s" }} />
           </div>
-          <span className="text-lg font-medium text-gray-400">Loading...</span>
+          <span className="text-lg font-medium text-[var(--color-text-muted)]">Loading...</span>
         </div>
       </div>
     );
@@ -387,24 +388,24 @@ const RoleAdmin: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-app">
-        <div className="max-w-md p-6 border border-red-500/30 bg-red-500/10 rounded-2xl">
-          <p className="mb-2 text-lg font-semibold text-red-300">Error:</p>
-          <p className="text-red-400">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg)]">
+        <div className="max-w-md p-6 border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] rounded-2xl">
+          <p className="mb-2 text-lg font-semibold text-[var(--color-destructive-text)]">Error:</p>
+          <p className="text-[var(--color-destructive-text)]">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen py-24 bg-app">
+    <div className="min-h-screen py-24 bg-[var(--color-bg)]">
       <div className="px-4 mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-bold tracking-tight text-white/95">
-            Admin <span className="text-white/60">Dashboard</span>
+          <h1 className="mb-2 text-4xl font-bold tracking-tight text-[var(--color-text-primary)]">
+            Admin <span className="text-[var(--color-text-muted)]">Dashboard</span>
           </h1>
-          <p className="text-lg text-white/60">Manage workers, clients, tasks, invoices, domains, and timesheets</p>
+          <p className="text-lg text-[var(--color-text-muted)]">Manage workers, clients, tasks, invoices, domains, and timesheets</p>
         </div>
 
         {/* Tab Navigation */}
@@ -429,26 +430,26 @@ const RoleAdmin: React.FC = () => {
         )}
 
         {/* Dynamic Content */}
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-black/10 backdrop-blur-xl">
+        <div className="rounded-2xl card-panel p-6 shadow-xl backdrop-blur-xl">
           {activeTab === "workers" && (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-white">Workers Management</h2>
-              <WorkerForm onSubmit={createWorker} colors={colors} />
+              <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Workers Management</h2>
+              <WorkerForm onSubmit={createWorker} />
               <WorkersList workers={workers} onDelete={deleteUser} />
             </>
           )}
 
           {activeTab === "clients" && (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-white">Clients Management</h2>
+              <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Clients Management</h2>
               <ClientForm onSubmit={createClient} colors={colors} />
               
               {/* Incomplete Profiles Section */}
               <div className="mt-8">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
                     Incomplete Profiles 
-                    <span className="ml-2 text-sm font-normal text-gray-500">
+                    <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
                       ({incompleteClients.length})
                     </span>
                   </h3>
@@ -462,22 +463,22 @@ const RoleAdmin: React.FC = () => {
                     getProfileStatus={(client) => client.profileStatus}
                     renderItem={(c) => (
                       <div>
-                        <p className="font-semibold text-white">{c.name}</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="font-semibold text-[var(--color-text-primary)]">{c.name}</p>
+                        <p className="text-sm text-[var(--color-text-muted)]">
                           {c.company} • {c.email}
                         </p>
                         {c.postalAddress && (
-                          <p className="mt-1 text-xs text-gray-500">📍 {c.postalAddress}</p>
+                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">📍 {c.postalAddress}</p>
                         )}
                       </div>
                     )}
                   />
                 ) : (
-                  <div className="py-8 text-center rounded-xl bg-white/5 border border-border-subtle">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="py-8 text-center rounded-xl card-panel">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p className="text-sm font-medium text-gray-400">All profiles are complete! 🎉</p>
+                    <p className="text-sm font-medium text-[var(--color-text-muted)]">All profiles are complete! 🎉</p>
                   </div>
                 )}
               </div>
@@ -486,16 +487,16 @@ const RoleAdmin: React.FC = () => {
               <div className="mt-8">
                 <button
                   onClick={() => setShowCompletedProfiles(!showCompletedProfiles)}
-                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors rounded-xl bg-white/5 border border-border-subtle hover:bg-white/10"
+                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:bg-[var(--color-surface-3)]"
                 >
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
                     Complete Profiles 
-                    <span className="ml-2 text-sm font-normal text-gray-500">
+                    <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
                       ({completeClients.length})
                     </span>
                   </h3>
                   <svg 
-                    className={`w-5 h-5 text-gray-500 transition-transform ${showCompletedProfiles ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-[var(--color-text-muted)] transition-transform ${showCompletedProfiles ? 'rotate-180' : ''}`}
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -513,18 +514,18 @@ const RoleAdmin: React.FC = () => {
                         getProfileStatus={(client) => client.profileStatus}
                         renderItem={(c) => (
                           <div>
-                            <p className="font-semibold text-white">{c.name}</p>
-                            <p className="text-sm text-gray-500">
+                            <p className="font-semibold text-[var(--color-text-primary)]">{c.name}</p>
+                            <p className="text-sm text-[var(--color-text-muted)]">
                               {c.company} • {c.email}
                             </p>
                             {c.postalAddress && (
-                              <p className="mt-1 text-xs text-gray-500">📍 {c.postalAddress}</p>
+                              <p className="mt-1 text-xs text-[var(--color-text-muted)]">📍 {c.postalAddress}</p>
                             )}
                           </div>
                         )}
                       />
                     ) : (
-                      <p className="py-4 text-sm text-center text-gray-500 rounded-xl bg-white/5">No complete profiles yet</p>
+                      <p className="py-4 text-sm text-center text-[var(--color-text-muted)] rounded-xl bg-[var(--color-surface-2)]">No complete profiles yet</p>
                     )}
                   </div>
                 )}
@@ -534,32 +535,31 @@ const RoleAdmin: React.FC = () => {
 
           {activeTab === "tasks" && (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-white">Tasks Management</h2>
+              <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Tasks Management</h2>
               <TaskForm
                 onSubmit={createTask}
                 clients={clients}
                 workers={workers}
                 projects={projects}
                 onCreateProject={handleCreateProject}
-                colors={colors}
               />
               
               {/* Active Tasks Section */}
               <div className="mt-8">
-                <h3 className="mb-4 text-xl font-bold text-white">
+                <h3 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">
                   Active Tasks 
-                  <span className="ml-2 text-sm font-normal text-gray-500">
+                  <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
                     ({activeTasks.length})
                   </span>
                 </h3>
                 {activeTasks.length > 0 ? (
                   <TasksList tasks={activeTasks} onDelete={deleteTask} colors={colors} />
                 ) : (
-                  <div className="py-8 text-center rounded-xl bg-white/5 border border-border-subtle">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="py-8 text-center rounded-xl card-panel">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
-                    <p className="text-sm font-medium text-gray-400">No active tasks</p>
+                    <p className="text-sm font-medium text-[var(--color-text-muted)]">No active tasks</p>
                   </div>
                 )}
               </div>
@@ -568,16 +568,16 @@ const RoleAdmin: React.FC = () => {
               <div className="mt-8">
                 <button
                   onClick={() => setShowCompletedTasks(!showCompletedTasks)}
-                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors rounded-xl bg-white/5 border border-border-subtle hover:bg-white/10"
+                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:bg-[var(--color-surface-3)]"
                 >
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
                     Completed Tasks 
-                    <span className="ml-2 text-sm font-normal text-gray-500">
+                    <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
                       ({completedTasks.length})
                     </span>
                   </h3>
                   <svg 
-                    className={`w-5 h-5 text-gray-500 transition-transform ${showCompletedTasks ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-[var(--color-text-muted)] transition-transform ${showCompletedTasks ? 'rotate-180' : ''}`}
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -590,7 +590,7 @@ const RoleAdmin: React.FC = () => {
                     {completedTasks.length > 0 ? (
                       <TasksList tasks={completedTasks} onDelete={deleteTask} colors={colors} />
                     ) : (
-                      <p className="py-4 text-sm text-center text-gray-500 rounded-xl bg-white/5">No completed tasks yet</p>
+                      <p className="py-4 text-sm text-center text-[var(--color-text-muted)] rounded-xl bg-[var(--color-surface-2)]">No completed tasks yet</p>
                     )}
                   </div>
                 )}
@@ -600,25 +600,25 @@ const RoleAdmin: React.FC = () => {
 
           {activeTab === "invoices" && (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-white">Invoices Management</h2>
+              <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Invoices Management</h2>
               <InvoiceForm onSubmit={createInvoice} clients={clients} colors={colors} />
               
               {/* Pending Invoices Section */}
               <div className="mt-8">
-                <h3 className="mb-4 text-xl font-bold text-white">
+                <h3 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">
                   Pending Invoices 
-                  <span className="ml-2 text-sm font-normal text-gray-500">
+                  <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
                     ({pendingInvoices.length})
                   </span>
                 </h3>
                 {pendingInvoices.length > 0 ? (
                   <InvoicesList invoices={pendingInvoices} onDelete={deleteInvoice} colors={colors} />
                 ) : (
-                  <div className="py-8 text-center rounded-xl bg-white/5 border border-border-subtle">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="py-8 text-center rounded-xl card-panel">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p className="text-sm font-medium text-gray-400">All invoices are paid! 💰</p>
+                    <p className="text-sm font-medium text-[var(--color-text-muted)]">All invoices are paid! 💰</p>
                   </div>
                 )}
               </div>
@@ -627,16 +627,16 @@ const RoleAdmin: React.FC = () => {
               <div className="mt-8">
                 <button
                   onClick={() => setShowPaidInvoices(!showPaidInvoices)}
-                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors rounded-xl bg-white/5 border border-border-subtle hover:bg-white/10"
+                  className="flex items-center justify-between w-full p-4 mb-4 text-left transition-colors rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] hover:bg-[var(--color-surface-3)]"
                 >
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
                     Paid Invoices 
-                    <span className="ml-2 text-sm font-normal text-gray-500">
+                    <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
                       ({paidInvoices.length})
                     </span>
                   </h3>
                   <svg 
-                    className={`w-5 h-5 text-gray-500 transition-transform ${showPaidInvoices ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-[var(--color-text-muted)] transition-transform ${showPaidInvoices ? 'rotate-180' : ''}`}
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -649,7 +649,7 @@ const RoleAdmin: React.FC = () => {
                     {paidInvoices.length > 0 ? (
                       <InvoicesList invoices={paidInvoices} onDelete={deleteInvoice} colors={colors} />
                     ) : (
-                      <p className="py-4 text-sm text-center text-gray-500 rounded-xl bg-white/5">No paid invoices yet</p>
+                      <p className="py-4 text-sm text-center text-[var(--color-text-muted)] rounded-xl bg-[var(--color-surface-2)]">No paid invoices yet</p>
                     )}
                   </div>
                 )}
@@ -659,7 +659,7 @@ const RoleAdmin: React.FC = () => {
 
           {activeTab === "domains" && (
             <>
-              <h2 className="mb-6 text-2xl font-bold text-white">Domains Management</h2>
+              <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Domains Management</h2>
               <DomainForm 
                 onSubmit={createDomain}
                 onUpdate={updateDomain}

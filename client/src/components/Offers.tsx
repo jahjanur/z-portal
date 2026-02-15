@@ -1,13 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-const colors = {
-  primary: "#5B4FFF",
-  secondary: "#7C73FF",
-  accent: "#FFA726",
-  light: "#F8F9FA",
-  dark: "#1A1A2E",
-};
+const CONTROL =
+  "h-11 w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]";
 
 interface Product {
   id: string;
@@ -28,25 +23,27 @@ const Offers: React.FC = () => {
   const [loading, setLoading] = useState(false);
 
   const addProduct = () => {
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      name: "",
-      price: undefined,
-      timeline: "",
-      techStack: "",
-    };
-    setProducts([...products, newProduct]);
+    setProducts((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        name: "",
+        price: undefined,
+        timeline: "",
+        techStack: "",
+      },
+    ]);
   };
 
   const removeProduct = (id: string) => {
     if (products.length > 1) {
-      setProducts(products.filter((p: Product) => p.id !== id));
+      setProducts((prev) => prev.filter((p) => p.id !== id));
     }
   };
 
   const updateProduct = (id: string, field: keyof Product, value: unknown) => {
-    setProducts(
-      products.map((p: Product) => (p.id === id ? { ...p, [field]: value } : p))
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
     );
   };
 
@@ -55,20 +52,15 @@ const Offers: React.FC = () => {
       alert("Please fill in all required fields including email!");
       return;
     }
-
     setLoading(true);
     try {
-      const totalPrice = products.reduce(
-        (sum: number, p: Product) => sum + (p.price || 0),
-        0
-      );
-
+      const totalPrice = products.reduce((s, p) => s + (p.price || 0), 0);
       await axios.post("/api/offers/send-offer", {
         clientName,
         clientEmail: recipientEmail,
         pageTitle,
         description,
-        products: products.map((p: Product) => ({
+        products: products.map((p) => ({
           name: p.name,
           price: p.price,
           timeline: p.timeline,
@@ -76,16 +68,12 @@ const Offers: React.FC = () => {
         })),
         totalPrice,
       });
-
       alert("Offer PDF sent successfully!");
-
       setClientName("");
       setRecipientEmail("");
       setPageTitle("");
       setDescription("");
-      setProducts([
-        { id: "1", name: "", price: undefined, timeline: "", techStack: "" },
-      ]);
+      setProducts([{ id: "1", name: "", price: undefined, timeline: "", techStack: "" }]);
     } catch (err) {
       console.error("Error sending offer PDF:", err);
       alert("Failed to send offer. Check console for details.");
@@ -99,14 +87,9 @@ const Offers: React.FC = () => {
       alert("Please fill in all required fields!");
       return;
     }
-
     setLoading(true);
     try {
-      const totalPrice = products.reduce(
-        (sum: number, p: Product) => sum + (p.price || 0),
-        0
-      );
-
+      const totalPrice = products.reduce((s, p) => s + (p.price || 0), 0);
       const response = await axios.post(
         "/api/offers/download",
         {
@@ -114,7 +97,7 @@ const Offers: React.FC = () => {
           clientEmail: recipientEmail,
           pageTitle,
           description,
-          products: products.map((p: Product) => ({
+          products: products.map((p) => ({
             name: p.name,
             price: p.price,
             timeline: p.timeline,
@@ -122,18 +105,12 @@ const Offers: React.FC = () => {
           })),
           totalPrice,
         },
-        {
-          responseType: "blob",
-        }
+        { responseType: "blob" }
       );
-
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute(
-        "download",
-        `${clientName.replace(/\s+/g, "_")}_offer.pdf`
-      );
+      link.setAttribute("download", `${clientName.replace(/\s+/g, "_")}_offer.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -145,185 +122,168 @@ const Offers: React.FC = () => {
     }
   };
 
+  const total = products.reduce((s, p) => s + (p.price || 0), 0);
+
   return (
     <form
-      onSubmit={(e: React.FormEvent<HTMLFormElement>) => {
+      onSubmit={(e) => {
         e.preventDefault();
         sendOfferByEmail();
       }}
-      className="max-w-4xl p-8 mx-auto bg-white border border-gray-100 shadow-xl rounded-2xl"
+      className="mx-auto max-w-3xl space-y-8"
     >
-      <h2 className="mb-8 text-3xl font-extrabold text-center text-gray-900">
-        Create & Send Offer
-      </h2>
+      <header className="text-center">
+        <h2 className="text-2xl font-bold tracking-tight text-[var(--color-text-primary)]">
+          Create & Send Offer
+        </h2>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+          Client info, offer details, and line items
+        </p>
+      </header>
 
-      {/* Client Information Section */}
-      <div className="p-6 mb-6 border border-gray-200 rounded-xl bg-gray-50">
-        <h3 className="mb-4 text-lg font-semibold text-gray-700">
+      {/* Client Info */}
+      <section
+        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-6"
+        aria-labelledby="client-heading"
+      >
+        <h3 id="client-heading" className="mb-4 text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
           Client Information
         </h3>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <input
             placeholder="Client Name *"
             value={clientName}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setClientName(e.target.value)}
-            className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+            onChange={(e) => setClientName(e.target.value)}
+            className={CONTROL}
           />
           <input
-            placeholder="Client Email *"
             type="email"
+            placeholder="Client Email *"
             value={recipientEmail}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRecipientEmail(e.target.value)}
-            className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
+            onChange={(e) => setRecipientEmail(e.target.value)}
+            className={CONTROL}
           />
         </div>
-      </div>
+      </section>
 
-      {/* Offer Details Section */}
-      <div className="p-6 mb-6 border border-gray-200 rounded-xl bg-gray-50">
-        <h3 className="mb-4 text-lg font-semibold text-gray-700">
+      {/* Offer Details */}
+      <section
+        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-6"
+        aria-labelledby="offer-heading"
+      >
+        <h3 id="offer-heading" className="mb-4 text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
           Offer Details
         </h3>
-        <input
-          placeholder="Project Title *"
-          value={pageTitle}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPageTitle(e.target.value)}
-          className="w-full px-4 py-3 mb-4 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
-        />
-        <textarea
-          placeholder="Project Description *"
-          value={description}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-          className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
-          rows={5}
-        />
-      </div>
+        <div className="space-y-4">
+          <input
+            placeholder="Project Title *"
+            value={pageTitle}
+            onChange={(e) => setPageTitle(e.target.value)}
+            className={CONTROL}
+          />
+          <textarea
+            placeholder="Project Description *"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={4}
+            className={`${CONTROL} min-h-[100px] resize-y py-3`}
+          />
+        </div>
+      </section>
 
-      {/* Products Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-700">Products</h3>
+      {/* Products */}
+      <section aria-labelledby="products-heading">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 id="products-heading" className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+            Products
+          </h3>
           <button
             type="button"
             onClick={addProduct}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg hover:shadow-md"
-            style={{
-              background: `linear-gradient(to right, ${colors.primary}, ${colors.secondary})`,
-            }}
+            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2 text-sm font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface-3)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
           >
-            <span className="text-lg">+</span> Add Product
+            + Add row
           </button>
         </div>
 
-        {products.map((product: Product, index: number) => (
-          <div
-            key={product.id}
-            className="relative p-6 mb-4 border border-gray-200 rounded-xl bg-gray-50"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-sm font-semibold text-gray-600">
-                Product {index + 1}
-              </h4>
+        <div className="space-y-3">
+          {products.map((product, index) => (
+            <div
+              key={product.id}
+              className="flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 sm:flex-row sm:flex-wrap sm:items-center"
+            >
+              <div className="flex flex-1 flex-wrap items-center gap-3 sm:flex-row">
+                <input
+                  placeholder="Name"
+                  value={product.name}
+                  onChange={(e) => updateProduct(product.id, "name", e.target.value)}
+                  className={`${CONTROL} sm:max-w-[180px]`}
+                />
+                <input
+                  type="number"
+                  placeholder="Price"
+                  value={product.price ?? ""}
+                  onChange={(e) =>
+                    updateProduct(product.id, "price", e.target.value ? Number(e.target.value) : undefined)
+                  }
+                  className={`${CONTROL} sm:max-w-[100px]`}
+                />
+                <input
+                  placeholder="Timeline"
+                  value={product.timeline}
+                  onChange={(e) => updateProduct(product.id, "timeline", e.target.value)}
+                  className={`${CONTROL} sm:max-w-[120px]`}
+                />
+                <input
+                  placeholder="Tech (comma-separated)"
+                  value={product.techStack}
+                  onChange={(e) => updateProduct(product.id, "techStack", e.target.value)}
+                  className={`${CONTROL} min-w-0 flex-1 sm:min-w-[140px]`}
+                />
+              </div>
               {products.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeProduct(product.id)}
-                  className="text-red-500 transition-colors hover:text-red-700"
+                  className="shrink-0 self-start rounded p-2 text-[var(--color-destructive-text)] transition-colors hover:bg-[var(--color-destructive-bg)] sm:self-center"
+                  aria-label={`Remove product ${index + 1}`}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-5 h-5"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                 </button>
               )}
             </div>
+          ))}
+        </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <input
-                placeholder="Product Name"
-                value={product.name}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  updateProduct(product.id, "name", e.target.value)
-                }
-                className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-              <input
-                type="number"
-                placeholder="Price"
-                value={product.price || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  updateProduct(
-                    product.id,
-                    "price",
-                    e.target.value ? Number(e.target.value) : undefined
-                  )
-                }
-                className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-              <input
-                placeholder="Timeline (e.g., 2 weeks)"
-                value={product.timeline}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  updateProduct(product.id, "timeline", e.target.value)
-                }
-                className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-              <input
-                placeholder="Tech Stack (comma separated)"
-                value={product.techStack}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  updateProduct(product.id, "techStack", e.target.value)
-                }
-                className="w-full px-4 py-3 text-sm bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400"
-              />
-            </div>
-          </div>
-        ))}
-
-        {/* Total Price Display */}
-        <div className="p-4 mt-4 border-2 border-gray-300 rounded-lg bg-gray-50">
+        {/* Total */}
+        <div className="mt-4 rounded-lg border border-[var(--color-border-hover)] bg-[var(--color-surface-3)] px-4 py-3">
           <div className="flex items-center justify-between">
-            <span className="text-lg font-semibold text-gray-700">
-              Total Price:
-            </span>
-            <span className="text-2xl font-bold" style={{ color: colors.primary }}>
-              ${products.reduce((sum: number, p: Product) => sum + (p.price || 0), 0).toFixed(2)}
+            <span className="text-sm font-semibold text-[var(--color-text-secondary)]">Total</span>
+            <span className="text-xl font-bold tabular-nums text-[var(--color-text-primary)]">
+              ${total.toFixed(2)}
             </span>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col gap-3">
+      {/* Actions */}
+      <div className="flex flex-col gap-3 border-t border-[var(--color-border)] pt-6">
         <button
           type="submit"
           disabled={loading}
-          className="w-full px-6 py-4 text-sm font-semibold text-white transition-all rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{
-            background: `linear-gradient(to right, ${colors.primary}, ${colors.secondary})`,
-          }}
+          className="h-11 w-full rounded-lg border border-[var(--color-btn-primary-border)] bg-[var(--color-btn-primary-bg)] px-4 text-sm font-semibold text-[var(--color-btn-primary-text)] transition-colors hover:border-[var(--color-btn-primary-hover-border)] hover:bg-[var(--color-btn-primary-hover-bg)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Sending Offer..." : "Send Offer via Email"}
+          {loading ? "Sending…" : "Send Offer via Email"}
         </button>
-
         <button
           type="button"
           disabled={loading}
           onClick={downloadPDF}
-          className="w-full px-6 py-4 text-sm font-semibold text-white transition-all rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-          style={{
-            background: `linear-gradient(to right, ${colors.accent}, ${colors.primary})`,
-          }}
+          className="h-11 w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 text-sm font-semibold text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-surface-3)] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Generating PDF..." : "Download Offer as PDF"}
+          {loading ? "Generating…" : "Download as PDF"}
         </button>
       </div>
     </form>

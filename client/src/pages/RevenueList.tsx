@@ -14,7 +14,7 @@ interface Invoice {
 }
 
 const colors = {
-  primary: "#5B4FFF",
+  primary: "rgba(255,255,255,0.9)",
   success: "#10B981",
   warning: "#F59E0B",
   danger: "#EF4444",
@@ -113,7 +113,7 @@ export default function RevenueList() {
       <div className="flex items-center justify-center min-h-screen bg-app">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.primary }}></div>
+            <div className="w-3 h-3 rounded-full animate-bounce bg-white/80"></div>
             <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.success, animationDelay: '0.1s' }}></div>
             <div className="w-3 h-3 rounded-full animate-bounce" style={{ backgroundColor: colors.warning, animationDelay: '0.2s' }}></div>
           </div>
@@ -137,10 +137,10 @@ export default function RevenueList() {
             </svg>
           </button>
           <div>
-            <h1 className="text-4xl font-bold text-white">
-              Revenue <span style={{ color: colors.primary }}>Overview</span>
+            <h1 className="text-4xl font-bold text-[var(--color-text-primary)]">
+              Revenue <span className="text-[var(--color-text-secondary)]">Overview</span>
             </h1>
-            <p className="mt-2 text-gray-400">Complete breakdown of all invoices and revenue</p>
+            <p className="mt-2 text-[var(--color-text-muted)]">Complete breakdown of all invoices and revenue</p>
           </div>
         </div>
 
@@ -148,15 +148,15 @@ export default function RevenueList() {
         <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-3">
           <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-gray-400">Total Revenue</p>
-              <div className="p-2 rounded-lg" style={{ backgroundColor: `${colors.primary}15` }}>
-                <svg className="w-5 h-5" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <p className="text-sm font-semibold text-[var(--color-text-muted)]">Total Revenue</p>
+              <div className="rounded-lg bg-[var(--color-surface-3)] p-2">
+                <svg className="h-5 w-5 text-[var(--color-text-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
-            <p className="text-3xl font-bold" style={{ color: colors.primary }}>{formatCurrency(totalRevenue)}</p>
-            <p className="mt-2 text-sm text-gray-500">{filteredInvoices.length} invoices</p>
+            <p className="text-3xl font-bold text-[var(--color-text-primary)]">{formatCurrency(totalRevenue)}</p>
+            <p className="mt-2 text-sm text-[var(--color-text-muted)]">{filteredInvoices.length} invoices</p>
           </div>
 
           <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
@@ -196,16 +196,15 @@ export default function RevenueList() {
             <button
               onClick={() => setFilter("all")}
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                filter === "all" ? "text-white" : "text-gray-400 bg-gray-100 hover:bg-gray-200"
+                filter === "all" ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]" : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
               }`}
-              style={filter === "all" ? { backgroundColor: colors.primary } : {}}
             >
               All ({invoices.length})
             </button>
             <button
               onClick={() => setFilter("paid")}
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                filter === "paid" ? "text-white bg-green-600" : "text-gray-400 bg-gray-100 hover:bg-gray-200"
+                filter === "paid" ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]" : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
               }`}
             >
               Paid ({invoices.filter(i => i.status === "PAID").length})
@@ -213,7 +212,7 @@ export default function RevenueList() {
             <button
               onClick={() => setFilter("pending")}
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                filter === "pending" ? "text-white bg-amber-600" : "text-gray-400 bg-gray-100 hover:bg-gray-200"
+                filter === "pending" ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]" : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
               }`}
             >
               Pending ({invoices.filter(i => i.status === "PENDING").length})
@@ -224,8 +223,7 @@ export default function RevenueList() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "date" | "amount" | "client")}
-              className="px-4 py-2 text-sm font-semibold border border-border-subtle bg-card rounded-lg focus:outline-none focus:ring-2"
-              style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+              className="input-dark rounded-lg border border-[var(--color-border)] bg-[var(--color-input-bg)] px-4 py-2 text-sm font-semibold"
             >
               <option value="date">Sort by Date</option>
               <option value="amount">Sort by Amount</option>
@@ -249,26 +247,26 @@ export default function RevenueList() {
 
         {/* Revenue by Client Table */}
         <div className="p-6 mb-8 border border-border-subtle bg-card shadow-sm rounded-2xl">
-          <h2 className="mb-4 text-xl font-bold text-white">Revenue by Client</h2>
+          <h2 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">Revenue by Client</h2>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-gray-200">
+              <thead className="border-b border-[var(--color-border)]">
                 <tr>
-                  <th className="px-4 py-3 text-sm font-semibold text-left text-gray-400">Client</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-right text-gray-400">Invoices</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-right text-gray-400">Total</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-right text-gray-400">Paid</th>
-                  <th className="px-4 py-3 text-sm font-semibold text-right text-gray-400">Pending</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-left text-[var(--color-text-muted)]">Client</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-right text-[var(--color-text-muted)]">Invoices</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-right text-[var(--color-text-muted)]">Total</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-right text-[var(--color-text-muted)]">Paid</th>
+                  <th className="px-4 py-3 text-sm font-semibold text-right text-[var(--color-text-muted)]">Pending</th>
                 </tr>
               </thead>
               <tbody>
                 {Object.values(revenueByClient)
                   .sort((a, b) => b.total - a.total)
                   .map((client, index) => (
-                    <tr key={index} className="transition-colors border-b border-gray-100 hover:bg-app">
-                      <td className="px-4 py-3 text-sm font-medium text-white">{client.name}</td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-400">{client.count}</td>
-                      <td className="px-4 py-3 text-sm font-semibold text-right" style={{ color: colors.primary }}>
+                    <tr key={index} className="transition-colors border-b border-[var(--color-border)] hover:bg-[var(--color-surface-2)]">
+                      <td className="px-4 py-3 text-sm font-medium text-[var(--color-text-primary)]">{client.name}</td>
+                      <td className="px-4 py-3 text-sm text-right text-[var(--color-text-muted)]">{client.count}</td>
+                      <td className="px-4 py-3 text-sm font-semibold text-right text-[var(--color-text-primary)]">
                         {formatCurrency(client.total)}
                       </td>
                       <td className="px-4 py-3 text-sm font-semibold text-right text-green-600">
@@ -286,18 +284,18 @@ export default function RevenueList() {
 
         {/* Detailed Invoice List */}
         <div className="p-6 border border-border-subtle bg-card shadow-sm rounded-2xl">
-          <h2 className="mb-4 text-xl font-bold text-white">All Invoices</h2>
+          <h2 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">All Invoices</h2>
           <div className="space-y-3">
             {sortedInvoices.map((invoice) => (
               <div
                 key={invoice.id}
-                className="flex flex-col gap-4 p-4 transition-all border border-gray-200 cursor-pointer md:flex-row md:items-center md:justify-between rounded-xl hover:shadow-md hover:border-gray-300"
+                className="flex cursor-pointer flex-col gap-4 rounded-xl card-panel p-4 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover md:flex-row md:items-center md:justify-between"
                 onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
               >
                 <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-lg ${invoice.status === "PAID" ? "bg-green-50" : "bg-amber-50"}`}>
+                  <div className="rounded-lg bg-[var(--color-surface-3)] p-3">
                     <svg
-                      className={`w-6 h-6 ${invoice.status === "PAID" ? "text-green-600" : "text-amber-600"}`}
+                      className="h-6 w-6 text-[var(--color-text-secondary)]"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -311,9 +309,9 @@ export default function RevenueList() {
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-white">Invoice #{invoice.invoiceNumber}</h3>
-                    <p className="text-sm text-gray-400">{invoice.client?.name || "Unknown Client"}</p>
-                    <p className="text-xs text-gray-400">{invoice.client?.email}</p>
+                    <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Invoice #{invoice.invoiceNumber}</h3>
+                    <p className="text-sm text-[var(--color-text-muted)]">{invoice.client?.name || "Unknown Client"}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{invoice.client?.email}</p>
                   </div>
                 </div>
 

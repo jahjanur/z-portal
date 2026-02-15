@@ -24,7 +24,7 @@ interface Task {
   status?: string | null;
   dueDate?: string | null;
   createdAt: string;
-  worker?: Worker | null;
+  workers?: { user: Worker }[];
   files?: TaskFile[];
 }
 
@@ -60,9 +60,7 @@ interface Domain {
 }
 
 const colors = {
-  primary: "#5B4FFF",
-  secondary: "#7C73FF",
-  accent: "#FFA726",
+  primary: "rgba(255,255,255,0.9)",
   light: "#F8F9FA",
   dark: "#1A1A2E",
 };
@@ -164,18 +162,18 @@ const fetchAll = async () => {
     return new Date(expiryDate) < new Date();
   };
 
-  const cardClass = "p-6 rounded-2xl border border-border-subtle bg-card backdrop-blur-sm";
+  const cardClass = "p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] backdrop-blur-sm";
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-app">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-bounce bg-white/80" />
-            <div className="w-3 h-3 rounded-full animate-bounce bg-white/60" style={{ animationDelay: "0.1s" }} />
-            <div className="w-3 h-3 rounded-full animate-bounce bg-white/40" style={{ animationDelay: "0.2s" }} />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)]" />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-80" style={{ animationDelay: "0.1s" }} />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-60" style={{ animationDelay: "0.2s" }} />
           </div>
-          <span className="text-lg font-medium text-gray-400">Loading your dashboard...</span>
+          <span className="text-lg font-medium text-[var(--color-text-muted)]">Loading your dashboard...</span>
         </div>
       </div>
     );
@@ -189,7 +187,7 @@ const fetchAll = async () => {
           <p className="text-red-400">{error}</p>
           <button
             onClick={fetchAll}
-            className="px-4 py-2 mt-4 text-sm font-semibold rounded-full bg-white text-app hover:bg-gray-200"
+            className="btn-primary px-4 py-2 mt-4 text-sm font-semibold rounded-full"
           >
             Try Again
           </button>
@@ -203,10 +201,10 @@ const fetchAll = async () => {
       <div className="px-4 mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-bold text-white">
-            Client <span className="text-gray-400">Dashboard</span>
+          <h1 className="mb-2 text-4xl font-bold text-[var(--color-text-primary)]">
+            Client <span className="text-[var(--color-text-muted)]">Dashboard</span>
           </h1>
-          <p className="text-lg text-gray-400">Track your projects, invoices, files, and domains</p>
+          <p className="text-lg text-[var(--color-text-muted)]">Track your projects, invoices, files, and domains</p>
         </div>
 
         {/* Tab Navigation */}
@@ -222,8 +220,8 @@ const fetchAll = async () => {
                 }}
                 className={`px-6 py-3 text-sm font-semibold rounded-full transition-all ${
                   activeTab === tab
-                    ? "bg-white text-app"
-                    : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
+                    ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
+                    : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
                 }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -242,11 +240,11 @@ const fetchAll = async () => {
                 value={tasks.length.toString()}
                 subtitle={`${completionRate}% completed`}
                 icon={
-                  <svg className="w-5 h-5" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5 text-[var(--color-text-primary)]/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 }
-                iconBgColor={`${colors.primary}15`}
+                iconBgColor="rgba(255,255,255,0.1)"
               />
               <StatsCard
                 title="In Progress"
@@ -265,30 +263,30 @@ const fetchAll = async () => {
                 value={formatCurrency(totalInvoiced)}
                 subtitle={`${invoices.length} invoices`}
                 icon={
-                  <svg className="w-5 h-5" style={{ color: colors.accent }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5 text-[var(--color-text-primary)]/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 }
-                iconBgColor={`${colors.accent}15`}
-                valueColor={colors.accent}
+                iconBgColor="rgba(255,255,255,0.1)"
+                valueColor="rgba(255,255,255,0.9)"
               />
               <StatsCard
                 title="Active Domains"
                 value={activeDomains.length.toString()}
                 subtitle={`${domains.length} total`}
                 icon={
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5 text-[var(--color-text-primary)]/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                   </svg>
                 }
-                iconBgColor="rgba(147, 51, 234, 0.1)"
-                valueColor="#9333EA"
+                iconBgColor="rgba(255,255,255,0.1)"
+                valueColor="rgba(255,255,255,0.9)"
               />
             </div>
 
             {/* Progress Chart */}
             <div className={cardClass}>
-              <h3 className="mb-4 text-lg font-bold text-gray-900">Project Progress</h3>
+              <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Project Progress</h3>
               <div className="space-y-4">
                 <ProgressBar
                   label="Completed"
@@ -317,7 +315,7 @@ const fetchAll = async () => {
             {/* Recent Activity */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div className={cardClass}>
-                <h3 className="mb-4 text-lg font-bold text-gray-900">Recent Projects</h3>
+                <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Recent Projects</h3>
                 <div className="space-y-3">
                   {tasks.slice(0, 3).map((task) => (
                     <RecentProjectCard
@@ -328,19 +326,19 @@ const fetchAll = async () => {
                     />
                   ))}
                   {tasks.length === 0 && (
-                    <p className="py-8 text-center text-gray-500">No projects yet</p>
+                    <p className="py-8 text-center text-[var(--color-text-muted)]">No projects yet</p>
                   )}
                 </div>
                 <button
                   onClick={() => setActiveTab("tasks")}
-                  className="w-full px-4 py-2 mt-4 text-sm font-semibold text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="btn-secondary mt-4 w-full rounded-lg px-4 py-2 text-sm font-semibold transition"
                 >
                   View All Projects
                 </button>
               </div>
 
               <div className={cardClass}>
-                <h3 className="mb-4 text-lg font-bold text-gray-900">Recent Invoices</h3>
+                <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Recent Invoices</h3>
                 <div className="space-y-3">
                   {invoices.slice(0, 3).map((invoice) => (
                     <RecentInvoiceCard
@@ -349,16 +347,16 @@ const fetchAll = async () => {
                       getStatusColor={getStatusColor}
                       formatCurrency={formatCurrency}
                       formatDate={formatDate}
-                      primaryColor={colors.primary}
+                      primaryColor="rgba(255,255,255,0.9)"
                     />
                   ))}
                   {invoices.length === 0 && (
-                    <p className="py-8 text-center text-gray-500">No invoices yet</p>
+                    <p className="py-8 text-center text-[var(--color-text-muted)]">No invoices yet</p>
                   )}
                 </div>
                 <button
                   onClick={() => setActiveTab("invoices")}
-                  className="w-full px-4 py-2 mt-4 text-sm font-semibold text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-gray-50"
+                  className="btn-secondary mt-4 w-full rounded-lg px-4 py-2 text-sm font-semibold transition"
                 >
                   View All Invoices
                 </button>
@@ -379,10 +377,9 @@ const fetchAll = async () => {
                     onClick={() => setStatusFilter(status)}
                     className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
                       statusFilter === status
-                        ? "text-white"
-                        : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
+                        ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
+                        : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
                     }`}
-                    style={statusFilter === status ? { backgroundColor: colors.primary } : {}}
                   >
                     {status.replace("_", " ")}
                   </button>
@@ -393,24 +390,23 @@ const fetchAll = async () => {
                 placeholder="Search projects..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                className="rounded-lg input-dark rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
               />
             </div>
 
             {/* Tasks List */}
             <div className="space-y-4">
               {filteredTasks.length === 0 ? (
-                <div className="py-12 text-center rounded-2xl border border-border-subtle bg-card">
+                <div className="py-12 text-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)]">
                   <div className="flex justify-center mb-4">
-                    <div className="p-4 rounded-full" style={{ backgroundColor: `${colors.primary}15` }}>
-                      <svg className="w-12 h-12" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="rounded-full bg-[var(--color-surface-3)] p-4">
+                      <svg className="h-12 w-12 text-[var(--color-text-primary)]/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
                     </div>
                   </div>
-                  <p className="text-lg font-medium text-gray-700">No projects found</p>
-                  <p className="text-sm text-gray-500">Try adjusting your filters</p>
+                  <p className="text-lg font-medium text-[var(--color-text-primary)]/90">No projects found</p>
+                  <p className="text-sm text-[var(--color-text-muted)]">Try adjusting your filters</p>
                 </div>
               ) : (
                 filteredTasks.map((task) => (
@@ -421,7 +417,7 @@ const fetchAll = async () => {
                     getStatusColor={getStatusColor}
                     formatDate={formatDate}
                     getDaysUntilDue={getDaysUntilDue}
-                    primaryColor={colors.primary}
+                    primaryColor="rgba(255,255,255,0.9)"
                   />
                 ))
               )}
@@ -441,10 +437,9 @@ const fetchAll = async () => {
                     onClick={() => setStatusFilter(status)}
                     className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
                       statusFilter === status
-                        ? "text-white"
-                        : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
+                        ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
+                        : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
                     }`}
-                    style={statusFilter === status ? { backgroundColor: colors.primary } : {}}
                   >
                     {status}
                   </button>
@@ -455,24 +450,23 @@ const fetchAll = async () => {
                 placeholder="Search invoices..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                className="rounded-lg input-dark rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
               />
             </div>
 
             {/* Invoices List */}
             <div className="space-y-4">
               {filteredInvoices.length === 0 ? (
-                <div className="py-12 text-center rounded-2xl border border-border-subtle bg-card">
+                <div className="py-12 text-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)]">
                   <div className="flex justify-center mb-4">
-                    <div className="p-4 rounded-full" style={{ backgroundColor: `${colors.primary}15` }}>
-                      <svg className="w-12 h-12" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="rounded-full bg-[var(--color-surface-3)] p-4">
+                      <svg className="h-12 w-12 text-[var(--color-text-primary)]/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
                   </div>
-                  <p className="text-lg font-medium text-gray-700">No invoices found</p>
-                  <p className="text-sm text-gray-500">Try adjusting your filters</p>
+                  <p className="text-lg font-medium text-[var(--color-text-primary)]/90">No invoices found</p>
+                  <p className="text-sm text-[var(--color-text-muted)]">Try adjusting your filters</p>
                 </div>
               ) : (
                 filteredInvoices.map((invoice) => (
@@ -524,8 +518,8 @@ const fetchAll = async () => {
           <div className="space-y-6">
             <div className={cardClass}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">All Project Files</h2>
-                <span className="px-4 py-2 text-sm font-semibold text-white rounded-lg" style={{ backgroundColor: colors.primary }}>
+                <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">All Project Files</h2>
+                <span className="rounded-lg bg-[var(--color-tab-active-bg)] px-4 py-2 text-sm font-semibold text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]">
                   {allFiles.length} files
                 </span>
               </div>
@@ -533,14 +527,14 @@ const fetchAll = async () => {
               {allFiles.length === 0 ? (
                 <div className="py-12 text-center">
                   <div className="flex justify-center mb-4">
-                    <div className="p-4 rounded-full" style={{ backgroundColor: `${colors.primary}15` }}>
-                      <svg className="w-12 h-12" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="rounded-full bg-[var(--color-surface-3)] p-4">
+                      <svg className="h-12 w-12 text-[var(--color-text-primary)]/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                       </svg>
                     </div>
                   </div>
-                  <p className="text-lg font-medium text-gray-700">No files uploaded yet</p>
-                  <p className="text-sm text-gray-500">Files will appear here once uploaded to your projects</p>
+                  <p className="text-lg font-medium text-[var(--color-text-primary)]/90">No files uploaded yet</p>
+                  <p className="text-sm text-[var(--color-text-muted)]">Files will appear here once uploaded to your projects</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -549,14 +543,14 @@ const fetchAll = async () => {
                       key={file.id}
                       file={file}
                       formatDate={formatDate}
-                      primaryColor={colors.primary}
+                      primaryColor="rgba(255,255,255,0.9)"
                     />
                   ))}
                 </div>
               )}
             {/* Files by Section */}
             {allFiles.length > 0 && (
-              <FilesBySection files={allFiles} primaryColor={colors.primary} />
+              <FilesBySection files={allFiles} primaryColor="rgba(255,255,255,0.9)" />
             )}
             </div>
 
@@ -573,39 +567,38 @@ const fetchAll = async () => {
                 placeholder="Search domains..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                className="rounded-lg input-dark rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
               />
             </div>
 
             {/* Primary Domain Card */}
             {primaryDomain && (
-              <div className="p-6 border-2 border-purple-200 shadow-sm bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl">
+              <div className="rounded-2xl border-2 border-[var(--color-border-hover)] bg-[var(--color-surface-2)] p-6 shadow-sm">
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-5 w-5 text-[var(--color-text-primary)]/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                       </svg>
-                      <h3 className="text-lg font-bold text-gray-900">Primary Domain</h3>
+                      <h3 className="text-lg font-bold text-[var(--color-text-primary)]/95">Primary Domain</h3>
                     </div>
                     <a 
                       href={`https://${primaryDomain.domainName}`} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-2xl font-bold text-purple-600 transition-colors hover:text-purple-700"
+                      className="text-2xl font-bold text-[var(--color-text-primary)]/90 transition-colors hover:opacity-80"
                     >
                       {primaryDomain.domainName}
                     </a>
                   </div>
-                  <span className="px-3 py-1 text-xs font-bold text-white bg-purple-600 rounded-full">
+                  <span className="rounded-full bg-[var(--color-surface-3)] px-3 py-1 text-xs font-bold text-[var(--color-text-primary)]">
                     PRIMARY
                   </span>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   {primaryDomain.hostingPlan && (
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center gap-2 text-sm text-[var(--color-text-primary)]/70">
+                      <svg className="h-4 w-4 text-[var(--color-text-primary)]/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                       </svg>
                       <span><strong>Plan:</strong> {primaryDomain.hostingPlan}</span>
@@ -613,28 +606,28 @@ const fetchAll = async () => {
                   )}
                   {primaryDomain.domainExpiry && (
                     <div className="flex items-center gap-2 text-sm">
-                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-4 w-4 text-[var(--color-text-primary)]/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      <span className={isDomainExpired(primaryDomain.domainExpiry) ? "text-red-600 font-semibold" : isDomainExpiringSoon(primaryDomain.domainExpiry) ? "text-amber-600 font-semibold" : "text-gray-700"}>
+                      <span className={isDomainExpired(primaryDomain.domainExpiry) ? "text-red-600 font-semibold" : isDomainExpiringSoon(primaryDomain.domainExpiry) ? "text-amber-600 font-semibold" : "text-[var(--color-text-secondary)]"}>
                         <strong>Domain expires:</strong> {formatDate(primaryDomain.domainExpiry)}
                       </span>
                     </div>
                   )}
                   {primaryDomain.hostingExpiry && (
                     <div className="flex items-center gap-2 text-sm">
-                      <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-4 w-4 text-[var(--color-text-primary)]/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      <span className={isDomainExpired(primaryDomain.hostingExpiry) ? "text-red-600 font-semibold" : isDomainExpiringSoon(primaryDomain.hostingExpiry) ? "text-amber-600 font-semibold" : "text-gray-700"}>
+                      <span className={isDomainExpired(primaryDomain.hostingExpiry) ? "text-red-600 font-semibold" : isDomainExpiringSoon(primaryDomain.hostingExpiry) ? "text-amber-600 font-semibold" : "text-[var(--color-text-secondary)]"}>
                         <strong>Hosting expires:</strong> {formatDate(primaryDomain.hostingExpiry)}
                       </span>
                     </div>
                   )}
                 </div>
                 {primaryDomain.notes && (
-                  <div className="p-3 mt-4 bg-white rounded-lg">
-                    <p className="text-sm text-gray-600"><strong>Notes:</strong> {primaryDomain.notes}</p>
+                  <div className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+                    <p className="text-sm text-[var(--color-text-secondary)]"><strong>Notes:</strong> {primaryDomain.notes}</p>
                   </div>
                 )}
               </div>
@@ -643,8 +636,8 @@ const fetchAll = async () => {
             {/* Domains List */}
             <div className={cardClass}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">All Domains</h2>
-                <span className="px-4 py-2 text-sm font-semibold text-white rounded-lg" style={{ backgroundColor: colors.primary }}>
+                <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">All Domains</h2>
+                <span className="rounded-lg bg-[var(--color-tab-active-bg)] border border-[var(--color-tab-active-border)] px-4 py-2 text-sm font-semibold text-[var(--color-tab-active-text)]">
                   {filteredDomains.length} domains
                 </span>
               </div>
@@ -652,24 +645,24 @@ const fetchAll = async () => {
               {filteredDomains.length === 0 ? (
                 <div className="py-12 text-center">
                   <div className="flex justify-center mb-4">
-                    <div className="p-4 rounded-full" style={{ backgroundColor: `${colors.primary}15` }}>
-                      <svg className="w-12 h-12" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="rounded-full bg-[var(--color-surface-3)] p-4">
+                      <svg className="h-12 w-12 text-[var(--color-text-primary)]/90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                       </svg>
                     </div>
                   </div>
-                  <p className="text-lg font-medium text-gray-700">No domains found</p>
-                  <p className="text-sm text-gray-500">Contact your administrator to add domains</p>
+                  <p className="text-lg font-medium text-[var(--color-text-primary)]/90">No domains found</p>
+                  <p className="text-sm text-[var(--color-text-muted)]">Contact your administrator to add domains</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {filteredDomains.map((domain) => (
                     <div
                       key={domain.id}
-                      className={`p-5 border-2 rounded-xl transition-all hover:shadow-md ${
+                      className={`rounded-xl border-2 p-5 transition-all hover:shadow-md ${
                         domain.isPrimary 
-                          ? "border-purple-200 bg-purple-50" 
-                          : "border-gray-200 bg-white hover:border-gray-300"
+                          ? "border-[var(--color-border-focus)] bg-[var(--color-surface-3)]" 
+                          : "border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-border-hover)]"
                       }`}
                     >
                       <div className="flex items-start justify-between mb-3">
@@ -679,17 +672,17 @@ const fetchAll = async () => {
                               href={`https://${domain.domainName}`} 
                               target="_blank" 
                               rel="noopener noreferrer"
-                              className="text-xl font-bold text-gray-900 transition-colors hover:text-purple-600"
+                              className="text-xl font-bold text-[var(--color-text-primary)]/95 transition-colors hover:opacity-80"
                             >
                               {domain.domainName}
                             </a>
                             {domain.isPrimary && (
-                              <span className="px-2 py-0.5 text-xs font-bold text-white bg-purple-600 rounded-full">
+                              <span className="rounded-full bg-[var(--color-surface-3)] px-2 py-0.5 text-xs font-bold text-[var(--color-text-primary)]">
                                 PRIMARY
                               </span>
                             )}
                             {!domain.isActive && (
-                              <span className="px-2 py-0.5 text-xs font-bold text-white bg-gray-500 rounded-full">
+                              <span className="px-2 py-0.5 text-xs font-bold text-[var(--color-text-primary)] bg-[var(--color-surface-3)] rounded-full">
                                 INACTIVE
                               </span>
                             )}
@@ -697,9 +690,9 @@ const fetchAll = async () => {
                           
                           <div className="grid grid-cols-1 gap-3 mt-3 md:grid-cols-2 lg:grid-cols-3">
                             {domain.hostingPlan && (
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
-                                <svg className="w-4 h-4" style={{ color: colors.primary }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                              <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+<svg className="h-4 w-4 text-[var(--color-text-primary)]/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                                 </svg>
                                 <span>{domain.hostingPlan}</span>
                               </div>
@@ -710,7 +703,7 @@ const fetchAll = async () => {
                                 <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
-                                <span className={isDomainExpired(domain.domainExpiry) ? "text-red-600 font-semibold" : isDomainExpiringSoon(domain.domainExpiry) ? "text-amber-600 font-semibold" : "text-gray-600"}>
+                                <span className={isDomainExpired(domain.domainExpiry) ? "text-red-600 font-semibold" : isDomainExpiringSoon(domain.domainExpiry) ? "text-amber-600 font-semibold" : "text-[var(--color-text-secondary)]"}>
                                   Domain: {formatDate(domain.domainExpiry)}
                                   {isDomainExpired(domain.domainExpiry) && " (Expired)"}
                                   {isDomainExpiringSoon(domain.domainExpiry) && !isDomainExpired(domain.domainExpiry) && " (Expiring Soon)"}
@@ -723,7 +716,7 @@ const fetchAll = async () => {
                                 <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                <span className={isDomainExpired(domain.hostingExpiry) ? "text-red-600 font-semibold" : isDomainExpiringSoon(domain.hostingExpiry) ? "text-amber-600 font-semibold" : "text-gray-600"}>
+                                <span className={isDomainExpired(domain.hostingExpiry) ? "text-red-600 font-semibold" : isDomainExpiringSoon(domain.hostingExpiry) ? "text-amber-600 font-semibold" : "text-[var(--color-text-secondary)]"}>
                                   Hosting: {formatDate(domain.hostingExpiry)}
                                   {isDomainExpired(domain.hostingExpiry) && " (Expired)"}
                                   {isDomainExpiringSoon(domain.hostingExpiry) && !isDomainExpired(domain.hostingExpiry) && " (Expiring Soon)"}
@@ -733,8 +726,8 @@ const fetchAll = async () => {
                           </div>
 
                           {domain.notes && (
-                            <div className="p-3 mt-3 rounded-lg bg-gray-50">
-                              <p className="text-sm text-gray-600">{domain.notes}</p>
+                            <div className="mt-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+                              <p className="text-sm text-[var(--color-text-secondary)]">{domain.notes}</p>
                             </div>
                           )}
                         </div>
@@ -743,7 +736,7 @@ const fetchAll = async () => {
                           href={`https://${domain.domainName}`} 
                           target="_blank" 
                           rel="noopener noreferrer"
-                          className="p-2 text-gray-400 transition-colors rounded-lg hover:bg-gray-100 hover:text-gray-600"
+                          className="p-2 text-[var(--color-text-muted)] transition-colors rounded-lg hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -764,12 +757,12 @@ const fetchAll = async () => {
                   value={domains.length.toString()}
                   subtitle={`${activeDomains.length} active`}
                   icon={
-                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5 text-[var(--color-text-primary)]/80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                     </svg>
                   }
-                  iconBgColor="rgba(147, 51, 234, 0.1)"
-                  valueColor="#9333EA"
+                  iconBgColor="rgba(255,255,255,0.1)"
+                  valueColor="rgba(255,255,255,0.9)"
                 />
                 <StatsCard
                   title="Expiring Soon"

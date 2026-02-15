@@ -1,18 +1,17 @@
 // utils.ts - Shared utility functions
 
 export const getStatusColor = (status?: string | null) => {
-  if (!status) return "bg-gray-100 text-gray-700 border-gray-200";
+  const base = "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)] border border-[var(--color-border-hover)]";
+  if (!status) return base;
   switch (status.toUpperCase()) {
     case "COMPLETED":
-      return "bg-green-100 text-green-700 border-green-200";
-    case "IN_PROGRESS":
-      return "bg-blue-100 text-blue-700 border-blue-200";
-    case "PENDING":
-      return "bg-amber-100 text-amber-700 border-amber-200";
     case "PAID":
-      return "bg-green-100 text-green-700 border-green-200";
+      return base;
+    case "IN_PROGRESS":
+    case "PENDING":
+      return base;
     default:
-      return "bg-gray-100 text-gray-700 border-gray-200";
+      return base;
   }
 };
 

@@ -21,8 +21,7 @@ interface Task {
 }
 
 const colors = {
-  primary: "#5B4FFF",
-  secondary: "#7C73FF",
+  primary: "rgba(255,255,255,0.12)",
   accent: "#FFA726",
   dark: "#1A1A2E",
   light: "#F8F9FA",
@@ -56,16 +55,16 @@ const RoleWorker: React.FC = () => {
   };
 
   const getStatusColor = (status?: string | null) => {
-    if (!status) return "bg-white/10 text-gray-400 border-border-subtle";
+    if (!status) return "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] border-[var(--color-border)]";
     switch (status.toUpperCase()) {
       case "COMPLETED":
-        return "bg-green-500/20 text-green-400 border-green-500/30";
+        return "bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30";
       case "IN_PROGRESS":
-        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+        return "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30";
       case "PENDING":
-        return "bg-amber-500/20 text-amber-400 border-amber-500/30";
+        return "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30";
       default:
-        return "bg-white/10 text-gray-400 border-border-subtle";
+        return "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] border-[var(--color-border)]";
     }
   };
 
@@ -113,17 +112,17 @@ const RoleWorker: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-app">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-bounce bg-white/80" />
-            <div className="w-3 h-3 rounded-full animate-bounce bg-white/60" style={{ animationDelay: "0.1s" }} />
-            <div className="w-3 h-3 rounded-full animate-bounce bg-white/40" style={{ animationDelay: "0.2s" }} />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)]" />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-80" style={{ animationDelay: "0.1s" }} />
+            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-60" style={{ animationDelay: "0.2s" }} />
           </div>
-          <span className="text-lg font-medium text-gray-400">Loading your tasks...</span>
+          <span className="text-lg font-medium text-[var(--color-text-muted)]">Loading your tasks...</span>
         </div>
       </div>
     );
   }
 
-  const cardClass = "p-6 rounded-2xl border border-border-subtle bg-card backdrop-blur-sm";
+  const cardClass = "p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] backdrop-blur-sm";
 
   if (error) {
     return (
@@ -133,7 +132,7 @@ const RoleWorker: React.FC = () => {
           <p className="text-red-400">{error}</p>
           <button
             onClick={fetchTasks}
-            className="px-4 py-2 mt-4 text-sm font-semibold rounded-full bg-white text-app hover:bg-gray-200"
+            className="btn-primary px-4 py-2 mt-4 text-sm font-semibold rounded-full"
           >
             Try Again
           </button>
@@ -147,10 +146,10 @@ const RoleWorker: React.FC = () => {
       <div className="px-4 mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-bold text-white">
-            My <span className="text-gray-400">Tasks</span>
+          <h1 className="mb-2 text-4xl font-bold text-[var(--color-text-primary)]">
+            My <span className="text-[var(--color-text-muted)]">Tasks</span>
           </h1>
-          <p className="text-lg text-gray-400">Track and manage your assigned tasks</p>
+          <p className="text-lg text-[var(--color-text-muted)]">Track and manage your assigned tasks</p>
         </div>
 
         {/* Tab Navigation */}
@@ -166,8 +165,8 @@ const RoleWorker: React.FC = () => {
                 }}
                 className={`px-6 py-3 text-sm font-semibold rounded-full transition-all ${
                   activeTab === tab
-                    ? "bg-white text-app"
-                    : "text-gray-400 border border-border-subtle bg-card hover:bg-white/10 hover:text-white"
+                    ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
+                    : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
                 }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -184,70 +183,70 @@ const RoleWorker: React.FC = () => {
               {/* Total Tasks */}
               <div className={cardClass}>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Total Tasks</p>
-                  <div className="p-2 rounded-lg bg-white/10">
-                    <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Total Tasks</p>
+                  <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
+                    <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                   </div>
                 </div>
-                <p className="text-3xl font-bold text-white">{tasks.length}</p>
-                <p className="mt-2 text-sm text-gray-500">{completedTasks} completed</p>
+                <p className="text-3xl font-bold text-[var(--color-text-primary)]">{tasks.length}</p>
+                <p className="mt-2 text-sm text-[var(--color-text-muted)]">{completedTasks} completed</p>
               </div>
 
               {/* Active Tasks */}
               <div className={cardClass}>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">In Progress</p>
-                  <div className="p-2 rounded-lg bg-white/10">
+                  <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">In Progress</p>
+                  <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
                     <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
                 </div>
                 <p className="text-3xl font-bold text-blue-400">{inProgressTasks}</p>
-                <p className="mt-2 text-sm text-gray-500">Active work</p>
+                <p className="mt-2 text-sm text-[var(--color-text-muted)]">Active work</p>
               </div>
 
               {/* Overdue Tasks */}
               <div className={cardClass}>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Overdue</p>
-                  <div className="p-2 rounded-lg bg-white/10">
+                  <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Overdue</p>
+                  <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
                     <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                   </div>
                 </div>
                 <p className="text-3xl font-bold text-red-400">{overdueTasks}</p>
-                <p className="mt-2 text-sm text-gray-500">Need attention</p>
+                <p className="mt-2 text-sm text-[var(--color-text-muted)]">Need attention</p>
               </div>
 
               {/* Upcoming Tasks */}
               <div className={cardClass}>
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Due This Week</p>
-                  <div className="p-2 rounded-lg bg-white/10">
+                  <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Due This Week</p>
+                  <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
                     <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
                 </div>
                 <p className="text-3xl font-bold text-amber-400">{upcomingTasks}</p>
-                <p className="mt-2 text-sm text-gray-500">Next 7 days</p>
+                <p className="mt-2 text-sm text-[var(--color-text-muted)]">Next 7 days</p>
               </div>
             </div>
 
             {/* Task Progress */}
             <div className={cardClass}>
-              <h3 className="mb-4 text-lg font-bold text-white">Task Progress</h3>
+              <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Task Progress</h3>
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Completed</span>
+                    <span className="text-sm font-medium text-[var(--color-text-secondary)]">Completed</span>
                     <span className="text-sm font-bold text-green-600">{completedTasks} / {tasks.length}</span>
                   </div>
-                  <div className="w-full h-3 overflow-hidden bg-gray-200 rounded-full">
+                  <div className="w-full h-3 overflow-hidden bg-[var(--color-surface-3)] rounded-full">
                     <div 
                       className="h-full transition-all duration-500 bg-green-500 rounded-full"
                       style={{ width: `${tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0}%` }}
@@ -256,10 +255,10 @@ const RoleWorker: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">In Progress</span>
+                    <span className="text-sm font-medium text-[var(--color-text-secondary)]">In Progress</span>
                     <span className="text-sm font-bold text-blue-600">{inProgressTasks} / {tasks.length}</span>
                   </div>
-                  <div className="w-full h-3 overflow-hidden bg-gray-200 rounded-full">
+                  <div className="w-full h-3 overflow-hidden bg-[var(--color-surface-3)] rounded-full">
                     <div 
                       className="h-full transition-all duration-500 bg-blue-500 rounded-full"
                       style={{ width: `${tasks.length > 0 ? (inProgressTasks / tasks.length) * 100 : 0}%` }}
@@ -268,10 +267,10 @@ const RoleWorker: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Pending</span>
+                    <span className="text-sm font-medium text-[var(--color-text-secondary)]">Pending</span>
                     <span className="text-sm font-bold text-amber-600">{pendingTasks} / {tasks.length}</span>
                   </div>
-                  <div className="w-full h-3 overflow-hidden bg-gray-200 rounded-full">
+                  <div className="w-full h-3 overflow-hidden bg-[var(--color-surface-3)] rounded-full">
                     <div 
                       className="h-full transition-all duration-500 rounded-full bg-amber-500"
                       style={{ width: `${tasks.length > 0 ? (pendingTasks / tasks.length) * 100 : 0}%` }}
@@ -285,12 +284,12 @@ const RoleWorker: React.FC = () => {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Overdue Tasks */}
               {overdueTasks > 0 && (
-                <div className="p-6 bg-white border border-red-200 shadow-sm rounded-2xl">
+                <div className="card-panel p-6 shadow-lg">
                   <div className="flex items-center gap-2 mb-4">
                     <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    <h3 className="text-lg font-bold text-white">Overdue Tasks</h3>
+                    <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Overdue Tasks</h3>
                   </div>
                   <div className="space-y-3">
                     {tasks
@@ -310,8 +309,8 @@ const RoleWorker: React.FC = () => {
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h4 className="font-semibold text-white">{task.title}</h4>
-                                <p className="text-sm text-gray-500">{task.client?.name || "No client"}</p>
+                                <h4 className="font-semibold text-[var(--color-text-primary)]">{task.title}</h4>
+                                <p className="text-sm text-[var(--color-text-muted)]">{task.client?.name || "No client"}</p>
                                 <p className="mt-1 text-xs font-semibold text-red-600">
                                   Overdue by {Math.abs(daysUntil!)} days
                                 </p>
@@ -329,7 +328,7 @@ const RoleWorker: React.FC = () => {
 
               {/* Recent Tasks */}
               <div className={cardClass}>
-                <h3 className="mb-4 text-lg font-bold text-white">Recent Tasks</h3>
+                <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Recent Tasks</h3>
                 <div className="space-y-3">
                   {tasks.slice(0, 5).map((task) => {
                     const daysUntil = getDaysUntilDue(task.dueDate);
@@ -339,12 +338,12 @@ const RoleWorker: React.FC = () => {
                       <div
                         key={task.id}
                         onClick={() => navigate(`/tasks/${task.id}`)}
-                        className="p-4 transition-all border border-border-subtle rounded-lg cursor-pointer hover:shadow-md hover:border-gray-300"
+                        className="p-4 transition-all border border-[var(--color-border)] rounded-lg cursor-pointer hover:shadow-md hover:border-[var(--color-border-hover)]"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h4 className="font-semibold text-white">{task.title}</h4>
-                            <p className="text-sm text-gray-500">{task.client?.name || "No client"}</p>
+                            <h4 className="font-semibold text-[var(--color-text-primary)]">{task.title}</h4>
+                            <p className="text-sm text-[var(--color-text-muted)]">{task.client?.name || "No client"}</p>
                             {isOverdue && (
                               <p className="mt-1 text-xs font-semibold text-red-600">Overdue by {Math.abs(daysUntil!)} days</p>
                             )}
@@ -357,12 +356,12 @@ const RoleWorker: React.FC = () => {
                     );
                   })}
                   {tasks.length === 0 && (
-                    <p className="py-8 text-center text-gray-500">No tasks yet</p>
+                    <p className="py-8 text-center text-[var(--color-text-muted)]">No tasks yet</p>
                   )}
                 </div>
                 <button
                   onClick={() => setActiveTab("tasks")}
-                  className="w-full px-4 py-2 mt-4 text-sm font-semibold text-gray-700 transition-colors border border-gray-300 rounded-lg hover:bg-app"
+                  className="w-full px-4 py-2 mt-4 text-sm font-semibold text-[var(--color-text-secondary)] transition-colors btn-secondary w-full rounded-lg"
                 >
                   View All Tasks
                 </button>
@@ -383,10 +382,9 @@ const RoleWorker: React.FC = () => {
                     onClick={() => setStatusFilter(status)}
                     className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
                       statusFilter === status
-                        ? "text-white"
-                        : "text-gray-400 bg-white border border-border-subtle hover:bg-app"
+                        ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
+                        : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
                     }`}
-                    style={statusFilter === status ? { backgroundColor: colors.primary } : {}}
                   >
                     {status.replace("_", " ")}
                   </button>
@@ -398,16 +396,15 @@ const RoleWorker: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
               />
             </div>
 
             {/* Tasks List */}
             <div className="space-y-4">
               {filteredTasks.length === 0 ? (
-                <div className="py-12 text-center bg-white border border-border-subtle rounded-2xl">
-                  <p className="text-lg font-medium text-gray-700">No tasks found</p>
-                  <p className="text-sm text-gray-500">Try adjusting your filters</p>
+                <div className="rounded-2xl card-panel py-12 text-center shadow-lg">
+                  <p className="text-lg font-medium text-[var(--color-text-secondary)]">No tasks found</p>
+                  <p className="text-sm text-[var(--color-text-muted)]">Try adjusting your filters</p>
                 </div>
               ) : (
                 filteredTasks.map((task) => {
@@ -419,15 +416,15 @@ const RoleWorker: React.FC = () => {
                     <div
                       key={task.id}
                       onClick={() => navigate(`/tasks/${task.id}`)}
-                      className="p-6 transition-all bg-white border border-border-subtle shadow-sm cursor-pointer rounded-2xl hover:shadow-md hover:border-gray-300"
+                      className="cursor-pointer rounded-2xl card-panel card-panel-hover p-6 shadow-lg transition hover:-translate-y-[1px]"
                     >
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1">
-                          <h3 className="mb-2 text-xl font-bold text-white">{task.title}</h3>
+                          <h3 className="mb-2 text-xl font-bold text-[var(--color-text-primary)]">{task.title}</h3>
                           {task.description && (
-                            <p className="mb-3 text-sm text-gray-400">{task.description}</p>
+                            <p className="mb-3 text-sm text-[var(--color-text-muted)]">{task.description}</p>
                           )}
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--color-text-muted)]">
                             {task.client && (
                               <span className="flex items-center gap-2">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -31,7 +31,7 @@ model User {
   invoices       Invoice[]          @relation("ClientInvoices")
   clientProjects Project[]          @relation("ClientProjects")
   clientTasks    Task[]             @relation("ClientTasks")
-  assignedTasks  Task[]             @relation("WorkerTasks")
+  taskAssignments TaskWorker[]      @relation("TaskWorkers")
   taskComments   TaskComment[]
   projects       TimesheetProject[] @relation("UserProjects")
 }
@@ -75,16 +75,27 @@ model Task {
   dueDate     DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @default(now()) @updatedAt
-  workerId    Int?
   clientId    Int
   projectId   Int?
   client      User          @relation("ClientTasks", fields: [clientId], references: [id])
   project     Project?      @relation("ProjectTasks", fields: [projectId], references: [id])
-  worker      User?         @relation("WorkerTasks", fields: [workerId], references: [id])
+  workers     TaskWorker[]
   comments    TaskComment[]
   files       TaskFile[]
 
   @@index([projectId])
+}
+
+model TaskWorker {
+  id     Int  @id @default(autoincrement())
+  taskId Int
+  userId Int
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user   User @relation("TaskWorkers", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
 }
 
 model TaskFile {

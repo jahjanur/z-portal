@@ -4,9 +4,8 @@ import { HexColorPicker } from "react-colorful";
 import API from "../api";
 
 const colors = {
-  primary: "#5B4FFF",
-  secondary: "#7C73FF",
-  accent: "#FFA726",
+  primary: "rgba(255,255,255,0.12)",
+  secondary: "rgba(255,255,255,0.08)",
 };
 
 interface UserData {
@@ -54,7 +53,7 @@ const CompleteProfile: React.FC = () => {
 
   const [brandColors, setBrandColors] = useState<string[]>([]);
   const [showColorPicker, setShowColorPicker] = useState<number | null>(null);
-  const [tempColor, setTempColor] = useState<string>("#5B4FFF");
+  const [tempColor, setTempColor] = useState<string>("#6b7280");
 
   const [formData, setFormData] = useState<FormData>({
     address: "",
@@ -113,9 +112,9 @@ const CompleteProfile: React.FC = () => {
 
   const handleAddColor = () => {
     const newIndex = brandColors.length;
-    setBrandColors([...brandColors, "#5B4FFF"]);
+    setBrandColors([...brandColors, "#6b7280"]);
     setShowColorPicker(newIndex);
-    setTempColor("#5B4FFF");
+    setTempColor("#6b7280");
   };
 
   const handleColorChange = (index: number, color: string) => {
@@ -366,8 +365,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                           href={`http://localhost:4001${existingFile}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs hover:underline"
-                          style={{ color: colors.primary }}
+                          className="text-xs text-white/80 hover:underline"
                         >
                           View file
                         </a>
@@ -402,8 +400,8 @@ const handleSubmit = async (e: React.FormEvent) => {
           key={index} 
           className={`flex items-center justify-between p-3 border-2 rounded-lg transition-all ${
             isLogo 
-              ? 'bg-purple-50 border-purple-300' 
-              : 'bg-white border-gray-200'
+              ? "bg-white/10 border-white/25" 
+              : "bg-white/5 border-white/10"
           }`}
         >
           <div className="flex items-center flex-1 min-w-0 gap-3">
@@ -413,11 +411,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                   src={fileInfo.preview}
                   alt={fileInfo.file.name}
                   className={`object-cover w-12 h-12 rounded border-2 ${
-                    isLogo ? 'border-purple-500' : 'border-gray-200'
+                    isLogo ? "border-white/25" : "border-white/10"
                   }`}
                 />
                 {isLogo && (
-                  <div className="absolute p-1 bg-purple-600 rounded-full -top-2 -right-2">
+                  <div className="absolute -top-2 -right-2 rounded-full bg-white/20 p-1">
                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -435,7 +433,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   {fileInfo.file.name}
                 </p>
                 {isLogo && (
-                  <span className="px-2 py-0.5 text-xs font-bold text-purple-700 bg-purple-200 rounded-full">
+                  <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-bold text-white/80">
                     LOGO
                   </span>
                 )}
@@ -451,7 +449,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               <button
                 type="button"
                 onClick={() => setSelectedLogoIndex(index)}
-                className="px-3 py-1 text-xs font-semibold text-purple-700 transition-colors bg-purple-100 rounded-lg hover:bg-purple-200"
+                className="btn-secondary rounded-lg px-3 py-1 text-xs"
                 title="Set as logo"
               >
                 Set as Logo
@@ -506,8 +504,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   placeholder="123 Business Street, City, Country"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/25 focus:border-transparent"
                   required
                 />
               </div>
@@ -522,8 +519,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   placeholder="P.O. Box 123, City, Postal Code"
                   value={formData.postalAddress}
                   onChange={(e) => setFormData({ ...formData, postalAddress: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/25 focus:border-transparent"
                   required
                 />
               </div>
@@ -538,8 +534,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   placeholder="+389 72 123 456"
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/25 focus:border-transparent"
                   required
                 />
               </div>
@@ -554,8 +549,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   placeholder="support@company.com, sales@company.com"
                   value={formData.extraEmails}
                   onChange={(e) => setFormData({ ...formData, extraEmails: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/25 focus:border-transparent"
                 />
                 <p className="mt-1 text-xs text-gray-500">Separate multiple emails with commas</p>
               </div>
@@ -571,8 +565,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   placeholder="e.g., Royal Blue and Gold, or #FF6B6B, #4ECDC4"
                   value={formData.brandPattern}
                   onChange={(e) => setFormData({ ...formData, brandPattern: e.target.value })}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                  style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/25 focus:border-transparent"
                 />
                 <p className="mt-1 text-xs text-gray-500">
                   Describe your brand colors or use the color pickers below
@@ -654,16 +647,14 @@ const handleSubmit = async (e: React.FormEvent) => {
                                       handleColorChange(index, value);
                                     }
                                   }}
-                                  className="flex-1 px-3 py-2 font-mono text-sm uppercase border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                                  style={{ "--tw-ring-color": colors.primary } as React.CSSProperties}
+                                  className="flex-1 px-3 py-2 font-mono text-sm uppercase border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-white/25 focus:border-transparent"
                                   placeholder="#000000"
                                 />
                               </div>
                               <button
                                 type="button"
                                 onClick={handleCloseColorPicker}
-                                className="w-full px-4 py-3 text-sm font-semibold text-white transition-colors rounded-lg hover:opacity-90"
-                                style={{ backgroundColor: colors.primary }}
+                                className="w-full px-4 py-3 text-sm font-semibold text-white transition-colors rounded-lg bg-white/12 hover:bg-white/18"
                               >
                                 Done
                               </button>
@@ -678,8 +669,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <button
                   type="button"
                   onClick={handleAddColor}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold transition-colors bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50"
-                  style={{ borderColor: colors.primary, color: colors.primary }}
+                  className="flex items-center gap-2 rounded-lg border-2 border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white/90 transition-colors hover:bg-white/10"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -716,8 +706,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full px-6 py-4 text-lg font-semibold text-white transition-all rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: colors.primary }}
+                className="btn-primary w-full px-6 py-4 text-lg font-semibold disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? "Saving..." : "Complete Profile"}
               </button>

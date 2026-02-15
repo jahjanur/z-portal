@@ -4,20 +4,26 @@ export default {
   theme: {
     extend: {
       colors: {
-        app: "#0f0f12",
-        card: "rgba(42, 42, 42, 0.8)",
-        "border-subtle": "rgba(255, 255, 255, 0.1)",
-        "border-medium": "rgba(255, 255, 255, 0.15)",
-        accent: "#5B4FFF",
-        "accent-dim": "rgba(91, 79, 255, 0.4)",
+        app: "var(--color-bg)",
+        card: "var(--color-surface-2)",
+        "border-subtle": "var(--color-border)",
+        "border-medium": "var(--color-border-hover)",
+        "theme-bg": "var(--color-bg)",
+        "theme-surface-1": "var(--color-surface-1)",
+        "theme-surface-2": "var(--color-surface-2)",
+        "theme-surface-3": "var(--color-surface-3)",
+        "theme-border": "var(--color-border)",
+        "theme-text": "var(--color-text-primary)",
+        "theme-muted": "var(--color-text-muted)",
+        "theme-destructive": "var(--color-destructive-text)",
       },
       backgroundColor: {
-        glass: "rgba(42, 42, 42, 0.6)",
-        "glass-border": "rgba(255, 255, 255, 0.08)",
+        glass: "var(--color-glass)",
+        "glass-border": "var(--color-glass-border)",
         surface: {
-          1: "#0f0f12",
-          2: "rgba(255, 255, 255, 0.05)",
-          3: "rgba(255, 255, 255, 0.08)",
+          1: "var(--color-surface-1)",
+          2: "var(--color-surface-2)",
+          3: "var(--color-surface-3)",
         },
       },
       backgroundImage: {

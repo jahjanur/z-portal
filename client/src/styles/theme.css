@@ -1,0 +1,211 @@
+/**
+ * Design tokens for Dark and Light themes.
+ * Set on <html data-theme="dark"> or data-theme="light".
+ * Default: dark. Toggle persists in localStorage; first visit can use prefers-color-scheme.
+ */
+
+/* ---------------------------------------------------------------------------
+   Dark theme (default)
+   --------------------------------------------------------------------------- */
+[data-theme="dark"] {
+  /* Page & surfaces */
+  --color-bg: #0b0f14;
+  --color-surface-1: #0f0f12;
+  --color-surface-2: rgba(255, 255, 255, 0.05);
+  --color-surface-3: rgba(255, 255, 255, 0.08);
+  --color-modal-surface: rgba(255, 255, 255, 0.06);
+  /* Borders */
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-hover: rgba(255, 255, 255, 0.2);
+  --color-border-focus: rgba(255, 255, 255, 0.25);
+  /* Text */
+  --color-text-primary: rgba(255, 255, 255, 0.95);
+  --color-text-secondary: rgba(255, 255, 255, 0.85);
+  --color-text-muted: rgba(255, 255, 255, 0.6);
+  --color-placeholder: rgba(255, 255, 255, 0.35);
+  /* Focus & overlay */
+  --color-focus-ring: rgba(255, 255, 255, 0.2);
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  /* Shadow */
+  --color-shadow: rgba(0, 0, 0, 0.3);
+  --color-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  /* Destructive */
+  --color-destructive-bg: rgba(239, 68, 68, 0.12);
+  --color-destructive-text: rgb(252, 165, 165);
+  --color-destructive-border: rgba(239, 68, 68, 0.25);
+  /* Inputs */
+  --color-input-bg: rgba(255, 255, 255, 0.08);
+  --color-input-border: rgba(255, 255, 255, 0.15);
+  /* Buttons */
+  --color-btn-primary-bg: rgba(255, 255, 255, 0.12);
+  --color-btn-primary-border: rgba(255, 255, 255, 0.14);
+  --color-btn-primary-text: rgba(255, 255, 255, 0.95);
+  --color-btn-primary-hover-bg: rgba(255, 255, 255, 0.18);
+  --color-btn-primary-hover-border: rgba(255, 255, 255, 0.2);
+  --color-btn-secondary-bg: rgba(255, 255, 255, 0.08);
+  --color-btn-secondary-border: rgba(255, 255, 255, 0.2);
+  --color-btn-secondary-text: rgba(255, 255, 255, 0.9);
+  --color-btn-secondary-hover-bg: rgba(255, 255, 255, 0.12);
+  --color-btn-secondary-hover-border: rgba(255, 255, 255, 0.25);
+  --color-btn-ghost-bg: transparent;
+  --color-btn-ghost-border: rgba(255, 255, 255, 0.1);
+  --color-btn-ghost-text: rgba(255, 255, 255, 0.8);
+  --color-btn-ghost-hover-bg: rgba(255, 255, 255, 0.08);
+  --color-btn-ghost-hover-border: rgba(255, 255, 255, 0.15);
+  /* Nav */
+  --color-nav-active-bg: #ffffff;
+  --color-nav-active-text: #0b0f14;
+  --color-nav-link-border: rgba(255, 255, 255, 0.1);
+  --color-nav-link-text: rgba(255, 255, 255, 0.8);
+  --color-nav-link-hover-bg: rgba(255, 255, 255, 0.1);
+  --color-nav-link-hover-border: rgba(255, 255, 255, 0.2);
+  --color-nav-link-hover-text: rgba(255, 255, 255, 1);
+  /* Glass / card */
+  --color-glass: rgba(42, 42, 42, 0.6);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  /* Tabs */
+  --color-tab-active-bg: rgba(255, 255, 255, 0.12);
+  --color-tab-active-text: rgba(255, 255, 255, 0.95);
+  --color-tab-active-border: rgba(255, 255, 255, 0.2);
+  --color-tab-inactive-bg: rgba(255, 255, 255, 0.05);
+  --color-tab-inactive-border: rgba(255, 255, 255, 0.1);
+  --color-tab-inactive-text: rgba(255, 255, 255, 0.7);
+  --color-tab-inactive-hover-bg: rgba(255, 255, 255, 0.1);
+  --color-tab-inactive-hover-text: rgba(255, 255, 255, 0.9);
+  /* Grid pattern (page bg) */
+  --color-grid-line: rgba(255, 255, 255, 0.03);
+  --color-vignette: rgba(0, 0, 0, 0.35);
+}
+
+/* ---------------------------------------------------------------------------
+   Light theme
+   --------------------------------------------------------------------------- */
+[data-theme="light"] {
+  /* Page & surfaces */
+  --color-bg: #f6f7f8;
+  --color-surface-1: #ffffff;
+  --color-surface-2: #f3f4f6;
+  --color-surface-3: #e5e7eb;
+  /* Modal: solid in light so it pops */
+  --color-modal-surface: #ffffff;
+  /* Borders */
+  --color-border: rgba(15, 23, 42, 0.12);
+  --color-border-hover: rgba(15, 23, 42, 0.2);
+  --color-border-focus: rgba(15, 23, 42, 0.35);
+  /* Text: near-black headings, medium gray secondary */
+  --color-text-primary: #0b0f14;
+  --color-text-secondary: #334155;
+  --color-text-muted: #475569;
+  --color-placeholder: #94a3b8;
+  /* Focus & overlay: dark overlay so modal stands out */
+  --color-focus-ring: rgba(15, 23, 42, 0.25);
+  --color-overlay: rgba(0, 0, 0, 0.35);
+  /* Shadow: card shadow so panels don't disappear */
+  --color-shadow: rgba(0, 0, 0, 0.08);
+  --color-card-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  /* Destructive */
+  --color-destructive-bg: rgba(239, 68, 68, 0.1);
+  --color-destructive-text: #b91c1c;
+  --color-destructive-border: rgba(239, 68, 68, 0.3);
+  /* Inputs: white bg, visible border */
+  --color-input-bg: #ffffff;
+  --color-input-border: rgba(15, 23, 42, 0.2);
+  /* Buttons */
+  --color-btn-primary-bg: rgba(15, 23, 42, 0.08);
+  --color-btn-primary-border: rgba(15, 23, 42, 0.18);
+  --color-btn-primary-text: #0b0f14;
+  --color-btn-primary-hover-bg: rgba(15, 23, 42, 0.12);
+  --color-btn-primary-hover-border: rgba(15, 23, 42, 0.25);
+  --color-btn-secondary-bg: #ffffff;
+  --color-btn-secondary-border: rgba(15, 23, 42, 0.2);
+  --color-btn-secondary-text: #0b0f14;
+  --color-btn-secondary-hover-bg: rgba(15, 23, 42, 0.06);
+  --color-btn-secondary-hover-border: rgba(15, 23, 42, 0.25);
+  --color-btn-ghost-bg: transparent;
+  --color-btn-ghost-border: rgba(15, 23, 42, 0.12);
+  --color-btn-ghost-text: #334155;
+  --color-btn-ghost-hover-bg: rgba(15, 23, 42, 0.06);
+  --color-btn-ghost-hover-border: rgba(15, 23, 42, 0.18);
+  /* Nav */
+  --color-nav-active-bg: #0b0f14;
+  --color-nav-active-text: #ffffff;
+  --color-nav-link-border: rgba(15, 23, 42, 0.2);
+  --color-nav-link-text: #334155;
+  --color-nav-link-hover-bg: rgba(15, 23, 42, 0.08);
+  --color-nav-link-hover-border: rgba(15, 23, 42, 0.25);
+  --color-nav-link-hover-text: #0b0f14;
+  /* Tabs (dashboard) */
+  --color-tab-active-bg: rgba(15, 23, 42, 0.1);
+  --color-tab-active-text: #0b0f14;
+  --color-tab-active-border: rgba(15, 23, 42, 0.2);
+  --color-tab-inactive-bg: #f3f4f6;
+  --color-tab-inactive-border: rgba(15, 23, 42, 0.12);
+  --color-tab-inactive-text: #475569;
+  --color-tab-inactive-hover-bg: #e5e7eb;
+  --color-tab-inactive-hover-text: #0b0f14;
+  /* Glass / card */
+  --color-glass: rgba(255, 255, 255, 0.95);
+  --color-glass-border: rgba(15, 23, 42, 0.1);
+  /* Grid pattern */
+  --color-grid-line: rgba(15, 23, 42, 0.06);
+  --color-vignette: rgba(15, 23, 42, 0.02);
+}
+
+/* Default (no data-theme yet): use dark so no flash before script runs */
+html:not([data-theme]) {
+  --color-bg: #0b0f14;
+  --color-surface-1: #0f0f12;
+  --color-surface-2: rgba(255, 255, 255, 0.05);
+  --color-surface-3: rgba(255, 255, 255, 0.08);
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-hover: rgba(255, 255, 255, 0.2);
+  --color-border-focus: rgba(255, 255, 255, 0.25);
+  --color-text-primary: rgba(255, 255, 255, 0.95);
+  --color-text-secondary: rgba(255, 255, 255, 0.85);
+  --color-text-muted: rgba(255, 255, 255, 0.6);
+  --color-placeholder: rgba(255, 255, 255, 0.35);
+  --color-focus-ring: rgba(255, 255, 255, 0.2);
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-shadow: rgba(0, 0, 0, 0.3);
+  --color-destructive-bg: rgba(239, 68, 68, 0.12);
+  --color-destructive-text: rgb(252, 165, 165);
+  --color-destructive-border: rgba(239, 68, 68, 0.25);
+  --color-input-bg: rgba(255, 255, 255, 0.08);
+  --color-input-border: rgba(255, 255, 255, 0.15);
+  --color-btn-primary-bg: rgba(255, 255, 255, 0.12);
+  --color-btn-primary-border: rgba(255, 255, 255, 0.14);
+  --color-btn-primary-text: rgba(255, 255, 255, 0.95);
+  --color-btn-primary-hover-bg: rgba(255, 255, 255, 0.18);
+  --color-btn-primary-hover-border: rgba(255, 255, 255, 0.2);
+  --color-btn-secondary-bg: rgba(255, 255, 255, 0.08);
+  --color-btn-secondary-border: rgba(255, 255, 255, 0.2);
+  --color-btn-secondary-text: rgba(255, 255, 255, 0.9);
+  --color-btn-secondary-hover-bg: rgba(255, 255, 255, 0.12);
+  --color-btn-secondary-hover-border: rgba(255, 255, 255, 0.25);
+  --color-btn-ghost-bg: transparent;
+  --color-btn-ghost-border: rgba(255, 255, 255, 0.1);
+  --color-btn-ghost-text: rgba(255, 255, 255, 0.8);
+  --color-btn-ghost-hover-bg: rgba(255, 255, 255, 0.08);
+  --color-btn-ghost-hover-border: rgba(255, 255, 255, 0.15);
+  --color-nav-active-bg: #ffffff;
+  --color-nav-active-text: #0b0f14;
+  --color-nav-link-border: rgba(255, 255, 255, 0.1);
+  --color-nav-link-text: rgba(255, 255, 255, 0.8);
+  --color-nav-link-hover-bg: rgba(255, 255, 255, 0.1);
+  --color-nav-link-hover-border: rgba(255, 255, 255, 0.2);
+  --color-nav-link-hover-text: rgba(255, 255, 255, 1);
+  --color-glass: rgba(42, 42, 42, 0.6);
+  --color-glass-border: rgba(255, 255, 255, 0.08);
+  --color-modal-surface: rgba(255, 255, 255, 0.06);
+  --color-card-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  --color-tab-active-bg: rgba(255, 255, 255, 0.12);
+  --color-tab-active-text: rgba(255, 255, 255, 0.95);
+  --color-tab-active-border: rgba(255, 255, 255, 0.2);
+  --color-tab-inactive-bg: rgba(255, 255, 255, 0.05);
+  --color-tab-inactive-border: rgba(255, 255, 255, 0.1);
+  --color-tab-inactive-text: rgba(255, 255, 255, 0.7);
+  --color-tab-inactive-hover-bg: rgba(255, 255, 255, 0.1);
+  --color-tab-inactive-hover-text: rgba(255, 255, 255, 0.9);
+  --color-grid-line: rgba(255, 255, 255, 0.03);
+  --color-vignette: rgba(0, 0, 0, 0.35);
+}

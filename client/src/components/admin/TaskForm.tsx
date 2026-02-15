@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { CONTROL_INPUT, CONTROL_SELECT } from "../ui/controls";
+import WorkerMultiSelect from "../ui/WorkerMultiSelect";
 
 interface User {
   id: number;
@@ -18,7 +20,7 @@ interface TaskFormProps {
     title: string;
     description: string;
     clientId: string;
-    workerId: string;
+    workerIds: number[];
     dueDate: string;
     projectId: string;
   }) => void;
@@ -26,7 +28,6 @@ interface TaskFormProps {
   workers: User[];
   projects: Project[];
   onCreateProject: (projectData: { name: string; clientId: string; description: string }) => Promise<void>;
-  colors: { primary: string };
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({ 
@@ -35,13 +36,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
   workers, 
   projects,
   onCreateProject,
-  colors 
 }) => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     clientId: "",
-    workerId: "",
+    workerIds: [] as number[],
     dueDate: "",
     projectId: "",
   });
@@ -59,7 +59,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       return;
     }
     onSubmit(formData);
-    setFormData({ title: "", description: "", clientId: "", workerId: "", dueDate: "", projectId: "" });
+    setFormData({ title: "", description: "", clientId: "", workerIds: [], dueDate: "", projectId: "" });
   };
 
   const handleCreateProject = async () => {
@@ -77,13 +77,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
     : projects;
 
   return (
-    <div className="mb-6 rounded-xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm">
+    <div className="mb-6 rounded-xl card-panel p-5 backdrop-blur-sm">
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-white/90">Add New Task</h3>
+        <h3 className="text-sm font-semibold text-theme-primary">Add New Task</h3>
         <button
           type="button"
           onClick={() => setShowProjectForm(!showProjectForm)}
-          className="flex items-center gap-1 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+          className="btn-primary flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -94,19 +94,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
       {/* Quick Project Creation */}
       {showProjectForm && (
-        <div className="mb-4 rounded-xl border-2 border-accent/30 bg-accent/10 p-4">
-          <h4 className="mb-3 text-xs font-semibold text-white/90">Create New Project</h4>
+        <div className="mb-4 rounded-xl border-2 border-[var(--color-border-hover)] card-panel p-4">
+          <h4 className="mb-3 text-xs font-semibold text-theme-primary">Create New Project</h4>
           <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
             <input
               placeholder="Project name *"
               value={newProject.name}
               onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-              className="px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg"
+              className="input-dark w-full px-3 py-2 text-xs rounded-lg"
             />
             <select
               value={newProject.clientId}
               onChange={(e) => setNewProject({ ...newProject, clientId: e.target.value })}
-              className="px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg"
+              className="input-dark w-full px-3 py-2 text-xs rounded-lg"
             >
               <option value="">No Client (Standalone)</option>
               {clients.map((c) => (
@@ -119,23 +119,24 @@ const TaskForm: React.FC<TaskFormProps> = ({
               placeholder="Description (optional)"
               value={newProject.description}
               onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-              className="px-3 py-2 text-xs bg-white border border-gray-300 rounded-lg"
+              className="input-dark w-full px-3 py-2 text-xs rounded-lg"
             />
           </div>
           <div className="flex gap-2 mt-2">
             <button
+              type="button"
               onClick={handleCreateProject}
-              className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg"
-              style={{ backgroundColor: colors.primary }}
+              className="btn-primary px-3 py-1.5 text-xs rounded-lg"
             >
               Create
             </button>
             <button
+              type="button"
               onClick={() => {
                 setShowProjectForm(false);
                 setNewProject({ name: "", clientId: "", description: "" });
               }}
-              className="px-3 py-1.5 text-xs font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+              className="btn-secondary px-3 py-1.5 text-xs rounded-lg"
             >
               Cancel
             </button>
@@ -149,20 +150,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
           placeholder="Task title *"
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          className="px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-lg"
+          className={CONTROL_INPUT}
           required
         />
         <input
           placeholder="Description"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-lg"
+          className={CONTROL_INPUT}
         />
         <select
           value={formData.clientId}
           onChange={(e) => {
             setFormData({ ...formData, clientId: e.target.value });
-            // Reset project if client changes
             if (formData.projectId) {
               const selectedProject = projects.find(p => p.id.toString() === formData.projectId);
               if (selectedProject && selectedProject.clientId?.toString() !== e.target.value) {
@@ -170,7 +170,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               }
             }
           }}
-          className="px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-lg"
+          className={CONTROL_SELECT}
           required
         >
           <option value="">Select Client *</option>
@@ -180,12 +180,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
             </option>
           ))}
         </select>
-        
-        {/* Project Dropdown */}
         <select
           value={formData.projectId}
           onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-          className="px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-lg"
+          className={CONTROL_SELECT}
         >
           <option value="">No Project (Standalone)</option>
           {filteredProjects.map((p) => (
@@ -194,30 +192,24 @@ const TaskForm: React.FC<TaskFormProps> = ({
             </option>
           ))}
         </select>
-        
-        <select
-          value={formData.workerId}
-          onChange={(e) => setFormData({ ...formData, workerId: e.target.value })}
-          className="px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-lg"
-        >
-          <option value="">Assign Worker (Optional)</option>
-          {workers.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.name}
-            </option>
-          ))}
-        </select>
+        <WorkerMultiSelect
+          workers={workers}
+          value={formData.workerIds}
+          onChange={(workerIds) => setFormData({ ...formData, workerIds })}
+          placeholder="Assign workers (optional)"
+          autoApply
+        />
         <input
           type="date"
           value={formData.dueDate}
           onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-          className="px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-lg"
+          className={CONTROL_INPUT}
         />
       </div>
       <button
+        type="button"
         onClick={handleSubmit}
-        className="w-full px-4 py-2.5 mt-3 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity"
-        style={{ backgroundColor: colors.primary }}
+        className="btn-primary mt-3 flex h-11 w-full items-center justify-center rounded-xl px-4 text-sm"
       >
         Add Task
       </button>

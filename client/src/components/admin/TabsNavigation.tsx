@@ -15,38 +15,68 @@ interface TabsNavigationProps {
   colors: { primary: string };
 }
 
+const TABS = ["workers", "clients", "tasks", "invoices", "domains", "offers", "timesheets"] as const;
+
 const TabsNavigation: React.FC<TabsNavigationProps> = ({ activeTab, setActiveTab, counts }) => {
   return (
-    <div className="mb-6 overflow-x-auto">
-      <div className="flex flex-wrap gap-2">
-        {(["workers", "clients", "tasks", "invoices", "domains", "offers", "timesheets"] as const).map((tab) => {
-          const showCount = counts[tab] != null && tab !== "offers" && tab !== "timesheets";
+    <nav
+      className="mb-8 w-full"
+      aria-label="Dashboard sections"
+    >
+      <div className="overflow-x-auto">
+        <div
+          className="inline-flex min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1 shadow-sm"
+          role="tablist"
+        >
+          {TABS.map((tab) => {
+            const showCount = counts[tab] != null && tab !== "offers" && tab !== "timesheets";
+            const label =
+              tab === "offers"
+                ? "Send Offer"
+                : tab === "timesheets"
+                  ? "Timesheets"
+                  : tab.charAt(0).toUpperCase() + tab.slice(1);
+            const isActive = activeTab === tab;
 
-          const label =
-            tab === "offers"
-              ? "Send Offer"
-              : tab === "timesheets"
-              ? "Timesheets"
-              : tab.charAt(0).toUpperCase() + tab.slice(1);
-
-          const isActive = activeTab === tab;
-          return (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`rounded-full px-5 py-2.5 text-sm font-semibold transition-all ${
-                isActive
-                  ? "bg-accent text-white shadow-md shadow-accent/20"
-                  : "border border-white/10 bg-white/5 text-white/70 hover:border-white/15 hover:bg-white/10 hover:text-white/90"
-              }`}
-            >
-              {label}
-              {showCount && ` (${counts[tab]})`}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={isActive}
+                aria-controls={`panel-${tab}`}
+                id={`tab-${tab}`}
+                onClick={() => setActiveTab(tab)}
+                className={`
+                  relative shrink-0 rounded-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-all
+                  focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]
+                  ${isActive
+                    ? "border-[var(--color-text-primary)] bg-[var(--color-surface-1)] text-[var(--color-text-primary)] shadow-sm"
+                    : "border-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                  }
+                `}
+              >
+                <span className="flex items-center gap-2 whitespace-nowrap">
+                  {label}
+                  {showCount && (
+                    <span
+                      className={`
+                        min-w-[1.25rem] rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums
+                        ${isActive
+                          ? "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]"
+                          : "bg-[var(--color-surface-3)]/80 text-[var(--color-text-muted)]"
+                        }
+                      `}
+                    >
+                      {counts[tab]}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </nav>
   );
 };
 
