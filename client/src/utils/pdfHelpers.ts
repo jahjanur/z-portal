@@ -186,10 +186,10 @@ export function renderTotals(
   return y;
 }
 
-/** Footer: thin divider, page number, optional "Made with ❤️ Zulbera". */
+/** Footer: thin divider and page number only. */
 export function renderFooter(
   doc: jsPDF,
-  options: { pageNumber: number; totalPages: number; showMadeWith?: boolean }
+  options: { pageNumber: number; totalPages: number }
 ): void {
   const pageHeight = getPageHeight(doc);
   const pageWidth = getPageWidth(doc);
@@ -207,9 +207,6 @@ export function renderFooter(
     footerY + 2,
     { align: "center" }
   );
-  if (options.showMadeWith !== false) {
-    doc.text("Made with ❤️ Zulbera", pageWidth / 2, footerY + 7, { align: "center" });
-  }
 }
 
 /** Add footer to all pages (call after content + any new pages from table). */
