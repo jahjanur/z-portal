@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
+import { generateOfferProposalPdf } from "../utils/pdf/generateOfferProposalPdf";
 
 const CONTROL =
   "h-11 w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]";
@@ -15,8 +16,13 @@ interface Product {
 const Offers: React.FC = () => {
   const [clientName, setClientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
+  const [clientCompany, setClientCompany] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
   const [pageTitle, setPageTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [whatWeNeed, setWhatWeNeed] = useState("");
+  const [roadmap, setRoadmap] = useState("");
+  const [whyToInvest, setWhyToInvest] = useState("");
   const [products, setProducts] = useState<Product[]>([
     { id: "1", name: "", price: undefined, timeline: "", techStack: "" },
   ]);
@@ -90,30 +96,24 @@ const Offers: React.FC = () => {
     setLoading(true);
     try {
       const totalPrice = products.reduce((s, p) => s + (p.price || 0), 0);
-      const response = await axios.post(
-        "/api/offers/download",
-        {
-          clientName,
-          clientEmail: recipientEmail,
-          pageTitle,
-          description,
-          products: products.map((p) => ({
-            name: p.name,
-            price: p.price,
-            timeline: p.timeline,
-            techStack: p.techStack.split(",").map((t: string) => t.trim()),
-          })),
-          totalPrice,
-        },
-        { responseType: "blob" }
-      );
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `${clientName.replace(/\s+/g, "_")}_offer.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      await generateOfferProposalPdf({
+        clientName,
+        clientEmail: recipientEmail || undefined,
+        clientCompany: clientCompany || undefined,
+        clientPhone: clientPhone || undefined,
+        pageTitle,
+        description,
+        whatWeNeed: whatWeNeed || undefined,
+        roadmap: roadmap || undefined,
+        whyToInvest: whyToInvest || undefined,
+        products: products.map((p) => ({
+          name: p.name,
+          price: p.price,
+          timeline: p.timeline,
+          techStack: p.techStack.split(",").map((t: string) => t.trim()),
+        })),
+        totalPrice,
+      });
     } catch (err) {
       console.error("Error downloading PDF:", err);
       alert("Failed to download PDF. Check console for details.");
@@ -163,6 +163,18 @@ const Offers: React.FC = () => {
             onChange={(e) => setRecipientEmail(e.target.value)}
             className={CONTROL}
           />
+          <input
+            placeholder="Company (optional)"
+            value={clientCompany}
+            onChange={(e) => setClientCompany(e.target.value)}
+            className={CONTROL}
+          />
+          <input
+            placeholder="Phone (optional)"
+            value={clientPhone}
+            onChange={(e) => setClientPhone(e.target.value)}
+            className={CONTROL}
+          />
         </div>
       </section>
 
@@ -187,6 +199,27 @@ const Offers: React.FC = () => {
             onChange={(e) => setDescription(e.target.value)}
             rows={4}
             className={`${CONTROL} min-h-[100px] resize-y py-3`}
+          />
+          <textarea
+            placeholder="What we need (optional — shown in PDF when filled)"
+            value={whatWeNeed}
+            onChange={(e) => setWhatWeNeed(e.target.value)}
+            rows={2}
+            className={`${CONTROL} min-h-[60px] resize-y py-3`}
+          />
+          <textarea
+            placeholder="Roadmap (optional — shown in PDF when filled)"
+            value={roadmap}
+            onChange={(e) => setRoadmap(e.target.value)}
+            rows={2}
+            className={`${CONTROL} min-h-[60px] resize-y py-3`}
+          />
+          <textarea
+            placeholder="Why to invest (optional — shown on last page when filled)"
+            value={whyToInvest}
+            onChange={(e) => setWhyToInvest(e.target.value)}
+            rows={2}
+            className={`${CONTROL} min-h-[60px] resize-y py-3`}
           />
         </div>
       </section>

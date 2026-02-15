@@ -3,6 +3,9 @@ export default {
   content: ["./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Panchang", "sans-serif"],
+      },
       colors: {
         app: "var(--color-bg)",
         card: "var(--color-surface-2)",

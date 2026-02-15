@@ -1,7 +1,7 @@
 /**
  * Shared PDF helpers for invoice and timesheet exports.
  * Grayscale only, print-friendly (white background, clean lines).
- * Uses jsPDF + jspdf-autotable.
+ * Uses jsPDF + jspdf-autotable. Uses built-in Helvetica for reliable PDF rendering.
  */
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";

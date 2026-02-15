@@ -3,11 +3,65 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
+   Panchang font (src/assets/fonts/*.otf)
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Panchang';
+  src: url('./assets/fonts/Panchang-Extralight.otf') format('opentype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Panchang';
+  src: url('./assets/fonts/Panchang-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Panchang';
+  src: url('./assets/fonts/Panchang-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Panchang';
+  src: url('./assets/fonts/Panchang-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Panchang';
+  src: url('./assets/fonts/Panchang-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Panchang';
+  src: url('./assets/fonts/Panchang-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Panchang';
+  src: url('./assets/fonts/Panchang-Extrabold.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
    Global: theme-aware body and grid (tokens from theme.css)
    --------------------------------------------------------------------------- */
 body {
   background-color: var(--color-bg);
   color: var(--color-text-primary);
+  font-family: 'Panchang', sans-serif;
 }
 
 /* ---------------------------------------------------------------------------
