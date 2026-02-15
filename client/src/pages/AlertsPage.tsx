@@ -239,7 +239,7 @@ export default function AlertsPage() {
                     <div
                       key={domain.id}
                       className="flex items-center justify-between p-4 transition-all border-l-4 border-orange-500 rounded-r-lg cursor-pointer bg-orange-50 hover:shadow-md"
-                      onClick={() => navigate("/dashboard", { state: { activeTab: "domains" } })}
+                      onClick={() => navigate("/admin/domains")}
                     >
                       <div className="flex-1">
                         <h4 className="font-semibold text-white">{domain.domainName}</h4>
@@ -279,7 +279,7 @@ export default function AlertsPage() {
                     <div
                       key={domain.id}
                       className="flex cursor-pointer items-center justify-between rounded-r-lg border-l-4 border-white/25 bg-white/5 p-4 transition-all hover:bg-white/10"
-                      onClick={() => navigate("/dashboard", { state: { activeTab: "domains" } })}
+                      onClick={() => navigate("/admin/domains")}
                     >
                       <div className="flex-1">
                         <h4 className="font-semibold text-white">{domain.domainName}</h4>
@@ -319,7 +319,7 @@ export default function AlertsPage() {
                     <div
                       key={domain.id}
                       className="flex items-center justify-between p-4 transition-all border-l-4 border-green-500 rounded-r-lg cursor-pointer bg-green-50 hover:shadow-md"
-                      onClick={() => navigate("/dashboard", { state: { activeTab: "domains" } })}
+                      onClick={() => navigate("/admin/domains")}
                     >
                       <div className="flex-1">
                         <h4 className="font-semibold text-white">{domain.domainName}</h4>
@@ -357,7 +357,7 @@ export default function AlertsPage() {
                   <div
                     key={task.id}
                     className="flex cursor-pointer items-center justify-between rounded-r-lg border-l-4 border-white/25 bg-white/5 p-4 transition-all hover:bg-white/10"
-                    onClick={() => navigate("/dashboard", { state: { activeTab: "tasks" } })}
+                    onClick={() => navigate("/admin/tasks")}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">{task.title}</h4>
@@ -394,7 +394,7 @@ export default function AlertsPage() {
                   <div
                     key={task.id}
                     className="flex items-center justify-between p-4 transition-all border-l-4 border-red-500 rounded-r-lg cursor-pointer bg-red-50 hover:shadow-md"
-                    onClick={() => navigate("/dashboard", { state: { activeTab: "tasks" } })}
+                    onClick={() => navigate("/admin/tasks")}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">{task.title}</h4>
@@ -433,7 +433,7 @@ export default function AlertsPage() {
                   <div
                     key={invoice.id}
                     className="flex items-center justify-between p-4 transition-all border-l-4 rounded-r-lg cursor-pointer border-amber-500 bg-amber-50 hover:shadow-md"
-                    onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
+                    onClick={() => navigate("/admin/invoices")}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">Invoice #{invoice.invoiceNumber}</h4>
@@ -472,7 +472,7 @@ export default function AlertsPage() {
                   <div
                     key={invoice.id}
                     className="flex items-center justify-between p-4 transition-all border-l-4 border-yellow-500 rounded-r-lg cursor-pointer bg-yellow-50 hover:shadow-md"
-                    onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
+                    onClick={() => navigate("/admin/invoices")}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">Invoice #{invoice.invoiceNumber}</h4>
@@ -509,7 +509,7 @@ export default function AlertsPage() {
                   <div
                     key={client.id}
                     className="flex items-center justify-between p-4 transition-all border-l-4 border-blue-500 rounded-r-lg cursor-pointer bg-blue-50 hover:shadow-md"
-                    onClick={() => navigate("/dashboard", { state: { activeTab: "clients" } })}
+                    onClick={() => navigate("/admin/clients")}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">{client.name}</h4>

@@ -290,7 +290,7 @@ export default function RevenueList() {
               <div
                 key={invoice.id}
                 className="flex cursor-pointer flex-col gap-4 rounded-xl card-panel p-4 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover md:flex-row md:items-center md:justify-between"
-                onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
+                onClick={() => navigate("/admin/invoices")}
               >
                 <div className="flex items-start gap-4">
                   <div className="rounded-lg bg-[var(--color-surface-3)] p-3">

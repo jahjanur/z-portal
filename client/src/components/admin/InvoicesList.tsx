@@ -9,7 +9,8 @@ interface Invoice {
   paidAt?: string;
   fileUrl?: string;
   paymentLink?: string;
-  client?: { name: string; email: string };
+  description?: string | null;
+  client?: { name: string; email: string; company?: string };
 }
 
 interface InvoicesListProps {
@@ -19,11 +20,13 @@ interface InvoicesListProps {
   colors: { primary: string };
 }
 
-const InvoicesList: React.FC<InvoicesListProps> = ({ 
-  invoices, 
-  onDelete, 
+import { generateInvoicePdf } from "../../utils/pdfHelpers";
+
+const InvoicesList: React.FC<InvoicesListProps> = ({
+  invoices,
+  onDelete,
   onRequestPayment,
-  colors 
+  colors: _colors,
 }) => {
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
@@ -70,17 +73,17 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
         return (
           <div
             key={inv.id}
-            className="rounded-xl card-panel p-5 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover"
+            className="rounded-xl card-panel p-4 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover sm:p-5"
           >
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-2 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
               {/* Invoice Info */}
-              <div className="flex-1">
-                <div className="mb-2 flex items-center gap-3">
-                  <h4 className="text-lg font-bold text-[var(--color-text-primary)]">
+              <div className="min-w-0 flex-1">
+                <div className="mb-2 flex flex-wrap items-center gap-3">
+                  <h4 className="text-lg font-bold text-[var(--color-text-primary)] break-words">
                     Invoice #{inv.invoiceNumber}
                   </h4>
                   <span
-                    className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
+                    className={`whitespace-nowrap px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
                       overdue ? "OVERDUE" : inv.status
                     )}`}
                   >
@@ -147,13 +150,13 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
               </div>
 
               {/* Actions */}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 justify-start sm:justify-end shrink-0">
                 {inv.paymentLink && (
                   <a
                     href={inv.paymentLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-primary flex gap-2 rounded-lg px-4 py-2 text-sm font-semibold"
+                    className="btn-primary h-9 px-3 text-sm font-semibold flex items-center justify-center gap-2 rounded-lg whitespace-nowrap"
                   >
                     <div className="flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,22 +172,30 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                     href={`http://localhost:4001${inv.fileUrl}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-secondary rounded-lg px-4 py-2 text-sm font-semibold"
+                    className="btn-secondary h-9 px-3 text-sm font-semibold rounded-lg inline-flex items-center justify-center gap-2 whitespace-nowrap"
                   >
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                      View PDF
-                    </div>
+                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    View PDF
                   </a>
                 )}
+                <button
+                  type="button"
+                  onClick={() => generateInvoicePdf(inv, { filename: `Invoice_${inv.invoiceNumber}.pdf` })}
+                  className="btn-secondary h-9 px-3 text-sm font-semibold rounded-lg inline-flex items-center justify-center gap-2 whitespace-nowrap"
+                >
+                  <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Download PDF
+                </button>
 
                 {inv.status.toUpperCase() === "PENDING" && onRequestPayment && (
                   <button
                     onClick={() => onRequestPayment(inv)}
-                    className="btn-secondary rounded-lg px-4 py-2 text-sm font-semibold"
+                    className="btn-secondary h-9 px-3 text-sm font-semibold rounded-lg whitespace-nowrap"
                   >
                     <div className="flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,7 +212,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                       onDelete(inv.id);
                     }
                   }}
-                  className="rounded-lg border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] px-4 py-2 text-sm font-semibold text-[var(--color-destructive-text)] transition hover:opacity-90"
+                  className="h-9 px-3 text-sm font-semibold rounded-lg border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] text-[var(--color-destructive-text)] transition hover:opacity-90 whitespace-nowrap"
                 >
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

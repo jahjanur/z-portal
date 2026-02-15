@@ -35,9 +35,9 @@ export default function AuthPage() {
   }, []);
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen p-6 bg-app-grid">
+    <div className="relative flex items-center justify-center min-h-screen p-6">
       <div
-        className="fixed inset-0 z-0 bg-gradient-to-b from-[var(--color-overlay)] via-[var(--color-overlay)]/70 to-[var(--color-overlay)]"
+        className="fixed inset-0 z-0 bg-gradient-to-b from-[var(--color-overlay)]/50 via-[var(--color-overlay)]/40 to-[var(--color-overlay)]/50"
         aria-hidden
       />
       <div className="relative z-10 w-full max-w-md">

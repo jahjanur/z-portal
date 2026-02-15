@@ -308,22 +308,22 @@ export default function HomePage() {
   };
 
   const handleCreateClient = () => {
-    navigate("/dashboard", { state: { activeTab: "clients" } });
+    navigate("/admin/clients");
   };
 
   const handleCreateTask = () => {
-    navigate("/dashboard", { state: { activeTab: "tasks" } });
+    navigate("/admin/tasks");
   };
 
   const handleCreateInvoice = () => {
-    navigate("/dashboard", { state: { activeTab: "invoices" } });
+    navigate("/admin/invoices");
   };
 
   const cardClass = "rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] shadow-[var(--color-card-shadow)] backdrop-blur-sm";
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg)]">
+      <div className="flex min-h-screen items-center justify-center bg-transparent">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-80" />
@@ -337,7 +337,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-24 bg-[var(--color-bg)] md:px-8">
+    <div className="min-h-screen bg-transparent px-4 py-24 md:px-8">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="flex flex-col gap-4 mb-8 md:flex-row md:items-center md:justify-between">
@@ -663,7 +663,7 @@ export default function HomePage() {
                   <div
                     key={invoice.id}
                     className="flex items-start gap-3 p-3 transition-all border border-[var(--color-border)] rounded-xl cursor-pointer hover:border-[var(--color-border-hover)] bg-[var(--color-surface-2)]"
-                    onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
+                    onClick={() => navigate("/admin/invoices")}
                   >
                     <div className={`p-2 rounded-lg ${invoice.status === "PAID" ? "bg-green-500/20" : "bg-amber-500/20"}`}>
                       <svg className={`w-4 h-4 ${invoice.status === "PAID" ? "text-green-400" : "text-amber-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -746,7 +746,7 @@ export default function HomePage() {
               {pendingApproval > 0 && (
                 <div
                   className="flex items-start gap-3 p-4 transition-all border-l-4 rounded-r-lg cursor-pointer bg-[var(--color-surface-2)] border-amber-500/50 hover:bg-[var(--color-surface-3)]"
-                  onClick={() => navigate("/dashboard", { state: { activeTab: "tasks" } })}
+                  onClick={() => navigate("/admin/tasks")}
                 >
                   <svg className="w-5 h-5 mt-0.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -764,7 +764,7 @@ export default function HomePage() {
               {overdueTasks.length > 0 && (
                 <div
                   className="flex items-start gap-3 p-4 transition-all border-l-4 border-red-500/70 rounded-r-lg cursor-pointer bg-red-500/10 hover:bg-red-500/15"
-                  onClick={() => navigate("/dashboard", { state: { activeTab: "tasks" } })}
+                  onClick={() => navigate("/admin/tasks")}
                 >
                   <svg className="w-5 h-5 mt-0.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -787,7 +787,7 @@ export default function HomePage() {
               {overdueInvoices.length > 0 && (
                 <div
                   className="flex items-start gap-3 p-4 transition-all border-l-4 border-amber-500/70 rounded-r-lg cursor-pointer bg-amber-500/10 hover:bg-amber-500/15"
-                  onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
+                  onClick={() => navigate("/admin/invoices")}
                 >
                   <svg className="w-5 h-5 mt-0.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -814,7 +814,7 @@ export default function HomePage() {
               {incompleteProfiles > 0 && (
                 <div
                   className="flex items-start gap-3 p-4 transition-all border-l-4 border-blue-500/70 rounded-r-lg cursor-pointer bg-blue-500/10 hover:bg-blue-500/15"
-                  onClick={() => navigate("/dashboard", { state: { activeTab: "clients" } })}
+                  onClick={() => navigate("/admin/clients")}
                 >
                   <svg className="w-5 h-5 mt-0.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />

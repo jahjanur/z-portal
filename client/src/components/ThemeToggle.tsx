@@ -8,21 +8,11 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="theme-toggle flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
+      className="theme-toggle flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] transition hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]"
       aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
       title={theme === "dark" ? "Light mode" : "Dark mode"}
     >
-      {theme === "dark" ? (
-        <>
-          <SunIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">Light</span>
-        </>
-      ) : (
-        <>
-          <MoonIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">Dark</span>
-        </>
-      )}
+      {theme === "dark" ? <SunIcon className="h-4 w-4" /> : <MoonIcon className="h-4 w-4" />}
     </button>
   );
 }

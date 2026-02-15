@@ -13,7 +13,7 @@ const Dashboard: React.FC = () => {
   }, []);
 
   if (!role) return (
-    <div className="flex items-center justify-center min-h-[60vh] bg-[var(--color-bg)]">
+    <div className="flex min-h-[60vh] items-center justify-center bg-transparent">
       <div className="flex flex-col items-center gap-3">
         <div className="flex gap-1.5">
           <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-text-muted)] animate-bounce opacity-80" />
@@ -28,7 +28,7 @@ const Dashboard: React.FC = () => {
   if (role === "WORKER") return <RoleWorker />;
   if (role === "CLIENT") return <RoleUser />;
   return (
-    <div className="flex items-center justify-center min-h-[60vh] bg-[var(--color-bg)]">
+    <div className="flex min-h-[60vh] items-center justify-center bg-transparent">
       <p className="text-[var(--color-text-muted)]">Unauthorized</p>
     </div>
   );

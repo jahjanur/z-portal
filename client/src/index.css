@@ -10,16 +10,34 @@ body {
   color: var(--color-text-primary);
 }
 
-/* Page background: grid + vignette (use on login and main layout) */
+/* ---------------------------------------------------------------------------
+   Zulbera-style background pattern (theme-aware grid + vignette)
+   Applied on App.tsx root wrapper. Content (main) uses z-10 so it sits above.
+   Inner pages must NOT use full-page opaque bg or they will hide the grid.
+   --------------------------------------------------------------------------- */
 .bg-app-grid {
   background-color: var(--color-bg);
-  background-image:
-    linear-gradient(var(--color-grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--color-grid-line) 1px, transparent 1px);
-  background-size: 32px 32px;
   position: relative;
+  min-height: 100vh;
+  width: 100%;
 }
+
+/* Grid: thin lines via CSS gradients, fixed so it doesn’t scroll */
 .bg-app-grid::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--pattern-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pattern-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-position: 0 0;
+  z-index: 0;
+}
+
+/* Soft vignette overlay to keep focus on content */
+.bg-app-grid::after {
   content: "";
   position: fixed;
   inset: 0;
@@ -27,19 +45,8 @@ body {
   background: radial-gradient(
     ellipse 80% 80% at 50% 50%,
     transparent 0%,
-    var(--color-vignette) 100%
+    var(--pattern-glow) 100%
   );
-  z-index: 0;
-}
-
-/* Optional: very subtle noise overlay (CSS-only) */
-.bg-app-grid::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.02;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
   z-index: 0;
 }
 

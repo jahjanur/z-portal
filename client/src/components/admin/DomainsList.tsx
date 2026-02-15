@@ -45,34 +45,34 @@ const DomainsList: React.FC<DomainsListProps> = ({ domains, onEdit, onDelete, co
       {domains.map((domain) => (
         <div
           key={domain.id}
-          className="flex items-center justify-between rounded-xl card-panel p-4 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover"
+          className="flex flex-col gap-2 rounded-xl card-panel p-4 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover sm:flex-row sm:items-center sm:justify-between"
         >
-          <div className="flex-1">
-            <div className="mb-1 flex items-center gap-3">
-              <p className="font-semibold text-[var(--color-text-primary)]">{domain.domainName}</p>
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 flex flex-wrap items-center gap-2 sm:gap-3">
+              <p className="font-semibold text-[var(--color-text-primary)] break-words">{domain.domainName}</p>
               {domain.isPrimary && (
-                <span className="rounded-full border border-[var(--color-border-hover)] bg-[var(--color-surface-3)] px-2 py-0.5 text-xs font-semibold text-[var(--color-text-primary)]">
+                <span className="whitespace-nowrap rounded-full border border-[var(--color-border-hover)] bg-[var(--color-surface-3)] px-2 py-0.5 text-xs font-semibold text-[var(--color-text-primary)]">
                   Primary
                 </span>
               )}
             </div>
-            <p className="text-sm text-[var(--color-text-muted)]">
+            <p className="text-sm text-[var(--color-text-muted)] break-words">
               Client: {domain.client?.company || domain.client?.name || "Unknown"}
               {domain.domainExpiry && ` • Domain expires: ${formatDate(domain.domainExpiry)}`}
               {domain.hostingPlan && ` • ${domain.hostingPlan}`}
               {domain.hostingExpiry && ` • Hosting expires: ${formatDate(domain.hostingExpiry)}`}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 justify-start sm:flex-nowrap sm:justify-end shrink-0">
             <button
               onClick={() => onEdit(domain)}
-              className="btn-primary rounded-lg px-3 py-1.5 text-xs font-semibold"
+              className="h-9 px-3 text-sm font-semibold btn-primary rounded-lg whitespace-nowrap"
             >
               Edit
             </button>
             <button
               onClick={() => onDelete(domain.id)}
-              className="rounded-lg border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--color-destructive-text)] transition hover:opacity-90"
+              className="h-9 px-3 text-sm font-semibold rounded-lg border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] text-[var(--color-destructive-text)] transition hover:opacity-90 whitespace-nowrap"
             >
               Delete
             </button>

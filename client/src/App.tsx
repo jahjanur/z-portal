@@ -10,6 +10,14 @@ import RevenueList from "./pages/RevenueList";
 import ClientsList from "./pages/ClientsList";
 import TasksOverview from "./pages/TasksOverview";
 import AlertsPage from "./pages/AlertsPage";
+import AdminLayout from "./layouts/AdminLayout";
+import AdminWorkersPage from "./pages/admin/AdminWorkersPage";
+import AdminClientsPage from "./pages/admin/AdminClientsPage";
+import AdminTasksPage from "./pages/admin/AdminTasksPage";
+import AdminInvoicesPage from "./pages/admin/AdminInvoicesPage";
+import AdminDomainsPage from "./pages/admin/AdminDomainsPage";
+import AdminSendOfferPage from "./pages/admin/AdminSendOfferPage";
+import AdminTimesheetsPage from "./pages/admin/AdminTimesheetsPage";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
@@ -21,9 +29,9 @@ function App() {
   return (
     <Router>
       <Toaster position="top-right" />
-      <div className="flex flex-col min-h-screen bg-app-grid">
+      <div className="flex w-full min-h-screen flex-col bg-app-grid">
         <Navbar />
-        <main className="relative z-10 flex-grow">
+        <main className="relative z-10 flex-grow min-h-0">
           <Routes>
             {/* Home page - Admin only */}
             <Route
@@ -45,11 +53,31 @@ function App() {
               element={token ? <Navigate to="/dashboard" /> : <AuthPage />}
             />
             
-            {/* Dashboard - All authenticated users */}
+            {/* Dashboard - Workers and Clients use legacy dashboard; Admins use /admin/* */}
             <Route
               path="/dashboard"
-              element={token ? <Dashboard /> : <Navigate to="/login" />}
+              element={
+                token && isAdmin ? (
+                  <Navigate to="/admin/workers" replace />
+                ) : token ? (
+                  <Dashboard />
+                ) : (
+                  <Navigate to="/login" />
+                )
+              }
             />
+
+            {/* Admin area - each tab is its own route */}
+            <Route path="/admin" element={token && isAdmin ? <AdminLayout /> : <Navigate to="/login" />}>
+              <Route index element={<Navigate to="/admin/workers" replace />} />
+              <Route path="workers" element={<AdminWorkersPage />} />
+              <Route path="clients" element={<AdminClientsPage />} />
+              <Route path="tasks" element={<AdminTasksPage />} />
+              <Route path="invoices" element={<AdminInvoicesPage />} />
+              <Route path="domains" element={<AdminDomainsPage />} />
+              <Route path="send-offer" element={<AdminSendOfferPage />} />
+              <Route path="timesheets" element={<AdminTimesheetsPage />} />
+            </Route>
             
             {/* Task Detail Page - All authenticated users */}
             <Route
@@ -125,7 +153,7 @@ function App() {
               path="*"
               element={
                 token && isAdmin ? (
-                  <Navigate to="/" />
+                  <Navigate to="/admin/workers" />
                 ) : token ? (
                   <Navigate to="/dashboard" />
                 ) : (

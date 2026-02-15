@@ -75,6 +75,9 @@
   /* Grid pattern (page bg) */
   --color-grid-line: rgba(255, 255, 255, 0.03);
   --color-vignette: rgba(0, 0, 0, 0.35);
+  /* Zulbera-style pattern (subtle grid + vignette) */
+  --pattern-line: rgba(255, 255, 255, 0.10);
+  --pattern-glow: rgba(0, 0, 0, 0.35);
 }
 
 /* ---------------------------------------------------------------------------
@@ -149,6 +152,9 @@
   /* Grid pattern */
   --color-grid-line: rgba(15, 23, 42, 0.06);
   --color-vignette: rgba(15, 23, 42, 0.02);
+  /* Zulbera-style pattern (subtle grid + vignette) */
+  --pattern-line: rgba(0, 0, 0, 0.10);
+  --pattern-glow: rgba(15, 23, 42, 0.05);
 }
 
 /* Default (no data-theme yet): use dark so no flash before script runs */
@@ -208,4 +214,6 @@ html:not([data-theme]) {
   --color-tab-inactive-hover-text: rgba(255, 255, 255, 0.9);
   --color-grid-line: rgba(255, 255, 255, 0.03);
   --color-vignette: rgba(0, 0, 0, 0.35);
+  --pattern-line: rgba(255, 255, 255, 0.10);
+  --pattern-glow: rgba(0, 0, 0, 0.35);
 }

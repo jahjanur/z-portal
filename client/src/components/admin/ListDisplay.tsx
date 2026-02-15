@@ -40,38 +40,40 @@ const ListDisplay = <T extends { id: number }>({
           <div
             key={item.id}
             onClick={() => navigate(`/clients/${item.id}`)}
-            className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-white/15 hover:bg-white/[0.07]"
+            className="flex cursor-pointer flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-white/15 hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between"
           >
-            <div className="flex items-center flex-1 gap-3">
-              {renderItem(item)}
-              {showProfileStatus && profileStatus && (
-                <span
-                  className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                    profileStatus.trim().toUpperCase() === "COMPLETE"
-                      ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                      : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                  }`}
-                >
-                  {profileStatus.trim().toUpperCase() === "COMPLETE" ? "✓ Complete" : "⚠ Incomplete Profile"}
-                </span>
-              )}
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                {renderItem(item)}
+                {showProfileStatus && profileStatus && (
+                  <span
+                    className={`whitespace-nowrap px-3 py-1 text-xs font-semibold rounded-full ${
+                      profileStatus.trim().toUpperCase() === "COMPLETE"
+                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                        : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                    }`}
+                  >
+                    {profileStatus.trim().toUpperCase() === "COMPLETE" ? "✓ Complete" : "⚠ Incomplete Profile"}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div
-              className="flex items-center gap-2"
+              className="flex flex-wrap gap-2 justify-start sm:flex-nowrap sm:justify-end"
               onClick={(e) => e.stopPropagation()}
             >
               {showProfileStatus && isIncomplete && onResendInvite && (
                 <button
                   onClick={() => onResendInvite(item.id)}
-                  className="px-3 py-1.5 text-sm font-semibold text-blue-300 bg-blue-500/20 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-colors"
+                  className="h-9 px-3 text-sm font-semibold text-blue-300 bg-blue-500/20 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-colors whitespace-nowrap"
                 >
                   Resend Invite
                 </button>
               )}
               <button
                 onClick={() => onDelete(item.id)}
-                className="px-3 py-1.5 text-sm font-semibold text-red-300 bg-red-500/20 rounded-full border border-red-500/30 hover:bg-red-500/30 transition-colors"
+                className="h-9 px-3 text-sm font-semibold text-red-300 bg-red-500/20 rounded-full border border-red-500/30 hover:bg-red-500/30 transition-colors whitespace-nowrap"
               >
                 Delete
               </button>

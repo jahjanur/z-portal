@@ -99,11 +99,11 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
           }
         }}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0 flex-1">
             {/* Title & Status */}
-            <div className="mb-2 flex items-center gap-3">
-              <h4 className="truncate text-base font-semibold text-[var(--color-text-primary)] transition-colors group-hover:text-[var(--color-text-primary)]">
+            <div className="mb-2 flex flex-wrap items-center gap-2 sm:gap-3">
+              <h4 className="text-base font-semibold text-[var(--color-text-primary)] transition-colors group-hover:text-[var(--color-text-primary)] break-words">
                 {task.title}
               </h4>
               <span 
@@ -165,19 +165,21 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
             </dl>
           </div>
 
-          {/* Delete Button */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirm(`Delete task "${task.title}"?`)) {
-                onDelete(task.id);
-              }
-            }}
-            className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-semibold text-red-300 opacity-0 transition hover:border-red-500/30 hover:bg-red-500/15 group-hover:opacity-100 focus:opacity-100"
-            aria-label={`Delete task: ${task.title}`}
-          >
-            Delete
-          </button>
+          {/* Actions: Delete */}
+          <div className="flex flex-wrap gap-2 justify-start shrink-0 sm:justify-end">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirm(`Delete task "${task.title}"?`)) {
+                  onDelete(task.id);
+                }
+              }}
+              className="h-9 px-3 text-sm font-semibold rounded-lg border border-red-500/20 bg-red-500/10 text-red-300 opacity-0 transition hover:border-red-500/30 hover:bg-red-500/15 group-hover:opacity-100 focus:opacity-100 whitespace-nowrap"
+              aria-label={`Delete task: ${task.title}`}
+            >
+              Delete
+            </button>
+          </div>
         </div>
       </article>
     </li>

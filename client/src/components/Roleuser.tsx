@@ -166,7 +166,7 @@ const fetchAll = async () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-app">
+      <div className="flex min-h-screen items-center justify-center bg-transparent">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)]" />
@@ -181,7 +181,7 @@ const fetchAll = async () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-app">
+      <div className="flex min-h-screen items-center justify-center bg-transparent">
         <div className="max-w-md p-6 border border-red-500/30 bg-red-500/10 rounded-2xl">
           <p className="mb-2 text-lg font-semibold text-red-300">Error:</p>
           <p className="text-red-400">{error}</p>
@@ -197,7 +197,7 @@ const fetchAll = async () => {
   }
 
   return (
-    <div className="min-h-screen py-24 bg-app">
+    <div className="min-h-screen bg-transparent py-24">
       <div className="px-4 mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">

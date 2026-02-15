@@ -58,7 +58,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit }) => {
     <div className="mb-6 rounded-xl card-panel p-5 backdrop-blur-sm">
       <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-primary)]">Add New Worker</h3>
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Full Name *</label>
             <input
@@ -68,7 +68,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit }) => {
               onKeyPress={handleKeyPress}
               disabled={isSubmitting}
               required
-              className="input-dark w-full rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
@@ -81,7 +81,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit }) => {
               onKeyPress={handleKeyPress}
               disabled={isSubmitting}
               required
-              className="input-dark w-full rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
           <div>
@@ -95,14 +95,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit }) => {
               disabled={isSubmitting}
               required
               minLength={6}
-              className="input-dark w-full rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end sm:col-span-2 lg:col-span-1">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="btn-primary w-full rounded-xl px-4 py-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-primary h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting ? "Adding..." : "Add Worker"}
             </button>

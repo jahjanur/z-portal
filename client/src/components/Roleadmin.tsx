@@ -373,7 +373,7 @@ const RoleAdmin: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg)]">
+      <div className="flex min-h-screen items-center justify-center bg-transparent">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-80" />
@@ -388,7 +388,7 @@ const RoleAdmin: React.FC = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg)]">
+      <div className="flex min-h-screen items-center justify-center bg-transparent">
         <div className="max-w-md p-6 border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] rounded-2xl">
           <p className="mb-2 text-lg font-semibold text-[var(--color-destructive-text)]">Error:</p>
           <p className="text-[var(--color-destructive-text)]">{error}</p>
@@ -398,7 +398,7 @@ const RoleAdmin: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen py-24 bg-[var(--color-bg)]">
+    <div className="min-h-screen bg-transparent py-24">
       <div className="px-4 mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8">

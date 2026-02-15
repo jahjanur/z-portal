@@ -215,7 +215,7 @@ export default function ClientsList() {
               <div
                 key={client.id}
                 className={`p-6 transition-all cursor-pointer rounded-2xl border border-border-subtle bg-card backdrop-blur-sm hover:border-white/15`}
-                onClick={() => navigate("/dashboard", { state: { activeTab: "clients" } })}
+                onClick={() => navigate("/admin/clients")}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">

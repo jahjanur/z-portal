@@ -10,12 +10,12 @@ interface ModalProps {
 }
 
 const maxWidthClasses = {
-  sm: "max-w-sm",
-  md: "max-w-md",
-  lg: "max-w-lg",
-  xl: "max-w-xl",
-  "2xl": "max-w-2xl",
-  "4xl": "max-w-4xl",
+  sm: "sm:max-w-sm",
+  md: "sm:max-w-md",
+  lg: "sm:max-w-lg",
+  xl: "sm:max-w-xl",
+  "2xl": "sm:max-w-2xl",
+  "4xl": "sm:max-w-4xl",
 };
 
 export const Modal: React.FC<ModalProps> = ({
@@ -60,7 +60,7 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         ref={panelRef}
-        className={`relative w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-modal-surface)] shadow-xl shadow-[var(--color-card-shadow)] backdrop-blur-2xl ${className}`}
+        className={`relative w-full max-w-[95vw] ${maxWidthClasses[maxWidth]} max-h-[90vh] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-modal-surface)] shadow-xl shadow-[var(--color-card-shadow)] backdrop-blur-2xl ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_0_var(--color-border)] pointer-events-none" />

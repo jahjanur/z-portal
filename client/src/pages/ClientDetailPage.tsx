@@ -369,14 +369,14 @@ const fetchAllFiles = async () => {
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => navigate("/dashboard", { state: { activeTab: "tasks" } })}
+                onClick={() => navigate("/admin/tasks")}
                 className="btn-primary px-4 py-2 text-sm rounded-lg"
               >
                 Create New Task
               </button>
               <button
                 type="button"
-                onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
+                onClick={() => navigate("/admin/invoices")}
                 className="btn-secondary px-4 py-2 text-sm rounded-lg"
               >
                 Generate Invoice
@@ -643,7 +643,7 @@ const fetchAllFiles = async () => {
                       <div
                         key={invoice.id}
                         className="flex items-center justify-between p-4 cursor-pointer rounded-xl border border-white/10 hover:bg-white/10"
-                        onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
+                        onClick={() => navigate("/admin/invoices")}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">
@@ -682,7 +682,7 @@ const fetchAllFiles = async () => {
                       <div
                         key={invoice.id}
                         className="flex items-center justify-between p-4 cursor-pointer rounded-xl border border-white/10 hover:bg-white/10"
-                        onClick={() => navigate("/dashboard", { state: { activeTab: "invoices" } })}
+                        onClick={() => navigate("/admin/invoices")}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">
