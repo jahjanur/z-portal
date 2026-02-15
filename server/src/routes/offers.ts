@@ -1,8 +1,6 @@
 import express from "express";
 import PDFDocument from "pdfkit";
 import { sendOfferPDF } from "../services/email_offer";
-import fs from "fs";
-import path from "path";
 
 const router = express.Router();
 
@@ -22,16 +20,19 @@ interface Offer {
   totalPrice: number;
 }
 
+// Grayscale only: primary/secondary colors (grey, dark grey, black, white)
 const colors = {
-  primary: "#5B4FFF",
-  secondary: "#7C73FF",
-  accent: "#FFA726",
-  dark: "#1A1A2E",
-  gray: "#666666",
-  lightGray: "#F5F5F5",
-  mediumGray: "#CCCCCC",
+  dark: "#2d2d2d",
+  medium: "#646464",
+  light: "#a0a0a0",
+  border: "#dcdcdc",
+  rowAlt: "#f8f9fa",
   white: "#FFFFFF",
+  headerBg: "#373737", // dark grey for total block (like timesheet header)
 };
+
+const MARGIN = 50;
+const FOOTER_Y_OFFSET = 18;
 
 const generateOfferPDF = (offer: Offer): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
@@ -48,350 +49,115 @@ const generateOfferPDF = (offer: Offer): Promise<Buffer> => {
 
     const pageWidth = doc.page.width;
     const pageHeight = doc.page.height;
-    const margin = 50;
 
-    // header with gradient background
-    doc.rect(0, 0, pageWidth, 180).fill(colors.primary);
+    // ----- Header: left = Zulbera branding, right = date + company (same layout as Time Management PDF) -----
+    const headerTop = 18;
+    const rightColWidth = 200;
 
-    // decorative circles (top right)
-    doc
-      .save()
-      .circle(pageWidth - 80, 60, 100)
-      .fillOpacity(0.1)
-      .fill(colors.white)
-      .restore();
+    // Left column: branding only; tagline well below to avoid overlap
+    doc.fontSize(15).fillColor(colors.dark).font("Helvetica-Bold").text("Zulbera", MARGIN, headerTop, { width: 220 });
+    doc.fontSize(9).fillColor(colors.medium).font("Helvetica").text("Building Digital Excellence", MARGIN, headerTop + 14, { width: 220 });
 
-    doc
-      .save()
-      .circle(pageWidth - 40, 120, 60)
-      .fillOpacity(0.08)
-      .fill(colors.white)
-      .restore();
+    // Right column: date then company info, each line with clear spacing (no overlap)
+    const dateText = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const lineHeight = 5.5;
+    let rightY = headerTop;
+    doc.fontSize(9).fillColor(colors.medium).font("Helvetica").text(dateText, pageWidth - MARGIN, rightY, { align: "right", width: rightColWidth });
+    rightY += lineHeight;
+    doc.text("Zulbera", pageWidth - MARGIN, rightY, { align: "right", width: rightColWidth });
+    rightY += lineHeight;
+    doc.text("Suite C, Level 7, World Trust Tower,", pageWidth - MARGIN, rightY, { align: "right", width: rightColWidth });
+    rightY += lineHeight;
+    doc.text("50 Stanley Street, Central, Hong Kong", pageWidth - MARGIN, rightY, { align: "right", width: rightColWidth });
 
-    // company Name
-    doc
-      .fontSize(36)
-      .fillColor(colors.white)
-      .font("Helvetica-Bold")
-      .text("Z-Portal", margin, 45);
+    // Content starts below header with comfortable gap (same feel as timesheet)
+    let yPos = headerTop + 38;
 
-    // tagline
-    doc
-      .fontSize(12)
-      .fillColor(colors.white)
-      .font("Helvetica")
-      .fillOpacity(0.9)
-      .text("Building Digital Excellence", margin, 90)
-      .fillOpacity(1);
+    // ----- Prepared For: light gray block, no orange bar -----
+    const preparedH = 70;
+    doc.roundedRect(MARGIN, yPos, pageWidth - MARGIN * 2, preparedH, 8).fill(colors.rowAlt);
+    doc.roundedRect(MARGIN, yPos, pageWidth - MARGIN * 2, preparedH, 8).lineWidth(0.3).strokeColor(colors.border).stroke();
+    doc.fontSize(9).fillColor(colors.light).font("Helvetica-Bold").text("PREPARED FOR", MARGIN + 16, yPos + 18);
+    doc.fontSize(22).fillColor(colors.dark).font("Helvetica-Bold").text(offer.clientName, MARGIN + 16, yPos + 36);
+    yPos += preparedH + 20;
 
-    // date in top right
-    const dateText = new Date().toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    // ----- Project: light gray block, no orange line -----
+    const projectContentWidth = pageWidth - MARGIN * 2 - 32;
+    const descHeight = 80;
+    const projectH = 30 + descHeight + 20;
+    doc.roundedRect(MARGIN, yPos, pageWidth - MARGIN * 2, projectH, 8).fill(colors.rowAlt);
+    doc.roundedRect(MARGIN, yPos, pageWidth - MARGIN * 2, projectH, 8).lineWidth(0.3).strokeColor(colors.border).stroke();
+    doc.fontSize(9).fillColor(colors.light).font("Helvetica-Bold").text("PROJECT", MARGIN + 16, yPos + 18);
+    doc.fontSize(18).fillColor(colors.dark).font("Helvetica-Bold").text(offer.pageTitle, MARGIN + 16, yPos + 34, { width: projectContentWidth });
+    doc.fontSize(10).fillColor(colors.dark).font("Helvetica").text(offer.description, MARGIN + 16, yPos + 58, { width: projectContentWidth, lineGap: 2 });
+    yPos += projectH + 24;
 
-    doc
-      .fontSize(11)
-      .fillColor(colors.white)
-      .font("Helvetica")
-      .fillOpacity(0.9)
-      .text(dateText, pageWidth - 200, 50, {
-        width: 150,
-        align: "right",
-      })
-      .fillOpacity(1);
+    // ----- Products & Services: minimal section title -----
+    doc.fontSize(14).fillColor(colors.dark).font("Helvetica-Bold").text("Products & Services", MARGIN, yPos);
+    yPos += 28;
 
-    // company details section on header
-    doc
-      .fontSize(10)
-      .fillColor(colors.white)
-      .font("Helvetica")
-      .fillOpacity(0.85)
-      .text("Z-Portal", margin, 130)
-      .text("Suite C, Level 7, World Trust Tower,", margin, 145)
-      .text("50 Stanley Street, Central,", margin, 157)
-      .text("Hong Kong", margin, 169)
-      .fillOpacity(1);
-
-    // client section
-    let yPos = 220;
-
-    // client card
-    doc
-      .save()
-      .roundedRect(margin, yPos, pageWidth - margin * 2, 90, 12)
-      .fillOpacity(0.05)
-      .fill(colors.dark)
-      .restore();
-
-    // accent bar on left
-    doc.rect(margin, yPos, 6, 90).fill(colors.accent);
-
-    // "PREPARED FOR" label
-    doc
-      .fontSize(10)
-      .fillColor(colors.gray)
-      .font("Helvetica-Bold")
-      .text("PREPARED FOR", margin + 30, yPos + 20);
-
-    // client name
-    doc
-      .fontSize(26)
-      .fillColor(colors.dark)
-      .font("Helvetica-Bold")
-      .text(offer.clientName, margin + 30, yPos + 40);
-
-    yPos += 120;
-
-    // project card
-    doc
-      .save()
-      .roundedRect(margin, yPos, pageWidth - margin * 2, 140, 12)
-      .fill(colors.lightGray)
-      .restore();
-
-    // "PROJECT" label
-    doc
-      .fontSize(10)
-      .fillColor(colors.gray)
-      .font("Helvetica-Bold")
-      .text("PROJECT", margin + 20, yPos + 20);
-
-    // project title
-    doc
-      .fontSize(20)
-      .fillColor(colors.primary)
-      .font("Helvetica-Bold")
-      .text(offer.pageTitle, margin + 20, yPos + 40, {
-        width: pageWidth - margin * 2 - 40,
-      });
-
-    // decorative line
-    doc
-      .strokeColor(colors.accent)
-      .lineWidth(2)
-      .moveTo(margin + 20, yPos + 75)
-      .lineTo(margin + 100, yPos + 75)
-      .stroke();
-
-    // description
-    doc
-      .fontSize(11)
-      .fillColor(colors.dark)
-      .font("Helvetica")
-      .text(offer.description, margin + 20, yPos + 90, {
-        width: pageWidth - margin * 2 - 40,
-        align: "left",
-        lineGap: 2,
-      });
-
-    yPos += 170;
-
-    // products and services
-    doc
-      .fontSize(20)
-      .fillColor(colors.dark)
-      .font("Helvetica-Bold")
-      .text("Products & Services", margin, yPos);
-
-    yPos += 35;
+    const cardWidth = pageWidth - MARGIN * 2;
+    const contentX = MARGIN + 16;
 
     offer.products.forEach((product, index) => {
-      if (yPos > pageHeight - 220) {
+      if (yPos > pageHeight - 140) {
         doc.addPage();
-        yPos = 60;
+        yPos = 50;
       }
 
-      const cardHeight = 100;
-      const cardWidth = pageWidth - margin * 2;
+      const cardHeight = 88;
+      doc.roundedRect(MARGIN, yPos, cardWidth, cardHeight, 6).fill(colors.white);
+      doc.roundedRect(MARGIN, yPos, cardWidth, cardHeight, 6).lineWidth(0.3).strokeColor(colors.border).stroke();
 
-      // product card
-      doc
-        .save()
-        .roundedRect(margin, yPos, cardWidth, cardHeight, 8)
-        .lineWidth(1)
-        .strokeOpacity(0.1)
-        .stroke(colors.mediumGray)
-        .fillOpacity(1)
-        .fill(colors.white)
-        .restore();
+      let contentY = yPos + 16;
 
-      // left colored stripe
-      doc
-        .save()
-        .roundedRect(margin, yPos, 4, cardHeight, 8)
-        .fill(colors.primary)
-        .restore();
+      // # index: small gray pill
+      doc.roundedRect(contentX, contentY - 2, 26, 18, 4).fill(colors.rowAlt);
+      doc.fontSize(9).fillColor(colors.medium).font("Helvetica-Bold").text(`#${index + 1}`, contentX + 6, contentY + 4);
 
-      // product number
-      const contentX = margin + 20;
-      let contentY = yPos + 18;
-
-      doc
-        .save()
-        .roundedRect(contentX, contentY, 32, 24, 12)
-        .fillOpacity(0.1)
-        .fill(colors.primary)
-        .restore();
-
-      doc
-        .fontSize(12)
-        .fillColor(colors.primary)
-        .font("Helvetica-Bold")
-        .text(`#${index + 1}`, contentX + 8, contentY + 5);
-
-      // product name
       const productName = product.name || `Product ${index + 1}`;
-      doc
-        .fontSize(15)
-        .fillColor(colors.dark)
-        .font("Helvetica-Bold")
-        .text(productName, contentX + 45, contentY + 2, {
-          width: cardWidth - 250,
-        });
+      doc.fontSize(13).fillColor(colors.dark).font("Helvetica-Bold").text(productName, contentX + 38, contentY, { width: cardWidth - 200 });
 
-      // price
       if (product.price !== undefined && product.price > 0) {
-        doc
-          .fontSize(20)
-          .fillColor(colors.primary)
-          .font("Helvetica-Bold")
-          .text(
-            `$${product.price.toFixed(2)}`,
-            pageWidth - margin - 130,
-            contentY,
-            {
-              width: 110,
-              align: "right",
-            }
-          );
+        doc.fontSize(16).fillColor(colors.dark).font("Helvetica-Bold").text(`$${product.price.toFixed(2)}`, pageWidth - MARGIN - 100, contentY - 2, { width: 90, align: "right" });
       }
 
-      contentY += 40;
-
-      // timeline and tech stack
+      contentY += 28;
       if (product.timeline) {
-        doc
-          .fontSize(10)
-          .fillColor(colors.gray)
-          .font("Helvetica")
-          .text("Timeline: ", contentX, contentY, { continued: true })
-          .fillColor(colors.dark)
-          .font("Helvetica-Bold")
-          .text(product.timeline);
+        doc.fontSize(9).fillColor(colors.medium).font("Helvetica").text("Timeline: ", contentX, contentY, { continued: true });
+        doc.fillColor(colors.dark).font("Helvetica-Bold").text(product.timeline);
       }
-
-      contentY += 18;
-
-      // tech stack
+      contentY += 14;
       if (product.techStack) {
-        const techArray =
-          typeof product.techStack === "string"
-            ? product.techStack.split(",").map((t) => t.trim())
-            : product.techStack;
-
+        const techArray = typeof product.techStack === "string" ? product.techStack.split(",").map((t) => t.trim()) : product.techStack;
         const validTech = techArray.filter((t) => t);
-
         if (validTech.length > 0) {
-          const techText = validTech.join(" • ");
-
-          doc
-            .fontSize(10)
-            .fillColor(colors.gray)
-            .font("Helvetica")
-            .text("Tech: ", contentX, contentY, { continued: true })
-            .fillColor(colors.dark)
-            .font("Helvetica")
-            .text(techText, {
-              width: cardWidth - 60,
-            });
+          doc.fontSize(9).fillColor(colors.medium).font("Helvetica").text("Tech: ", contentX, contentY, { continued: true });
+          doc.fillColor(colors.dark).font("Helvetica").text(validTech.join(" • "), { width: cardWidth - 80 });
         }
       }
 
       yPos += cardHeight + 12;
     });
 
-    // total investment
-    yPos += 25;
-
-    if (yPos > pageHeight - 180) {
+    // ----- Total Investment: single accent block (minimal, no extra circles) -----
+    yPos += 16;
+    if (yPos > pageHeight - 120) {
       doc.addPage();
-      yPos = 60;
+      yPos = 50;
     }
+    const totalHeight = 72;
+    doc.roundedRect(MARGIN, yPos, pageWidth - MARGIN * 2, totalHeight, 8).fill(colors.headerBg);
+    doc.fontSize(10).fillColor(colors.white).font("Helvetica").text("TOTAL INVESTMENT", MARGIN + 20, yPos + 18);
+    doc.fontSize(28).fillColor(colors.white).font("Helvetica-Bold").text(`$${offer.totalPrice.toFixed(2)}`, MARGIN + 20, yPos + 40);
 
-    const totalHeight = 90;
-
-    // total card
-    doc
-      .save()
-      .roundedRect(margin, yPos, pageWidth - margin * 2, totalHeight, 10)
-      .fill(colors.primary)
-      .restore();
-
-    doc
-      .save()
-      .roundedRect(margin, yPos + 45, pageWidth - margin * 2, 45, 10)
-      .fillOpacity(0.3)
-      .fill(colors.secondary)
-      .restore();
-
-    // decorative accent
-    doc
-      .save()
-      .circle(pageWidth - margin - 60, yPos + 45, 60)
-      .fillOpacity(0.1)
-      .fill(colors.white)
-      .restore();
-
-    // "TOTAL INVESTMENT" label
-    doc
-      .fontSize(13)
-      .fillColor(colors.white)
-      .font("Helvetica")
-      .fillOpacity(0.9)
-      .text("TOTAL INVESTMENT", margin + 25, yPos + 22)
-      .fillOpacity(1);
-
-    // total price
-    doc
-      .fontSize(32)
-      .fillColor(colors.white)
-      .font("Helvetica-Bold")
-      .text(`$${offer.totalPrice.toFixed(2)}`, margin + 25, yPos + 42);
-
-    // footer
-    const footerY = pageHeight - 60;
-
-    // separator line
-    doc
-      .strokeColor(colors.lightGray)
-      .lineWidth(1)
-      .moveTo(margin, footerY)
-      .lineTo(pageWidth - margin, footerY)
-      .stroke();
-
-    // footer text
-    doc
-      .fontSize(10)
-      .fillColor(colors.gray)
-      .font("Helvetica")
-      .text("Made with love ePage Digital.", margin, footerY + 20, {
-        align: "center",
-        width: pageWidth - margin * 2,
-      });
-
-    // page numbers
+    // ----- Footer: thin divider + "Page X of Y" only (same as invoice/timesheet) -----
     const range = doc.bufferedPageRange();
+    const footerY = pageHeight - FOOTER_Y_OFFSET;
     for (let i = 0; i < range.count; i++) {
       doc.switchToPage(i);
-
-      const pageNumText = `${i + 1} / ${range.count}`;
-      doc
-        .fontSize(9)
-        .fillColor(colors.gray)
-        .font("Helvetica")
-        .text(pageNumText, pageWidth - margin - 40, pageHeight - 35);
+      doc.strokeColor(colors.border).lineWidth(0.3).moveTo(MARGIN, footerY - 4).lineTo(pageWidth - MARGIN, footerY - 4).stroke();
+      doc.fontSize(8).fillColor(colors.light).font("Helvetica").text(`Page ${i + 1} of ${range.count}`, pageWidth / 2, footerY + 2, { align: "center" });
     }
 
     doc.end();
