@@ -3,36 +3,65 @@
  *
  * Dev note – where to tweak:
  * - Spacing: MARGIN, SECTION_GAP, HEADER_H, FOOTER_H at top of file.
- * - Fonts: Helvetica used throughout; to use Inter, add font file and register with jsPDF.
+ * - Fonts: Inter (TTF in public/fonts/) if present, else Helvetica. See registerInterFont.ts.
  * - Colors: PALETTE object (hex); convert to RGB for setTextColor/setFillColor/setDrawColor.
  */
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import logoUrl from "../../assets/Artboard 2.svg";
+import { registerInterFont } from "./registerInterFont";
 
-// ---- Layout: margins 48–60pt, spacing 8/12/16/22/32 ----
-const MARGIN = 52;
+/** Font for this PDF: "Inter" if TTF files are in public/fonts/, else "helvetica". Set at generation time. */
+let OFFER_PDF_FONT: "Inter" | "helvetica" = "helvetica";
+
+// ---- Layout: A4 grid, centered max width ~520pt, spacing 8/16/24/32/48 ----
+const A4_W = 595;
+const A4_H = 842;
+const MARGIN = 38;
+const CONTENT_WIDTH = A4_W - MARGIN * 2;
+const SPACE_8 = 8;
 const SPACE_16 = 16;
-const SPACE_22 = 22;
+const SPACE_24 = 24;
 const SPACE_32 = 32;
-const SECTION_GAP = SPACE_22;
+const SPACE_48 = 48;
+const SECTION_GAP = SPACE_24;
 const HEADER_H = 44;
 const FOOTER_H = 44;
+const CARD_RADIUS = 2;
+const CARD_BORDER = 0.5;
+const ACCENT_RULE = 2.5; // thin accent line (2–3px)
 
-// ---- Color palette (B/W/grey only). RGB [0-255] for jsPDF ----
+// ---- Typography tokens: minimal luxury corporate ----
 function hexToRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 const PALETTE = {
-  text: hexToRgb("#0B0F14"),
-  textSecondary: hexToRgb("#6B7280"),
-  border: hexToRgb("#E5E7EB"),
-  block: hexToRgb("#F6F7F9"),
-  grid: hexToRgb("#E8E8E8"),
-  pricingCard: hexToRgb("#F5F6F7"),
-  cardBg: hexToRgb("#F4F4F5"),
+  text: hexToRgb("#1a1a1a"),
+  textSecondary: hexToRgb("#525252"),
+  meta: hexToRgb("#737373"),
+  border: hexToRgb("#e5e5e5"),
+  cardBg: hexToRgb("#fafafa"),
+  cardBorder: hexToRgb("#e5e5e5"),
+  accent: hexToRgb("#2563eb"), // single accent: thin rules only
 };
+const FONT = {
+  keyNumber: 36, // Total / hero amount
+  sectionTitle: 17, // Project title, section titles
+  sectionLabel: 11, // uppercase section labels
+  body: 11,
+  meta: 9,
+};
+const LINE_HEIGHT = {
+  body: 1.35,
+  meta: 1.3,
+};
+function bodyLead(): number {
+  return Math.round(FONT.body * LINE_HEIGHT.body);
+}
+function metaLead(): number {
+  return Math.round(FONT.meta * LINE_HEIGHT.meta);
+}
 
 // Cover page (Offer style): domain, dark band colors
 const COVER_MARGIN = 40;
@@ -98,10 +127,6 @@ function imageUrlToPngDataUrl(url: string, maxW = 600, maxH = 120): Promise<stri
     img.src = url;
   });
 }
-
-// A4 in pt (matches jsPDF default)
-const A4_W = 595;
-const A4_H = 842;
 
 /**
  * Cover background: Background-Logo.svg (outline of Zulbera logo) scaled to fill the white zone,
@@ -174,32 +199,70 @@ function renderSvgToPngDataUrl(svgString: string, scale = 2): Promise<string> {
   });
 }
 
-/** Footer on every page; header (Zulbera + proposal title) on non-cover pages only. No "Made with" text. */
+/** Footer on every page. Pages 2–3: premium header (logo + "Project Proposal" | date + ID) and footer (contact | page X of Y | validity). */
 function drawHeaderFooter(
   doc: jsPDF,
   pageIndex: number,
   pageCount: number,
-  options: { proposalTitle: string }
+  options: { proposalTitle: string; logoDataUrl?: string | null; proposalId?: string }
 ): void {
   const w = getPageWidth(doc);
   const h = getPageHeight(doc);
+  const footerY = h - FOOTER_H + 14;
+  const isOverviewOrPricing = pageIndex >= 2;
+
+  if (isOverviewOrPricing && options.logoDataUrl != null && options.proposalId != null) {
+    // ----- Premium header: logo and "Project Proposal" on same baseline -----
+    const logoW = 36;
+    const logoH = 8;
+    const headerBaselineY = MARGIN + 8;
+    const logoTop = headerBaselineY - logoH;
+    try {
+      doc.addImage(options.logoDataUrl, "PNG", MARGIN, logoTop, logoW, logoH);
+      doc.setFontSize(FONT.meta);
+      doc.setTextColor(...PALETTE.meta);
+      doc.setFont(OFFER_PDF_FONT, "normal");
+      doc.text("Project Proposal", MARGIN + logoW + 8, headerBaselineY);
+    } catch {
+      doc.setFontSize(FONT.meta);
+      doc.setFont(OFFER_PDF_FONT, "bold");
+      doc.setTextColor(...PALETTE.text);
+      doc.text("Zulbera", MARGIN, headerBaselineY);
+      doc.setFont(OFFER_PDF_FONT, "normal");
+      doc.setTextColor(...PALETTE.meta);
+      doc.text("Project Proposal", MARGIN + 32, headerBaselineY);
+    }
+    const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    doc.setFontSize(FONT.meta);
+    doc.setTextColor(...PALETTE.meta);
+    doc.text(dateStr, w - MARGIN, headerBaselineY - metaLead(), { align: "right" });
+    doc.text(options.proposalId, w - MARGIN, headerBaselineY, { align: "right" });
+    doc.setDrawColor(...PALETTE.border);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN, headerBaselineY + SPACE_16, w - MARGIN, headerBaselineY + SPACE_16);
+  } else if (pageIndex > 1 && pageIndex !== 2) {
+    // Legacy: header on page 3+ when no logo/ID (fallback)
+    doc.setFontSize(10);
+    doc.setFont(OFFER_PDF_FONT, "bold");
+    doc.setTextColor(...PALETTE.text);
+    doc.text("Zulbera", MARGIN, 14);
+    doc.setFont(OFFER_PDF_FONT, "normal");
+    doc.setTextColor(...PALETTE.textSecondary);
+    doc.setFontSize(FONT.meta);
+    doc.text(options.proposalTitle, MARGIN, 22, { maxWidth: w - MARGIN * 2 - 50 });
+  }
+
+  // ----- Footer: line + contact left | page X of Y center | validity right -----
   doc.setDrawColor(...PALETTE.border);
   doc.setLineWidth(0.3);
-  const footerY = h - FOOTER_H + 14;
   doc.line(MARGIN, footerY - 4, w - MARGIN, footerY - 4);
-  doc.setFontSize(9);
+  doc.setFontSize(FONT.meta);
   doc.setTextColor(...PALETTE.textSecondary);
-  doc.setFont("helvetica", "normal");
-  doc.text(`Page ${pageIndex} of ${pageCount}`, w / 2, footerY + 2, { align: "center" });
-  if (pageIndex > 1 && pageIndex !== 2) {
-    doc.setFontSize(10);
-    doc.setTextColor(...PALETTE.text);
-    doc.setFont("helvetica", "bold");
-    doc.text("Zulbera", MARGIN, 14);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...PALETTE.textSecondary);
-    doc.setFontSize(9);
-    doc.text(options.proposalTitle, MARGIN, 22, { maxWidth: w - MARGIN * 2 - 50 });
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.text(String(pageIndex), w / 2, footerY + 2, { align: "center" });
+  if (isOverviewOrPricing) {
+    doc.text("Zulbera · www.zulbera.com", MARGIN, footerY + 2);
+    doc.text("Valid 14 days", w - MARGIN, footerY + 2, { align: "right" });
   }
 }
 
@@ -238,7 +301,7 @@ function drawCoverPage(
   // ----- Top white zone -----
   doc.setFontSize(9);
   doc.setTextColor(...PALETTE.textSecondary);
-  doc.setFont("helvetica", "normal");
+  doc.setFont(OFFER_PDF_FONT, "normal");
   doc.text(WEBSITE_URL, w - COVER_MARGIN, COVER_MARGIN, { align: "right" });
 
   // ----- Logo on boundary (white part), right-of-center; preserve aspect ratio (no stretch) -----
@@ -253,13 +316,13 @@ function drawCoverPage(
     } catch {
       doc.setFontSize(18);
       doc.setTextColor(...COVER_DARK_GREY);
-      doc.setFont("helvetica", "bold");
+      doc.setFont(OFFER_PDF_FONT, "bold");
       doc.text("Zulbera", logoX, logoY + logoH - 6);
     }
   } else {
     doc.setFontSize(18);
     doc.setTextColor(...COVER_DARK_GREY);
-    doc.setFont("helvetica", "bold");
+    doc.setFont(OFFER_PDF_FONT, "bold");
     doc.text("Zulbera", logoX, logoY + logoH - 6);
   }
 
@@ -270,7 +333,7 @@ function drawCoverPage(
   const offerY = bandTop + (h - bandTop) * 0.18;
 
   doc.setFontSize(52);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(OFFER_PDF_FONT, "bold");
   doc.setTextColor(...white);
   doc.text("Offer", w - bandPadding, offerY, { align: "right" });
 
@@ -281,7 +344,7 @@ function drawCoverPage(
   const forLines = doc.splitTextToSize(forText, forMaxW);
   const forFontSize = forLines.length > 1 ? 14 : 18;
   doc.setFontSize(forFontSize);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(OFFER_PDF_FONT, "bold");
   doc.setTextColor(...white);
   // "For: {Client}" — pushed well up (extra margin from bottom)
   const forBottomMargin = 130;
@@ -296,13 +359,23 @@ function drawCoverPage(
   const dateStr = `${day}.${month}.${year}`;
   doc.setFontSize(9);
   doc.setTextColor(220, 220, 220);
-  doc.setFont("helvetica", "normal");
+  doc.setFont(OFFER_PDF_FONT, "normal");
   doc.text(dateStr, w - bandPadding, h - bandPadding, { align: "right" });
 }
 
 const MAX_DESC_LENGTH = 380;
-const MAX_SCOPE_ITEMS = 8;
+const MAX_SCOPE_ITEMS = 12;
+const OVERVIEW_HEADER_RESERVED = 48;
 
+/** Normalize text for PDF: trim, collapse whitespace, strip weird chars, fallback "—". */
+function normalizeText(s: string | undefined, fallback = "—"): string {
+  if (s == null) return fallback;
+  const t = String(s)
+    .replace(/\s+/g, " ")
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, "")
+    .trim();
+  return t.length > 0 ? t : fallback;
+}
 function trim(s: string | undefined): string {
   return (s || "").trim();
 }
@@ -310,115 +383,216 @@ function hasContent(s: string | undefined): boolean {
   return trim(s).length > 0;
 }
 
-/** Page 2: Detailed overview — sections only when data is present. Prepared for (detailed), Project summary, What we need, Timeline, Roadmap, Services, Tech, Next steps. */
-function drawOverviewPage(doc: jsPDF, data: OfferProposalData, proposalId: string, logoDataUrl: string | null): void {
-  doc.addPage();
-  const w = getPageWidth(doc);
-  const gap = SPACE_32;
-  const totalContentW = w - MARGIN * 2;
-  const leftColW = (totalContentW - gap) * (1.2 / 2);
-  const rightColW = (totalContentW - gap) * (0.8 / 2);
-  const leftColX = MARGIN;
-  const rightColX = MARGIN + leftColW + gap;
+// ---- Reusable building blocks ----
 
-  const lineHeightBody = 8;
-  const sectionTitleToBody = 14;
-  const sectionBottomGap = 28;
-  const sectionTitleSize = 12;
-  const bodySize = 10;
-  const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+/** SectionLabel: uppercase, letter-spacing feel, medium weight. Returns Y after label. */
+function SectionLabel(doc: jsPDF, x: number, y: number, label: string): number {
+  doc.setFontSize(FONT.sectionLabel);
+  doc.setTextColor(...PALETTE.meta);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.text(label.toUpperCase(), x, y + 3);
+  return y + 4 + metaLead();
+}
 
-  // ----- A) HEADER BAND -----
-  const headerTop = MARGIN + 8;
-  if (logoDataUrl) {
-    try {
-      doc.addImage(logoDataUrl, "PNG", leftColX, headerTop - 4, 56, 12);
-      doc.setFontSize(10);
-      doc.setTextColor(...PALETTE.textSecondary);
-      doc.setFont("helvetica", "normal");
-      doc.text("Project Proposal", leftColX + 62, headerTop + 4);
-    } catch {
-      doc.setFontSize(10);
-      doc.setTextColor(...PALETTE.textSecondary);
-      doc.setFont("helvetica", "bold");
-      doc.text("Zulbera", leftColX, headerTop + 4);
-      doc.setFont("helvetica", "normal");
-      doc.text("Project Proposal", leftColX + 38, headerTop + 4);
-    }
-  } else {
-    doc.setFontSize(10);
-    doc.setTextColor(...PALETTE.textSecondary);
-    doc.setFont("helvetica", "bold");
-    doc.text("Zulbera", leftColX, headerTop + 4);
-    doc.setFont("helvetica", "normal");
-    doc.text("Project Proposal", leftColX + 38, headerTop + 4);
-  }
-  doc.setFontSize(9);
-  doc.text(dateStr, w - MARGIN, headerTop, { align: "right" });
-  doc.text(proposalId, w - MARGIN, headerTop + 14, { align: "right" });
-  const dividerY = headerTop + SPACE_16 + 18;
+/** Thin horizontal Divider. Returns Y after line. */
+function Divider(doc: jsPDF, x: number, y: number, w: number): number {
   doc.setDrawColor(...PALETTE.border);
   doc.setLineWidth(0.3);
-  doc.line(MARGIN, dividerY, w - MARGIN, dividerY);
+  doc.line(x, y, x + w, y);
+  return y + SPACE_8;
+}
 
-  let contentY = dividerY + SPACE_32;
-
-  // ----- B) PREPARED FOR (only if we have at least name) — each line wrapped to avoid overflow -----
-  if (hasContent(data.clientName)) {
-    const prepLines: { label: string; value: string }[] = [];
-    prepLines.push({ label: "Name", value: trim(data.clientName) });
-    if (hasContent(data.clientEmail)) prepLines.push({ label: "Email", value: trim(data.clientEmail!) });
-    if (hasContent(data.clientCompany)) prepLines.push({ label: "Company", value: trim(data.clientCompany!) });
-    if (hasContent(data.clientPhone)) prepLines.push({ label: "Phone", value: trim(data.clientPhone!) });
-    const prepPad = 14;
-    const prepW = totalContentW - prepPad * 2;
-    const lineH = 11;
-    doc.setFontSize(10);
-    let totalTextH = 0;
-    const wrappedRows: string[][] = [];
-    prepLines.forEach((row, i) => {
-      doc.setFont("helvetica", i === 0 ? "bold" : "normal");
-      const text = `${row.label}: ${row.value}`;
-      const wrapped = doc.splitTextToSize(text, prepW);
-      wrappedRows.push(wrapped);
-      totalTextH += wrapped.length * lineH;
-    });
-    const cardH = Math.max(36, prepPad + 10 + totalTextH + prepPad);
-    doc.setFillColor(...PALETTE.cardBg);
-    doc.roundedRect(leftColX, contentY, totalContentW, cardH, 4, 4, "F");
-    doc.setFontSize(9);
-    doc.setTextColor(...PALETTE.textSecondary);
-    doc.setFont("helvetica", "normal");
-    doc.text("Prepared for", leftColX + prepPad, contentY + prepPad - 2);
-    let prepY = contentY + prepPad + 10;
-    prepLines.forEach((_, i) => {
-      doc.setFontSize(10);
-      doc.setTextColor(...PALETTE.text);
-      doc.setFont("helvetica", i === 0 ? "bold" : "normal");
-      const wrapped = wrappedRows[i];
-      doc.text(wrapped, leftColX + prepPad, prepY);
-      prepY += wrapped.length * lineH;
-    });
-    contentY += cardH + SECTION_GAP;
-  }
-
-  let leftY = contentY;
-  let rightY = contentY;
-
-  // ----- C) LEFT: PROJECT SUMMARY (only if title or description) -----
-  if (hasContent(data.pageTitle) || hasContent(data.description)) {
-    doc.setFontSize(sectionTitleSize);
+/** KeyValueStack: label (meta) + value (body) pairs. Returns final Y. */
+function KeyValueStack(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  items: { label: string; value: string }[],
+  valueWidth: number,
+  rowGap: number = SPACE_8
+): number {
+  const bl = bodyLead();
+  items.forEach((item) => {
+    doc.setFontSize(FONT.meta);
+    doc.setTextColor(...PALETTE.meta);
+    doc.setFont(OFFER_PDF_FONT, "normal");
+    doc.text(item.label, x, y + 2);
+    doc.setFontSize(FONT.body);
     doc.setTextColor(...PALETTE.text);
-    doc.setFont("helvetica", "bold");
-    doc.text("PROJECT SUMMARY", leftColX, leftY);
-    leftY += sectionTitleToBody;
+    const lines = doc.splitTextToSize(normalizeText(item.value), valueWidth);
+    doc.text(lines, x + 64, y + 2);
+    y += Math.max(metaLead() + 2, lines.length * bl) + rowGap;
+  });
+  return y;
+}
+
+/** TagList: pills with subtle border (no fill). Returns Y after last tag row. */
+function TagList(doc: jsPDF, x: number, y: number, tags: string[], maxW: number): number {
+  const tagH = 16;
+  const pad = 6;
+  let cx = x;
+  let rowY = y;
+  doc.setFontSize(FONT.body);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.setTextColor(...PALETTE.text);
+  tags.forEach((tag) => {
+    const t = normalizeText(tag) || "—";
+    const tw = doc.getTextWidth(t) + pad * 2;
+    if (cx + tw > x + maxW && cx > x) {
+      cx = x;
+      rowY += tagH + 4;
+    }
+    doc.setDrawColor(...PALETTE.border);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(cx, rowY - 10, tw, tagH, 1.5, 1.5, "S");
+    doc.text(t, cx + pad, rowY);
+    cx += tw + 6;
+  });
+  return rowY + 6;
+}
+
+/** MilestoneList: items with subtle left accent line. Returns final Y. */
+function MilestoneList(doc: jsPDF, x: number, y: number, items: { label: string; duration: string }[], colW: number): number {
+  const bl = bodyLead();
+  const accentX = x + 4;
+  doc.setDrawColor(...PALETTE.accent);
+  doc.setLineWidth(ACCENT_RULE * 0.5);
+  const startY = y;
+  let lastY = y;
+  items.forEach((item, i) => {
+    const text = `${normalizeText(item.label)}${item.duration ? ` — ${normalizeText(item.duration)}` : ""}`;
+    const lines = doc.splitTextToSize(text, colW - 16);
+    doc.setFontSize(FONT.body);
+    doc.setFont(OFFER_PDF_FONT, "normal");
+    doc.setTextColor(...PALETTE.text);
+    doc.text(lines, accentX + 8, y + 4);
+    const h = lines.length * bl + SPACE_8;
+    if (i > 0) {
+      doc.setDrawColor(...PALETTE.border);
+      doc.setLineWidth(0.2);
+      doc.line(accentX, y - 2, x + colW, y - 2);
+    }
+    lastY = y + h;
+    y = lastY;
+  });
+  doc.setDrawColor(...PALETTE.accent);
+  doc.setLineWidth(ACCENT_RULE * 0.5);
+  doc.line(accentX, startY, accentX, lastY);
+  return lastY + SPACE_8;
+}
+
+/** Refined card: optional very subtle fill, thin border. */
+function RefinedCard(doc: jsPDF, x: number, y: number, w: number, h: number, filled: boolean = false): void {
+  if (filled) {
+    doc.setFillColor(...PALETTE.cardBg);
+    doc.roundedRect(x, y, w, h, CARD_RADIUS, CARD_RADIUS, "F");
+  }
+  doc.setDrawColor(...PALETTE.cardBorder);
+  doc.setLineWidth(CARD_BORDER);
+  doc.roundedRect(x, y, w, h, CARD_RADIUS, CARD_RADIUS, "S");
+}
+
+/** Draw section title: uppercase label + thin divider. Returns Y after title block. */
+function drawSectionTitle(doc: jsPDF, x: number, y: number, label: string, w: number): number {
+  doc.setFontSize(FONT.sectionLabel);
+  doc.setTextColor(...PALETTE.textSecondary);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.text(label.toUpperCase(), x, y + 3);
+  const lineY = y + 8;
+  doc.setDrawColor(...PALETTE.border);
+  doc.setLineWidth(0.5);
+  doc.line(x, lineY, x + Math.min(24, w), lineY);
+  return lineY + SPACE_8;
+}
+
+/** Draw a light card (fill + 1px border, rounded). */
+function drawCard(doc: jsPDF, x: number, y: number, w: number, h: number): void {
+  doc.setFillColor(...PALETTE.cardBg);
+  doc.roundedRect(x, y, w, h, CARD_RADIUS, CARD_RADIUS, "F");
+  doc.setDrawColor(...PALETTE.cardBorder);
+  doc.setLineWidth(CARD_BORDER);
+  doc.roundedRect(x, y, w, h, CARD_RADIUS, CARD_RADIUS, "S");
+}
+
+/** Page 2 (Overview): full-width Client & Project card, then 2-column (Summary, What We Need, Timeline, Roadmap, Deliverables | Tech, Next Steps). */
+function drawOverviewPage(doc: jsPDF, data: OfferProposalData, _proposalId: string, _logoDataUrl: string | null): void {
+  doc.addPage();
+  const w = getPageWidth(doc);
+  const contentW = CONTENT_WIDTH;
+  const colGap = SPACE_24;
+  const leftColW = (contentW - colGap) / 2;
+  const rightColW = leftColW;
+  const leftColX = MARGIN;
+  const rightColX = MARGIN + leftColW + colGap;
+  const lineHeightBody = 8;
+  const sectionTitleToBody = 14;
+  const sectionBottomGap = 24;
+  const bl = bodyLead();
+
+  let y = MARGIN + OVERVIEW_HEADER_RESERVED;
+
+  // ----- Client & Project card (full width) -----
+  const rows: { label: string; value: string }[] = [];
+  if (hasContent(data.clientName)) rows.push({ label: "Name", value: trim(data.clientName) });
+  if (hasContent(data.clientEmail)) rows.push({ label: "Email", value: trim(data.clientEmail!) });
+  if (hasContent(data.clientCompany)) rows.push({ label: "Company", value: trim(data.clientCompany!) });
+  if (hasContent(data.clientPhone)) rows.push({ label: "Phone", value: trim(data.clientPhone!) });
+  if (rows.length === 0) rows.push({ label: "Prepared for", value: "—" });
+
+  const cardPad = 14;
+  let cardContentH = 0;
+  doc.setFontSize(FONT.body);
+  rows.forEach((r) => {
+    const valLines = doc.splitTextToSize(r.value, contentW - cardPad * 2 - 80);
+    cardContentH += Math.max(12, valLines.length * lineHeightBody) + 2;
+  });
+  if (hasContent(data.pageTitle)) {
+    cardContentH += SPACE_8;
+    const titleLines = doc.splitTextToSize(trim(data.pageTitle), contentW - cardPad * 2);
+    cardContentH += titleLines.length * (FONT.body + 2);
+  }
+  const cardH = cardPad + Math.max(32, cardContentH) + cardPad;
+  drawCard(doc, leftColX, y, contentW, cardH);
+
+  doc.setFontSize(FONT.meta);
+  doc.setTextColor(...PALETTE.textSecondary);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.text("Prepared for", leftColX + cardPad, y + cardPad - 2);
+  let rowY = y + cardPad + 10;
+  rows.forEach((r) => {
+    doc.setFontSize(FONT.meta);
+    doc.setTextColor(...PALETTE.textSecondary);
+    doc.text(r.label + ":", leftColX + cardPad, rowY + 2);
+    doc.setFontSize(FONT.body);
+    doc.setTextColor(...PALETTE.text);
+    const valLines = doc.splitTextToSize(r.value, contentW - cardPad * 2 - 80);
+    doc.text(valLines, leftColX + cardPad + 76, rowY + 2);
+    rowY += Math.max(12, valLines.length * lineHeightBody) + 2;
+  });
+  if (hasContent(data.pageTitle)) {
+    rowY += SPACE_8;
+    doc.setFontSize(FONT.sectionTitle);
+    doc.setFont(OFFER_PDF_FONT, "bold");
+    doc.setTextColor(...PALETTE.text);
+    const titleLines = doc.splitTextToSize(trim(data.pageTitle), contentW - cardPad * 2);
+    doc.text(titleLines, leftColX + cardPad, rowY);
+  }
+  y += cardH + SECTION_GAP;
+
+  let leftY = y;
+  let rightY = y;
+
+  // ----- Left: Project Summary -----
+  if (hasContent(data.pageTitle) || hasContent(data.description)) {
+    leftY = drawSectionTitle(doc, leftColX, leftY, "Project Summary", leftColW);
     if (hasContent(data.pageTitle)) {
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
+      doc.setFontSize(FONT.body + 1);
+      doc.setFont(OFFER_PDF_FONT, "bold");
       doc.text(trim(data.pageTitle), leftColX, leftY);
       leftY += 12;
     }
-    doc.setFont("helvetica", "normal");
+    doc.setFont(OFFER_PDF_FONT, "normal");
+    doc.setFontSize(FONT.body);
     doc.setTextColor(...PALETTE.text);
     const rawDesc = trim(data.description) || "—";
     const desc = rawDesc.length > MAX_DESC_LENGTH ? rawDesc.slice(0, MAX_DESC_LENGTH).trim() + "…" : rawDesc;
@@ -427,215 +601,163 @@ function drawOverviewPage(doc: jsPDF, data: OfferProposalData, proposalId: strin
     leftY += summaryLines.length * lineHeightBody + sectionBottomGap;
   }
 
-  // ----- D) LEFT: WHAT WE NEED (only if filled) -----
+  // ----- Left: What We Need -----
   if (hasContent(data.whatWeNeed)) {
-    doc.setFontSize(sectionTitleSize);
-    doc.setFont("helvetica", "bold");
-    doc.text("WHAT WE NEED", leftColX, leftY);
-    leftY += sectionTitleToBody;
-    doc.setFontSize(bodySize);
-    doc.setFont("helvetica", "normal");
+    leftY = drawSectionTitle(doc, leftColX, leftY, "What We Need", leftColW);
+    doc.setFontSize(FONT.body);
+    doc.setFont(OFFER_PDF_FONT, "normal");
     doc.setTextColor(...PALETTE.text);
     const lines = doc.splitTextToSize(trim(data.whatWeNeed!), leftColW);
     doc.text(lines, leftColX, leftY);
     leftY += lines.length * lineHeightBody + sectionBottomGap;
   }
 
-  // ----- E) LEFT: TIMELINE (only if any product has timeline) — wrapped rows to avoid overflow -----
+  // ----- Left: Timeline -----
   const productsWithTimeline = data.products.filter((p) => hasContent(p.timeline) || hasContent(p.name));
   if (productsWithTimeline.length > 0) {
-    doc.setFontSize(sectionTitleSize);
-    doc.setFont("helvetica", "bold");
-    doc.text("TIMELINE", leftColX, leftY);
-    leftY += sectionTitleToBody;
+    leftY = drawSectionTitle(doc, leftColX, leftY, "Timeline", leftColW);
     const timelineLeft = leftColX + 8;
     const timelineW = leftColW - 18;
-    const lineH = 8;
-    doc.setFontSize(bodySize);
-    const timelineRowHeights: number[] = [];
-    productsWithTimeline.forEach((p) => {
-      const label = p.name?.trim() || "Phase";
-      const duration = hasContent(p.timeline) ? ` — ${p.timeline}` : "";
-      const wrapped = doc.splitTextToSize(label + duration, timelineW);
-      timelineRowHeights.push(Math.max(20, wrapped.length * lineH + 8));
-    });
-    const lastY = leftY + timelineRowHeights.reduce((a, b) => a + b, 0) + 4;
-    doc.setDrawColor(...PALETTE.border);
-    doc.setLineWidth(0.4);
-    doc.line(timelineLeft, leftY + 4, timelineLeft, lastY + 4);
-    let rowY = leftY;
     productsWithTimeline.forEach((p, i) => {
-      if (i > 0) rowY += timelineRowHeights[i - 1];
-      const y = rowY + 6;
-      if (i > 0) {
-        doc.setDrawColor(...PALETTE.border);
-        doc.setLineWidth(0.2);
-        doc.line(timelineLeft, y - 4, leftColX + leftColW, y - 4);
-      }
-      doc.setFontSize(bodySize);
-      doc.setTextColor(...PALETTE.text);
-      doc.setFont("helvetica", "normal");
-      const label = p.name?.trim() || `Phase ${i + 1}`;
+      const label = normalizeText(p.name) || `Phase ${i + 1}`;
       const duration = hasContent(p.timeline) ? ` — ${p.timeline}` : "";
       const wrapped = doc.splitTextToSize(label + duration, timelineW);
-      doc.text(wrapped, timelineLeft + 10, y);
+      doc.setFontSize(FONT.body);
+      doc.setTextColor(...PALETTE.text);
+      doc.setFont(OFFER_PDF_FONT, "normal");
+      doc.text(wrapped, timelineLeft + 10, leftY + 6);
+      leftY += wrapped.length * lineHeightBody + 10;
     });
-    leftY = lastY + 4 + sectionBottomGap;
+    leftY += sectionBottomGap;
   }
 
-  // ----- F) LEFT: ROADMAP (only if filled) -----
+  // ----- Left: Roadmap -----
   if (hasContent(data.roadmap)) {
-    doc.setFontSize(sectionTitleSize);
-    doc.setFont("helvetica", "bold");
-    doc.text("ROADMAP", leftColX, leftY);
-    leftY += sectionTitleToBody;
-    doc.setFontSize(bodySize);
-    doc.setFont("helvetica", "normal");
+    leftY = drawSectionTitle(doc, leftColX, leftY, "Roadmap", leftColW);
+    doc.setFontSize(FONT.body);
+    doc.setFont(OFFER_PDF_FONT, "normal");
     doc.setTextColor(...PALETTE.text);
     const lines = doc.splitTextToSize(trim(data.roadmap!), leftColW);
     doc.text(lines, leftColX, leftY);
     leftY += lines.length * lineHeightBody + sectionBottomGap;
   }
 
-  // ----- G) LEFT: SERVICES & DELIVERABLES (only if we have products with names) — wrap long names -----
-  const deliverables = data.products.map((p) => p.name?.trim()).filter(Boolean);
+  // ----- Left: Services & Deliverables -----
+  const deliverables = data.products.map((p) => p.name?.trim()).filter(Boolean).slice(0, MAX_SCOPE_ITEMS);
   if (deliverables.length > 0) {
-    doc.setFontSize(sectionTitleSize);
-    doc.setFont("helvetica", "bold");
-    doc.text("SERVICES & DELIVERABLES", leftColX, leftY);
-    leftY += sectionTitleToBody;
-    doc.setFontSize(bodySize);
-    doc.setFont("helvetica", "normal");
-    const showCount = Math.min(deliverables.length, MAX_SCOPE_ITEMS);
-    const bulletGap = 10;
-    for (let i = 0; i < showCount; i++) {
-      const wrapped = doc.splitTextToSize("• " + deliverables[i], leftColW);
+    leftY = drawSectionTitle(doc, leftColX, leftY, "Services & Deliverables", leftColW);
+    doc.setFontSize(FONT.body);
+    doc.setFont(OFFER_PDF_FONT, "normal");
+    doc.setTextColor(...PALETTE.text);
+    deliverables.forEach((name, i) => {
+      const wrapped = doc.splitTextToSize("• " + name, leftColW);
       doc.text(wrapped, leftColX, leftY);
-      leftY += wrapped.length * lineHeightBody + bulletGap;
-    }
-    if (deliverables.length > MAX_SCOPE_ITEMS) {
-      doc.setTextColor(...PALETTE.textSecondary);
-      doc.text(`+ ${deliverables.length - MAX_SCOPE_ITEMS} more`, leftColX, leftY);
-      doc.setTextColor(...PALETTE.text);
-      leftY += bulletGap;
-    }
+      leftY += wrapped.length * lineHeightBody + 8;
+    });
     leftY += sectionBottomGap;
   }
 
-  // ----- RIGHT: TECH STACK (only if any product has tech) -----
+  // ----- Right: Tech Stack -----
   const techSet = new Set<string>();
   data.products.forEach((p) => {
     const arr = Array.isArray(p.techStack) ? p.techStack : String(p.techStack || "").split(",").map((t) => t.trim()).filter(Boolean);
     arr.forEach((t) => techSet.add(t));
   });
   if (techSet.size > 0) {
-    doc.setFontSize(sectionTitleSize);
-    doc.setTextColor(...PALETTE.text);
-    doc.setFont("helvetica", "bold");
-    doc.text("TECH STACK", rightColX, rightY);
-    rightY += sectionTitleToBody;
-    const techStr = Array.from(techSet).join(" • ");
-    doc.setFontSize(bodySize);
-    doc.setFont("helvetica", "normal");
+    rightY = drawSectionTitle(doc, rightColX, rightY, "Tech Stack", rightColW);
+    const techStr = Array.from(techSet).join(" · ");
+    doc.setFontSize(FONT.body);
+    doc.setFont(OFFER_PDF_FONT, "normal");
     doc.setTextColor(...PALETTE.text);
     const techLines = doc.splitTextToSize(techStr, rightColW);
     doc.text(techLines, rightColX, rightY);
     rightY += techLines.length * lineHeightBody + sectionBottomGap;
   }
 
-  // ----- RIGHT: NEXT STEPS -----
-  doc.setFontSize(sectionTitleSize);
-  doc.setFont("helvetica", "bold");
-  doc.text("NEXT STEPS", rightColX, rightY);
-  rightY += sectionTitleToBody;
-  doc.setFontSize(bodySize);
-  doc.setFont("helvetica", "normal");
+  // ----- Right: Next Steps -----
+  rightY = drawSectionTitle(doc, rightColX, rightY, "Next Steps", rightColW);
+  doc.setFontSize(FONT.body);
+  doc.setFont(OFFER_PDF_FONT, "normal");
   doc.setTextColor(...PALETTE.text);
-  const nextSteps = [
-    "Review this proposal and confirm scope.",
-    "Sign-off and kickoff schedule.",
-  ];
+  const nextSteps = ["Review this proposal and confirm scope.", "Sign off and kickoff schedule."];
   nextSteps.forEach((step, i) => {
     doc.text(`${i + 1}. ${step}`, rightColX, rightY);
     rightY += 12 + lineHeightBody;
   });
   rightY += 14;
-  doc.setFontSize(9);
+  doc.setFontSize(FONT.meta);
   doc.setTextColor(...PALETTE.textSecondary);
   doc.text("Valid for 14 days", rightColX, rightY);
 }
 
-/** Page 3: Total investment (prominent), Why to invest (only if filled), then deliverables table. */
-function drawPricingPage(doc: jsPDF, data: OfferProposalData): void {
+/** Page 3 (Pricing): PricingHero (refined band), light table, TotalsBreakdown, Commercial Notes, Terms + Acceptance. */
+function drawPricingPage(doc: jsPDF, data: OfferProposalData, proposalId: string): void {
   doc.addPage();
-  const w = getPageWidth(doc);
-  let y = MARGIN + HEADER_H;
-  const tableWidth = w - MARGIN * 2;
-  const lineHeight = 7.5;
+  const contentW = CONTENT_WIDTH;
+  let y = MARGIN + OVERVIEW_HEADER_RESERVED;
+  const bl = bodyLead();
+  const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-  // ----- TOTAL INVESTMENT (prominent at top) — label and amount with clear vertical separation -----
-  doc.setFontSize(11);
-  doc.setTextColor(...PALETTE.textSecondary);
-  doc.setFont("helvetica", "normal");
-  doc.text("Total investment", MARGIN, y);
-  y += 28; /* space so 28pt amount sits fully below the label (no overlap) */
-  doc.setFontSize(28);
-  doc.setFont("helvetica", "bold");
+  // ----- PricingHero: left = Total Investment + amount + currency; right = payment terms + validity + ID; thin accent, no heavy fill -----
+  const bandH = 56;
+  doc.setDrawColor(...PALETTE.accent);
+  doc.setLineWidth(ACCENT_RULE);
+  doc.line(MARGIN, y, MARGIN, y + bandH);
+  doc.setFontSize(FONT.sectionLabel);
+  doc.setTextColor(...PALETTE.meta);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.text("TOTAL INVESTMENT", MARGIN + 12, y + 14);
+  doc.setFontSize(22);
+  doc.setFont(OFFER_PDF_FONT, "bold");
   doc.setTextColor(...PALETTE.text);
-  doc.text(`$${data.totalPrice.toFixed(2)}`, MARGIN, y);
-  y += 44;
+  doc.text(`€${data.totalPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, MARGIN + 12, y + 38);
+  doc.setFontSize(FONT.meta);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.setTextColor(...PALETTE.meta);
+  doc.text("EUR", MARGIN + 12, y + 48);
+  doc.setFontSize(FONT.meta);
+  doc.text("Payment: deposit & milestones as agreed.", MARGIN + contentW - 12, y + 10, { align: "right" });
+  doc.text("Valid 14 days from issue date.", MARGIN + contentW - 12, y + 10 + metaLead(), { align: "right" });
+  doc.text(proposalId, MARGIN + contentW - 12, y + 10 + metaLead() * 2, { align: "right" });
+  y += bandH + SECTION_GAP;
 
-  // ----- WHY TO INVEST (only if filled) -----
-  if (hasContent(data.whyToInvest)) {
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("WHY TO INVEST", MARGIN, y);
-    y += 14;
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...PALETTE.text);
-    const whyLines = doc.splitTextToSize(trim(data.whyToInvest!), tableWidth);
-    doc.text(whyLines, MARGIN, y);
-    y += whyLines.length * lineHeight + 24;
-  }
-
-  // ----- DELIVERABLES TABLE -----
-  const colWidths = {
-    0: tableWidth * 0.42,
-    1: tableWidth * 0.18,
-    2: tableWidth * 0.25,
-    3: tableWidth * 0.15,
+  // ----- Deliverables table: balanced column widths so content fits; light header -----
+  const tableWidth = contentW;
+  const colWidths: Record<number, number> = {
+    0: tableWidth * 0.35,
+    1: tableWidth * 0.24,
+    2: tableWidth * 0.23,
+    3: tableWidth * 0.18,
   };
   const columns = ["Deliverable", "Timeline", "Tech", "Price"];
-  const rows = data.products.map((p) => {
-    const tech = Array.isArray(p.techStack) ? (p.techStack as string[]).join(", ") : String(p.techStack || "");
-    return [p.name || "—", p.timeline || "—", tech || "—", p.price != null ? `$${p.price.toFixed(2)}` : "—"];
+  const bodyRows = data.products.map((p) => {
+    const tech = Array.isArray(p.techStack) ? (p.techStack as string[]).map((t) => normalizeText(t)).join(", ") : normalizeText(String(p.techStack || ""));
+    return [normalizeText(p.name), normalizeText(p.timeline), tech || "—", p.price != null ? `€${p.price.toFixed(2)}` : "—"];
   });
-  rows.push(["Total", "", "", `$${data.totalPrice.toFixed(2)}`]);
-
-  const headBg: [number, number, number] = [45, 45, 45];
-  const rowAlt: [number, number, number] = [246, 247, 249];
+  const rowAlt: [number, number, number] = [252, 252, 252];
 
   autoTable(doc, {
     startY: y,
     head: [columns],
-    body: rows,
-    theme: "grid",
-    margin: { left: MARGIN, right: MARGIN, bottom: FOOTER_H + 24 },
+    body: bodyRows,
+    margin: { left: MARGIN, right: MARGIN },
     tableWidth,
+    showHead: "everyPage",
     headStyles: {
-      fillColor: headBg,
-      textColor: [255, 255, 255],
+      fillColor: [250, 250, 250],
+      textColor: PALETTE.text as unknown as [number, number, number],
       fontStyle: "bold",
-      fontSize: 10,
-      cellPadding: 6,
+      fontSize: FONT.sectionLabel,
+      cellPadding: { top: 10, right: 8, bottom: 10, left: 8 },
+      lineWidth: 0.3,
+      lineColor: PALETTE.border as unknown as [number, number, number],
     },
-    styles: {
-      fontSize: 10,
-      cellPadding: 6,
+    bodyStyles: {
+      fontSize: FONT.body,
+      cellPadding: { top: 10, right: 8, bottom: 10, left: 8 },
+      textColor: PALETTE.text as unknown as [number, number, number],
       lineColor: PALETTE.border as unknown as [number, number, number],
       lineWidth: 0.3,
-      textColor: PALETTE.text as unknown as [number, number, number],
     },
     columnStyles: {
       0: { cellWidth: colWidths[0], halign: "left" },
@@ -644,22 +766,155 @@ function drawPricingPage(doc: jsPDF, data: OfferProposalData): void {
       3: { cellWidth: colWidths[3], halign: "right" },
     },
     didParseCell: (cellData) => {
-      if (cellData.row.index === rows.length - 1) {
-        cellData.cell.styles.fontStyle = "bold";
-        cellData.cell.styles.fillColor = rowAlt;
-      } else if (cellData.section === "body" && cellData.row.index % 2 === 1) {
+      if (cellData.section === "body" && cellData.row.index % 2 === 1) {
         cellData.cell.styles.fillColor = rowAlt;
       }
     },
   });
+
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + SPACE_24;
+
+  // ----- TotalsBreakdown: Subtotal / Taxes / Total, right-aligned -----
+  const subtotal = data.totalPrice;
+  const taxes = 0;
+  const total = subtotal + taxes;
+  const breakdownW = 140;
+  const breakdownX = MARGIN + contentW - breakdownW;
+  doc.setDrawColor(...PALETTE.border);
+  doc.setLineWidth(0.3);
+  doc.line(breakdownX, y, breakdownX + breakdownW, y);
+  y += SPACE_16;
+  doc.setFontSize(FONT.body);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.setTextColor(...PALETTE.text);
+  doc.text("Subtotal", breakdownX, y);
+  doc.text(`€${subtotal.toFixed(2)}`, breakdownX + breakdownW, y, { align: "right" });
+  y += bl + 4;
+  doc.setTextColor(...PALETTE.meta);
+  doc.text("Taxes (if any)", breakdownX, y);
+  doc.text(taxes === 0 ? "—" : `€${taxes.toFixed(2)}`, breakdownX + breakdownW, y, { align: "right" });
+  y += bl + 8;
+  doc.setDrawColor(...PALETTE.border);
+  doc.setLineWidth(0.5);
+  doc.line(breakdownX, y, breakdownX + breakdownW, y);
+  y += SPACE_8;
+  doc.setFontSize(FONT.sectionLabel);
+  doc.setFont(OFFER_PDF_FONT, "bold");
+  doc.setTextColor(...PALETTE.text);
+  doc.text("Total", breakdownX, y);
+  doc.text(`€${total.toFixed(2)}`, breakdownX + breakdownW, y, { align: "right" });
+  y += bl + SECTION_GAP;
+
+  // ----- Commercial Notes: refined block, thin border, bullets max 1 line -----
+  const notesBullets = hasContent(data.whyToInvest)
+    ? normalizeText(data.whyToInvest).split(/\n|\.\s+/).map((s) => normalizeText(s).slice(0, 70)).filter((s) => s !== "—").slice(0, 5)
+    : [
+        "Pricing assumes scope as described; changes require a revised quote.",
+        "Payment terms: deposit and milestones to be agreed in contract.",
+        "Deliverables subject to acceptance criteria and sign-off.",
+      ];
+  const notesPad = 12;
+  const notesH = 12 + notesBullets.length * (bl + 6) + notesPad;
+  RefinedCard(doc, MARGIN, y, contentW, notesH, true);
+  doc.setFontSize(FONT.sectionLabel);
+  doc.setTextColor(...PALETTE.meta);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.text("COMMERCIAL NOTES & ASSUMPTIONS", MARGIN + notesPad, y + 12);
+  doc.setFontSize(FONT.body);
+  doc.setTextColor(...PALETTE.text);
+  let ny = y + 12 + metaLead() + 4;
+  notesBullets.forEach((b) => {
+    const oneLine = b.length > 72 ? b.slice(0, 69) + "…" : b;
+    doc.text(`· ${oneLine}`, MARGIN + notesPad, ny);
+    ny += bl + 6;
+  });
+  y += notesH + SECTION_GAP;
+
+  // ----- Terms (left) + Acceptance (right): equal-height cards; Terms text wraps inside card; signature lines full width -----
+  const bottomCardW = (contentW - SPACE_24) / 2;
+  const cardPad = 14;
+  const termsTextW = bottomCardW - cardPad * 2;
+  const termsBullets = [
+    "Revisions: 2 rounds included; further changes quoted separately.",
+    "Delivery: milestones and handover as per timeline.",
+    "Communication: regular check-ins; 2 business days response.",
+    "Support: 30-day post-delivery window for defects.",
+    "Scope changes: written change request and revised quote required.",
+  ];
+  doc.setFontSize(FONT.body);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  let termsContentH = 12 + metaLead() + 8;
+  termsBullets.forEach((line) => {
+    const wrapped = doc.splitTextToSize(`· ${line}`, termsTextW);
+    termsContentH += wrapped.length * bl + 4;
+  });
+  termsContentH += cardPad;
+
+  const acceptBlockH = 172;
+  const cardH = Math.max(termsContentH, acceptBlockH);
+
+  RefinedCard(doc, MARGIN, y, bottomCardW, cardH, true);
+  doc.setFontSize(FONT.sectionLabel);
+  doc.setTextColor(...PALETTE.meta);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.text("TERMS", MARGIN + cardPad, y + 12);
+  doc.setFontSize(FONT.body);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.setTextColor(...PALETTE.text);
+  let ty = y + 12 + metaLead() + 8;
+  termsBullets.forEach((line) => {
+    const wrapped = doc.splitTextToSize(`· ${line}`, termsTextW);
+    doc.text(wrapped, MARGIN + cardPad, ty);
+    ty += wrapped.length * bl + 4;
+  });
+
+  RefinedCard(doc, MARGIN + bottomCardW + SPACE_24, y, bottomCardW, cardH, true);
+  doc.setFontSize(FONT.sectionLabel);
+  doc.setTextColor(...PALETTE.meta);
+  doc.text("ACCEPTANCE", MARGIN + bottomCardW + SPACE_24 + cardPad, y + 12);
+  doc.setFontSize(FONT.body);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.setTextColor(...PALETTE.text);
+  const clientLabel = normalizeText(data.clientName);
+  const companyLabel = hasContent(data.clientCompany) ? `, ${normalizeText(data.clientCompany)}` : "";
+  const prepLines = doc.splitTextToSize(`Prepared for: ${clientLabel}${companyLabel}`, termsTextW);
+  doc.text(prepLines, MARGIN + bottomCardW + SPACE_24 + cardPad, y + 12 + metaLead() + 8);
+  let acceptY = y + 12 + metaLead() + 8 + prepLines.length * bl + 6;
+  const acceptStmtLines = doc.splitTextToSize("By signing below, the client accepts this proposal and its terms.", termsTextW);
+  doc.text(acceptStmtLines, MARGIN + bottomCardW + SPACE_24 + cardPad, acceptY);
+  acceptY += acceptStmtLines.length * bl + 20;
+  const sigLineW = bottomCardW - cardPad * 2;
+  const sigLineX = MARGIN + bottomCardW + SPACE_24 + cardPad;
+  const sigLabelGap = 6;
+  const sigRowMargin = 12;
+  doc.setDrawColor(...PALETTE.border);
+  doc.setLineWidth(0.5);
+  doc.line(sigLineX, acceptY, sigLineX + sigLineW, acceptY);
+  doc.setFontSize(FONT.meta);
+  doc.setTextColor(...PALETTE.meta);
+  doc.text("Signature", sigLineX, acceptY + sigLabelGap + metaLead());
+  const line2Y = acceptY + sigLabelGap + metaLead() + sigRowMargin;
+  doc.line(sigLineX, line2Y, sigLineX + sigLineW, line2Y);
+  doc.text("Date", sigLineX, line2Y + sigLabelGap + metaLead());
+  const line3Y = line2Y + sigLabelGap + metaLead() + sigRowMargin;
+  doc.line(sigLineX, line3Y, sigLineX + sigLineW, line3Y);
+  doc.text("Name & Title (optional)", sigLineX, line3Y + sigLabelGap + metaLead());
 }
 
-/** Add footer to every page (cover included). */
-function addFootersToAllPages(doc: jsPDF, proposalTitle: string): void {
+/** Add header/footer to every page (cover gets footer only; pages 2–3 get premium header + footer). */
+function addFootersToAllPages(
+  doc: jsPDF,
+  proposalTitle: string,
+  opts: { logoDataUrl: string | null; proposalId: string }
+): void {
   const n = getNumberOfPages(doc);
   for (let i = 1; i <= n; i++) {
     doc.setPage(i);
-    drawHeaderFooter(doc, i, n, { proposalTitle });
+    drawHeaderFooter(doc, i, n, {
+      proposalTitle,
+      logoDataUrl: opts.logoDataUrl,
+      proposalId: opts.proposalId,
+    });
   }
 }
 
@@ -685,13 +940,14 @@ export async function generateOfferProposalPdf(data: OfferProposalData): Promise
 
   const proposalId = `PROP-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  doc.setFont("helvetica", "normal");
+  OFFER_PDF_FONT = await registerInterFont(doc);
+  doc.setFont(OFFER_PDF_FONT, "normal");
 
   drawCoverPage(doc, data, logoDataUrl, proposalId, coverBgDataUrl);
   drawOverviewPage(doc, data, proposalId, logoDataUrl);
-  drawPricingPage(doc, data);
+  drawPricingPage(doc, data, proposalId);
 
-  addFootersToAllPages(doc, data.pageTitle);
+  addFootersToAllPages(doc, data.pageTitle, { logoDataUrl: logoDataUrl ?? null, proposalId });
 
   const safeName = data.clientName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_-]/g, "") || "proposal";
   doc.save(`${safeName}_proposal.pdf`);
