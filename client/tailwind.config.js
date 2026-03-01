@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Panchang", "sans-serif"],
+        sans: ["Inter", "sans-serif"],
       },
       colors: {
         app: "var(--color-bg)",

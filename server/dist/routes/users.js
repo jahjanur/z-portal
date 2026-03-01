@@ -7,14 +7,43 @@ const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const crypto_1 = __importDefault(require("crypto"));
+const nodemailer_1 = __importDefault(require("nodemailer"));
+const multer_1 = __importDefault(require("multer"));
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
 const auth_1 = require("../middleware/auth");
-const emailService_1 = require("../services/emailService");
+const notifications_1 = require("../services/notifications");
 const router = (0, express_1.Router)();
 const prisma = new client_1.PrismaClient();
 const SALT_ROUNDS = 10;
-// ----------------------
-// GET all users (Admin only)
-// ----------------------
+const filesDir = "uploads/files";
+if (!fs_1.default.existsSync(filesDir)) {
+    fs_1.default.mkdirSync(filesDir, { recursive: true });
+}
+const fileStorage = multer_1.default.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, filesDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        const sanitizedName = file.originalname.replace(/[^a-zA-Z0-9.]/g, '-');
+        cb(null, "file-" + uniqueSuffix + "-" + sanitizedName);
+    },
+});
+const uploadFile = (0, multer_1.default)({
+    storage: fileStorage,
+    limits: { fileSize: 100 * 1024 * 1024 },
+});
+const transporter = nodemailer_1.default.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: false,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+});
+// get all users
 router.get("/", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
     try {
         const users = await prisma.user.findMany({
@@ -26,15 +55,12 @@ router.get("/", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
                 company: true,
                 logo: true,
                 colorHex: true,
-                address: true,
-                postalAddress: true,
-                phoneNumber: true,
-                extraEmails: true,
-                brandPattern: true,
-                shortInfo: true,
-                profileStatus: true,
                 createdAt: true,
-            },
+                profileStatus: true,
+                postalAddress: true,
+                address: true,
+                phoneNumber: true,
+            }
         });
         res.json(users);
     }
@@ -43,20 +69,87 @@ router.get("/", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
         res.status(500).json({ error: "Failed to fetch users" });
     }
 });
-// ----------------------
-// GET user by ID
-// ----------------------
-router.get("/:id", auth_1.verifyJWT, async (req, res) => {
+// get user invite token
+router.get("/by-token/:token", async (req, res) => {
     try {
-        const requestingUserId = req.user.id;
-        const requestingUserRole = req.user.role;
-        const targetUserId = Number(req.params.id);
-        // Allow users to view their own profile, or admins to view any profile
-        if (requestingUserRole !== "ADMIN" && requestingUserId !== targetUserId) {
-            return res.status(403).json({ error: "Not authorized" });
-        }
+        const { token } = req.params;
         const user = await prisma.user.findUnique({
-            where: { id: targetUserId },
+            where: { inviteToken: token },
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                company: true,
+                logo: true,
+                address: true,
+                postalAddress: true,
+                phoneNumber: true,
+                extraEmails: true,
+                brandPattern: true,
+                shortInfo: true,
+                inviteExpires: true,
+            },
+        });
+        if (!user) {
+            return res.status(404).json({ error: "Invalid token" });
+        }
+        if (user.inviteExpires && user.inviteExpires < new Date()) {
+            return res.status(400).json({ error: "Token has expired" });
+        }
+        res.json(user);
+    }
+    catch (error) {
+        console.error("Error fetching user by token:", error);
+        res.status(500).json({ error: "Failed to fetch user" });
+    }
+});
+// post resend invite email
+router.post("/:id/resend-invite", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await prisma.user.findUnique({
+            where: { id: Number(id) },
+        });
+        if (!user || user.role !== "CLIENT") {
+            return res.status(404).json({ error: "Client not found" });
+        }
+        const inviteToken = crypto_1.default.randomBytes(32).toString('hex');
+        const inviteExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await prisma.user.update({
+            where: { id: Number(id) },
+            data: { inviteToken, inviteExpires },
+        });
+        const inviteLink = `${process.env.CLIENT_URL || 'http://localhost:3000'}/complete-profile?token=${inviteToken}`;
+        try {
+            await transporter.sendMail({
+                from: process.env.SMTP_USER,
+                to: user.email,
+                subject: 'Complete Your Company Profile - Reminder',
+                html: `
+          <h2>Hi ${user.name}!</h2>
+          <p>This is a reminder to complete your company profile:</p>
+          <a href="${inviteLink}" style="display: inline-block; padding: 10px 20px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 5px;">Complete Profile</a>
+          <p>This link will expire in 7 days.</p>
+        `,
+            });
+            console.log(`✅ Invite email sent to ${user.email}`);
+            res.json({ message: 'Invite email sent successfully' });
+        }
+        catch (emailError) {
+            console.error("❌ Error sending email:", emailError);
+            res.status(500).json({ error: 'Failed to send invite email' });
+        }
+    }
+    catch (error) {
+        console.error("Error resending invite:", error);
+        res.status(500).json({ error: "Failed to resend invite" });
+    }
+});
+// get user if
+router.get("/:id", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: Number(req.params.id) },
             select: {
                 id: true,
                 email: true,
@@ -65,14 +158,14 @@ router.get("/:id", auth_1.verifyJWT, async (req, res) => {
                 company: true,
                 logo: true,
                 colorHex: true,
+                createdAt: true,
+                profileStatus: true,
                 address: true,
                 postalAddress: true,
                 phoneNumber: true,
                 extraEmails: true,
                 brandPattern: true,
                 shortInfo: true,
-                profileStatus: true,
-                createdAt: true,
             },
         });
         if (!user)
@@ -84,140 +177,44 @@ router.get("/:id", auth_1.verifyJWT, async (req, res) => {
         res.status(500).json({ error: "Failed to fetch user" });
     }
 });
-// ----------------------
-// CREATE new user (Admin only)
-// ----------------------
+// create user
 router.post("/", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
     try {
-        const { email, password, role, name, company, postalAddress, contactPersonName } = req.body;
-        if (!email || !role || !name) {
-            return res.status(400).json({ error: "Email, role, and name are required" });
+        const { email, password, role, name, company, logo, colorHex, postalAddress, domainName } = req.body;
+        if (!email || !password || !role || !name) {
+            return res.status(400).json({ error: "Email, password, role, and name are required" });
         }
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing)
             return res.status(400).json({ error: "Email already in use" });
+        const hashedPassword = await bcrypt_1.default.hash(password, SALT_ROUNDS);
         const roleNormalized = role.toUpperCase();
         if (!["ADMIN", "WORKER", "CLIENT"].includes(roleNormalized)) {
             return res.status(400).json({ error: "Invalid role. Must be ADMIN, WORKER, or CLIENT" });
         }
+        let inviteToken = null;
+        let inviteExpires = null;
+        if (roleNormalized === "CLIENT") {
+            inviteToken = crypto_1.default.randomBytes(32).toString('hex');
+            inviteExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        }
         const userData = {
             email,
+            password: hashedPassword,
             role: roleNormalized,
-            name: contactPersonName || name,
+            name,
         };
-        // For CLIENT role
         if (roleNormalized === "CLIENT") {
-            // Generate temporary password if not provided
-            const tempPassword = password || crypto_1.default.randomBytes(8).toString("hex");
-            userData.password = await bcrypt_1.default.hash(tempPassword, SALT_ROUNDS);
-            // Set company info
             userData.company = company || null;
+            userData.logo = logo || null;
+            userData.colorHex = colorHex || "#5B4FFF";
             userData.postalAddress = postalAddress || null;
-            // Generate invite token
-            const inviteToken = crypto_1.default.randomBytes(32).toString("hex");
-            userData.inviteToken = inviteToken;
-            userData.inviteExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
             userData.profileStatus = "INCOMPLETE";
-            const newUser = await prisma.user.create({
-                data: userData,
-                select: {
-                    id: true,
-                    email: true,
-                    role: true,
-                    name: true,
-                    company: true,
-                    postalAddress: true,
-                    profileStatus: true,
-                    inviteToken: true,
-                    createdAt: true,
-                },
-            });
-            // Send invitation email
-            try {
-                await (0, emailService_1.sendClientInviteEmail)(newUser.email, newUser.name, inviteToken);
-            }
-            catch (emailError) {
-                console.error("Failed to send invite email:", emailError);
-                // Don't fail the request if email fails
-            }
-            // Don't send back the token in response
-            const { inviteToken: _, ...userResponse } = newUser;
-            return res.status(201).json(userResponse);
+            userData.inviteToken = inviteToken;
+            userData.inviteExpires = inviteExpires;
         }
-        // For ADMIN and WORKER roles
-        if (!password) {
-            return res.status(400).json({ error: "Password is required for this role" });
-        }
-        userData.password = await bcrypt_1.default.hash(password, SALT_ROUNDS);
         const newUser = await prisma.user.create({
             data: userData,
-            select: {
-                id: true,
-                email: true,
-                role: true,
-                name: true,
-                createdAt: true,
-            },
-        });
-        res.status(201).json(newUser);
-    }
-    catch (error) {
-        console.error("Error creating user:", error);
-        res.status(500).json({ error: "Failed to create user" });
-    }
-});
-// ----------------------
-// UPDATE user profile (Self or Admin)
-// ----------------------
-router.put("/:id", auth_1.verifyJWT, async (req, res) => {
-    try {
-        const requestingUserId = req.user.id;
-        const requestingUserRole = req.user.role;
-        const targetUserId = Number(req.params.id);
-        // Check authorization
-        if (requestingUserRole !== "ADMIN" && requestingUserId !== targetUserId) {
-            return res.status(403).json({ error: "Not authorized" });
-        }
-        const { email, password, role, name, company, logo, colorHex, address, postalAddress, phoneNumber, extraEmails, brandPattern, shortInfo } = req.body;
-        const data = {};
-        // Only admins can change email, role, or other users' passwords
-        if (requestingUserRole === "ADMIN") {
-            if (email)
-                data.email = email;
-            if (role)
-                data.role = role.toUpperCase();
-            if (password)
-                data.password = await bcrypt_1.default.hash(password, SALT_ROUNDS);
-        }
-        else {
-            // Non-admins can only change their own password
-            if (password)
-                data.password = await bcrypt_1.default.hash(password, SALT_ROUNDS);
-        }
-        // Profile fields anyone can update (for themselves)
-        if (name !== undefined)
-            data.name = name;
-        if (company !== undefined)
-            data.company = company;
-        if (logo !== undefined)
-            data.logo = logo;
-        if (colorHex !== undefined)
-            data.colorHex = colorHex;
-        if (address !== undefined)
-            data.address = address;
-        if (postalAddress !== undefined)
-            data.postalAddress = postalAddress;
-        if (phoneNumber !== undefined)
-            data.phoneNumber = phoneNumber;
-        if (extraEmails !== undefined)
-            data.extraEmails = extraEmails;
-        if (brandPattern !== undefined)
-            data.brandPattern = brandPattern;
-        if (shortInfo !== undefined)
-            data.shortInfo = shortInfo;
-        const updatedUser = await prisma.user.update({
-            where: { id: targetUserId },
-            data,
             select: {
                 id: true,
                 email: true,
@@ -226,132 +223,142 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
                 company: true,
                 logo: true,
                 colorHex: true,
-                address: true,
-                postalAddress: true,
-                phoneNumber: true,
-                extraEmails: true,
-                brandPattern: true,
-                shortInfo: true,
-                profileStatus: true,
                 createdAt: true,
+                profileStatus: true,
+                postalAddress: true,
             },
         });
-        res.json(updatedUser);
+        if (roleNormalized === "CLIENT" && domainName) {
+            try {
+                await prisma.domain.create({
+                    data: {
+                        clientId: newUser.id,
+                        domainName,
+                        isPrimary: true,
+                    }
+                });
+                console.log(`✅ Domain ${domainName} created for client ${newUser.id}`);
+            }
+            catch (domainError) {
+                console.error("❌ Error creating domain:", domainError);
+            }
+        }
+        if (roleNormalized === "CLIENT" && inviteToken) {
+            const inviteLink = `${process.env.CLIENT_URL || 'http://localhost:3000'}/complete-profile?token=${inviteToken}`;
+            try {
+                await transporter.sendMail({
+                    from: process.env.SMTP_USER,
+                    to: email,
+                    subject: 'Complete Your Company Profile',
+                    html: `
+            <h2>Welcome ${name}!</h2>
+            <p>Please complete your company profile by clicking the link below:</p>
+            <a href="${inviteLink}" style="display: inline-block; padding: 10px 20px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 5px;">Complete Profile</a>
+            <p>This link will expire in 7 days.</p>
+          `,
+                });
+                console.log(`✅ Invite email sent to ${email}`);
+            }
+            catch (emailError) {
+                console.error("❌ Error sending invite email:", emailError);
+            }
+        }
+        res.status(201).json(newUser);
     }
     catch (error) {
-        console.error("Error updating user:", error);
-        res.status(500).json({ error: "Failed to update user" });
+        console.error("Error creating user:", error);
+        res.status(500).json({ error: "Failed to create user" });
     }
 });
-// ----------------------
-// COMPLETE CLIENT PROFILE (via invite token)
-// ----------------------
-router.post("/complete-profile", async (req, res) => {
+// post complete profile
+router.post("/complete-profile", uploadFile.array("files", 10), async (req, res) => {
     try {
-        const { token, password, address, phoneNumber, extraEmails, brandPattern, shortInfo, colorHex, logo } = req.body;
+        const { token, address, postalAddress, phoneNumber, extraEmails, brandPattern, shortInfo, logoIndex, } = req.body;
         if (!token) {
-            return res.status(400).json({ error: "Invite token is required" });
+            return res.status(400).json({ error: "Token is required" });
         }
-        // Find user by token
         const user = await prisma.user.findUnique({
-            where: { inviteToken: token }
+            where: { inviteToken: token },
         });
         if (!user) {
-            return res.status(404).json({ error: "Invalid or expired invite token" });
+            return res.status(404).json({ error: "Invalid or expired token" });
         }
-        // Check if token is expired
         if (user.inviteExpires && user.inviteExpires < new Date()) {
             return res.status(400).json({ error: "Invite token has expired" });
         }
-        // Check if profile is already complete
-        if (user.profileStatus === "COMPLETE") {
-            return res.status(400).json({ error: "Profile already completed" });
+        const updateData = {
+            address,
+            postalAddress,
+            phoneNumber,
+            extraEmails,
+            brandPattern,
+            shortInfo,
+            profileStatus: "COMPLETE",
+            inviteToken: null,
+            inviteExpires: null,
+        };
+        const files = req.files;
+        let logoPath = user.logo;
+        // NEW: Create profile files directory for this user
+        const profileFilesDir = `uploads/profile-files/${user.id}`;
+        if (!fs_1.default.existsSync(profileFilesDir)) {
+            fs_1.default.mkdirSync(profileFilesDir, { recursive: true });
         }
-        // Validate required fields
-        if (!password || !address || !phoneNumber) {
-            return res.status(400).json({
-                error: "Password, address, and phone number are required"
-            });
+        if (files && files.length > 0) {
+            // NEW: Copy all uploaded files to user's profile folder
+            for (const file of files) {
+                const sourcePath = path_1.default.join(filesDir, file.filename);
+                const destPath = path_1.default.join(profileFilesDir, file.filename);
+                try {
+                    fs_1.default.copyFileSync(sourcePath, destPath);
+                }
+                catch (copyError) {
+                    console.error("Error copying file:", copyError);
+                }
+            }
+            // Select logo (existing logic - unchanged)
+            if (logoIndex !== undefined) {
+                const logoIdx = parseInt(logoIndex);
+                if (logoIdx >= 0 && logoIdx < files.length) {
+                    logoPath = `/uploads/files/${files[logoIdx].filename}`;
+                }
+            }
+            else if (!user.logo) {
+                const firstImage = files.find(f => f.mimetype.startsWith('image/'));
+                if (firstImage) {
+                    logoPath = `/uploads/files/${firstImage.filename}`;
+                }
+                else {
+                    logoPath = `/uploads/files/${files[0].filename}`;
+                }
+            }
         }
-        // Update user profile
-        const hashedPassword = await bcrypt_1.default.hash(password, SALT_ROUNDS);
+        updateData.logo = logoPath;
         const updatedUser = await prisma.user.update({
             where: { id: user.id },
-            data: {
-                password: hashedPassword,
-                address,
-                phoneNumber,
-                extraEmails: extraEmails || null,
-                brandPattern: brandPattern || null,
-                shortInfo: shortInfo || null,
-                colorHex: colorHex || null,
-                logo: logo || null,
-                profileStatus: "COMPLETE",
-                inviteToken: null, // Clear the token
-                inviteExpires: null
-            },
+            data: updateData,
             select: {
                 id: true,
                 email: true,
-                role: true,
                 name: true,
                 company: true,
+                logo: true,
                 profileStatus: true,
-            }
+            },
         });
-        res.json({
-            message: "Profile completed successfully",
-            user: updatedUser
+        await (0, notifications_1.notifyProfileCompleted)({
+            name: updatedUser.name,
+            email: updatedUser.email,
+            company: updatedUser.company || undefined
         });
+        res.json(updatedUser);
     }
     catch (error) {
         console.error("Error completing profile:", error);
         res.status(500).json({ error: "Failed to complete profile" });
     }
 });
-// ----------------------
-// VERIFY INVITE TOKEN (check if valid before showing form)
-// ----------------------
-router.get("/verify-invite/:token", async (req, res) => {
-    try {
-        const { token } = req.params;
-        const user = await prisma.user.findUnique({
-            where: { inviteToken: token },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                company: true,
-                profileStatus: true,
-                inviteExpires: true,
-            }
-        });
-        if (!user) {
-            return res.status(404).json({ error: "Invalid invite token" });
-        }
-        if (user.inviteExpires && user.inviteExpires < new Date()) {
-            return res.status(400).json({ error: "Invite token has expired" });
-        }
-        if (user.profileStatus === "COMPLETE") {
-            return res.status(400).json({ error: "Profile already completed" });
-        }
-        res.json({
-            valid: true,
-            user: {
-                email: user.email,
-                name: user.name,
-                company: user.company
-            }
-        });
-    }
-    catch (error) {
-        console.error("Error verifying invite:", error);
-        res.status(500).json({ error: "Failed to verify invite" });
-    }
-});
-// ----------------------
-// DELETE user
-// ----------------------
+// delete user
 router.delete("/:id", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
     try {
         await prisma.user.delete({ where: { id: Number(req.params.id) } });
@@ -362,56 +369,109 @@ router.delete("/:id", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => 
         res.status(500).json({ error: "Failed to delete user" });
     }
 });
-// ----------------------
-// GET clients (Admin → all clients, Worker → only assigned ones)
-// ----------------------
-router.get("/clients", auth_1.verifyJWT, async (req, res) => {
+// get clients
+router.get("/clients/list", auth_1.verifyJWT, async (req, res) => {
     try {
-        const { id: userId, role } = req.user;
-        if (role === "ADMIN") {
-            const clients = await prisma.user.findMany({
-                where: { role: "CLIENT" },
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    company: true,
-                    logo: true,
-                    colorHex: true,
-                    profileStatus: true,
-                    address: true,
-                    phoneNumber: true,
-                },
-            });
-            return res.json(clients);
+        const { role } = req.user;
+        if (role !== "ADMIN" && role !== "WORKER") {
+            return res.status(403).json({ error: "Not authorized" });
         }
-        if (role === "WORKER") {
-            const tasks = await prisma.task.findMany({
-                where: { workerId: userId },
-                select: { clientId: true },
-            });
-            const clientIds = [...new Set(tasks.map((t) => t.clientId))];
-            if (clientIds.length === 0)
-                return res.json([]);
-            const clients = await prisma.user.findMany({
-                where: { id: { in: clientIds } },
-                select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    company: true,
-                    logo: true,
-                    colorHex: true,
-                    profileStatus: true,
-                },
-            });
-            return res.json(clients);
-        }
-        return res.status(403).json({ error: "Not authorized" });
+        const clients = await prisma.user.findMany({
+            where: { role: "CLIENT" },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                company: true,
+                profileStatus: true,
+            },
+        });
+        res.json(clients);
     }
     catch (error) {
         console.error("Error fetching clients:", error);
         res.status(500).json({ error: "Failed to fetch clients" });
+    }
+});
+// get all files for a specific client
+router.get("/files/client/:clientId", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
+    try {
+        const clientId = parseInt(req.params.clientId);
+        const tasks = await prisma.task.findMany({
+            where: { clientId },
+            include: {
+                files: {
+                    include: {
+                        task: {
+                            select: {
+                                id: true,
+                                title: true
+                            }
+                        }
+                    },
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
+                }
+            }
+        });
+        const allFiles = tasks.flatMap(task => task.files.map(file => ({
+            ...file,
+            task: {
+                id: task.id,
+                title: task.title
+            }
+        })));
+        res.json(allFiles);
+    }
+    catch (error) {
+        console.error("Error fetching client files:", error);
+        res.status(500).json({ error: "Failed to fetch files" });
+    }
+});
+// get all profile files for the client
+router.get("/profile-files/client/:clientId", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
+    try {
+        const clientId = parseInt(req.params.clientId);
+        const profileFilesDir = path_1.default.join(__dirname, `../../uploads/profile-files/${clientId}`);
+        if (!fs_1.default.existsSync(profileFilesDir)) {
+            return res.json([]);
+        }
+        const fileNames = fs_1.default.readdirSync(profileFilesDir);
+        const files = fileNames.map(fileName => {
+            const filePath = path_1.default.join(profileFilesDir, fileName);
+            const stats = fs_1.default.statSync(filePath);
+            const ext = path_1.default.extname(fileName).toLowerCase();
+            let fileType = 'application/octet-stream';
+            if (['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
+                fileType = `image/${ext.slice(1)}`;
+            }
+            else if (ext === '.pdf') {
+                fileType = 'application/pdf';
+            }
+            else if (['.doc', '.docx'].includes(ext)) {
+                fileType = 'application/msword';
+            }
+            return {
+                id: `profile-${fileName}`,
+                fileName: fileName,
+                fileUrl: `uploads/profile-files/${clientId}/${fileName}`,
+                fileType: fileType,
+                uploadedAt: stats.birthtime,
+                caption: null,
+                section: 'Profile',
+                isCompleted: true,
+                task: {
+                    id: 0,
+                    title: 'Profile Setup'
+                }
+            };
+        });
+        res.json(files);
+    }
+    catch (error) {
+        console.error("Error fetching profile files:", error);
+        res.status(500).json({ error: "Failed to fetch profile files" });
     }
 });
 exports.default = router;
