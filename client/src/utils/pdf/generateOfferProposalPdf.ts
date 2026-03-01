@@ -23,9 +23,7 @@ const SPACE_8 = 8;
 const SPACE_16 = 16;
 const SPACE_24 = 24;
 const SPACE_32 = 32;
-const SPACE_48 = 48;
 const SECTION_GAP = SPACE_24;
-const HEADER_H = 44;
 const FOOTER_H = 44;
 const CARD_RADIUS = 2;
 const CARD_BORDER = 0.5;
@@ -88,6 +86,8 @@ export interface OfferProposalData {
   whatWeNeed?: string;
   roadmap?: string;
   whyToInvest?: string;
+  /** Global project tech stack — shown as logos on page 2. Overrides per-product tech aggregation for that section. */
+  techStack?: string[];
   products: OfferProposalProduct[];
   totalPrice: number;
 }
@@ -199,11 +199,58 @@ function renderSvgToPngDataUrl(svgString: string, scale = 2): Promise<string> {
   });
 }
 
+/**
+ * Convert an SVG string to a PNG data URL at a given pixel size (square).
+ */
+function svgStringToPng(svgText: string, size: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("canvas ctx")); return; }
+      ctx.drawImage(img, 0, 0, size, size);
+      try { resolve(canvas.toDataURL("image/png")); } catch (e) { reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("img load")); };
+    img.src = url;
+  });
+}
+
+/**
+ * Pre-fetch PNG data URLs for every selected tech name.
+ * Returns a map: techName → PNG data URL.  Missing/failed logos are omitted.
+ */
+async function preloadTechLogos(techNames: string[]): Promise<Record<string, string>> {
+  const { findTech } = await import("../techList");
+  const map: Record<string, string> = {};
+  await Promise.all(
+    techNames.map(async (name) => {
+      const tech = findTech(name);
+      if (!tech) return;
+      try {
+        const resp = await fetch(`https://cdn.simpleicons.org/${tech.slug}/000000`);
+        if (!resp.ok) return;
+        const svgText = await resp.text();
+        map[name] = await svgStringToPng(svgText, 96); // 96px → will be rendered ~22pt in PDF
+      } catch {
+        // skip — falls back to text
+      }
+    })
+  );
+  return map;
+}
+
 /** Footer on every page. Pages 2–3: premium header (logo + "Project Proposal" | date + ID) and footer (contact | page X of Y | validity). */
 function drawHeaderFooter(
   doc: jsPDF,
   pageIndex: number,
-  pageCount: number,
+  _pageCount: number,
   options: { proposalTitle: string; logoDataUrl?: string | null; proposalId?: string }
 ): void {
   const w = getPageWidth(doc);
@@ -212,34 +259,38 @@ function drawHeaderFooter(
   const isOverviewOrPricing = pageIndex >= 2;
 
   if (isOverviewOrPricing && options.logoDataUrl != null && options.proposalId != null) {
-    // ----- Premium header: logo and "Project Proposal" on same baseline -----
-    const logoW = 36;
-    const logoH = 8;
-    const headerBaselineY = MARGIN + 8;
-    const logoTop = headerBaselineY - logoH;
+    // ----- Premium header: logo and "Project Proposal" vertically centred on same line -----
+    const logoW = 54;
+    const logoH = Math.round(logoW / COVER_LOGO_ASPECT); // ~9.3pt, keeps aspect ratio
+    const headerCenterY = MARGIN + 8; // vertical midpoint for alignment
+    const logoTop = headerCenterY - logoH / 2;
     try {
       doc.addImage(options.logoDataUrl, "PNG", MARGIN, logoTop, logoW, logoH);
       doc.setFontSize(FONT.meta);
       doc.setTextColor(...PALETTE.meta);
       doc.setFont(OFFER_PDF_FONT, "normal");
-      doc.text("Project Proposal", MARGIN + logoW + 8, headerBaselineY);
+      // Vertically centre text with the logo: baseline ≈ centre + half cap-height
+      const textBaselineY = headerCenterY + FONT.meta * 0.35;
+      doc.text("Project Proposal", MARGIN + logoW + 10, textBaselineY);
     } catch {
       doc.setFontSize(FONT.meta);
       doc.setFont(OFFER_PDF_FONT, "bold");
       doc.setTextColor(...PALETTE.text);
-      doc.text("Zulbera", MARGIN, headerBaselineY);
+      const textBaselineY = headerCenterY + FONT.meta * 0.35;
+      doc.text("Zulbera", MARGIN, textBaselineY);
       doc.setFont(OFFER_PDF_FONT, "normal");
       doc.setTextColor(...PALETTE.meta);
-      doc.text("Project Proposal", MARGIN + 32, headerBaselineY);
+      doc.text("Project Proposal", MARGIN + 32, textBaselineY);
     }
     const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
     doc.setFontSize(FONT.meta);
     doc.setTextColor(...PALETTE.meta);
-    doc.text(dateStr, w - MARGIN, headerBaselineY - metaLead(), { align: "right" });
-    doc.text(options.proposalId, w - MARGIN, headerBaselineY, { align: "right" });
+    const headerTextY = headerCenterY + FONT.meta * 0.35;
+    doc.text(dateStr, w - MARGIN, headerTextY - metaLead(), { align: "right" });
+    doc.text(options.proposalId, w - MARGIN, headerTextY, { align: "right" });
     doc.setDrawColor(...PALETTE.border);
     doc.setLineWidth(0.3);
-    doc.line(MARGIN, headerBaselineY + SPACE_16, w - MARGIN, headerBaselineY + SPACE_16);
+    doc.line(MARGIN, headerCenterY + SPACE_16, w - MARGIN, headerCenterY + SPACE_16);
   } else if (pageIndex > 1 && pageIndex !== 2) {
     // Legacy: header on page 3+ when no logo/ID (fallback)
     doc.setFontSize(10);
@@ -253,16 +304,18 @@ function drawHeaderFooter(
   }
 
   // ----- Footer: line + contact left | page X of Y center | validity right -----
+  const footerLineY = footerY - 10;
   doc.setDrawColor(...PALETTE.border);
   doc.setLineWidth(0.3);
-  doc.line(MARGIN, footerY - 4, w - MARGIN, footerY - 4);
+  doc.line(MARGIN, footerLineY, w - MARGIN, footerLineY);
+  const footerTextY = footerY + 2;
   doc.setFontSize(FONT.meta);
   doc.setTextColor(...PALETTE.textSecondary);
   doc.setFont(OFFER_PDF_FONT, "normal");
-  doc.text(String(pageIndex), w / 2, footerY + 2, { align: "center" });
+  doc.text(String(pageIndex), w / 2, footerTextY, { align: "center" });
   if (isOverviewOrPricing) {
-    doc.text("Zulbera · www.zulbera.com", MARGIN, footerY + 2);
-    doc.text("Valid 14 days", w - MARGIN, footerY + 2, { align: "right" });
+    doc.text("Zulbera · www.zulbera.com", MARGIN, footerTextY);
+    doc.text("Valid 14 days", w - MARGIN, footerTextY, { align: "right" });
   }
 }
 
@@ -298,18 +351,11 @@ function drawCoverPage(
     doc.rect(0, bandTop, w, h - bandTop, "F");
   }
 
-  // ----- Top white zone -----
-  doc.setFontSize(9);
-  doc.setTextColor(...PALETTE.textSecondary);
-  doc.setFont(OFFER_PDF_FONT, "normal");
-  doc.text(WEBSITE_URL, w - COVER_MARGIN, COVER_MARGIN, { align: "right" });
-
-  // ----- Logo on boundary (white part), right-of-center; preserve aspect ratio (no stretch) -----
-  const logoW = 118;
+  // ----- Top white zone: logo top-left, website URL top-right -----
+  const logoW = 96;
   const logoH = Math.round(logoW / COVER_LOGO_ASPECT);
-  const logoX = w - COVER_MARGIN - logoW;
-  const logoBottomMargin = 12; // ~10–15pt space above dark band
-  const logoY = bandTop - logoH - logoBottomMargin;
+  const logoX = COVER_MARGIN;
+  const logoY = COVER_MARGIN - logoH / 2; // vertically centred on the top margin line
   if (logoDataUrl) {
     try {
       doc.addImage(logoDataUrl, "PNG", logoX, logoY, logoW, logoH);
@@ -317,14 +363,19 @@ function drawCoverPage(
       doc.setFontSize(18);
       doc.setTextColor(...COVER_DARK_GREY);
       doc.setFont(OFFER_PDF_FONT, "bold");
-      doc.text("Zulbera", logoX, logoY + logoH - 6);
+      doc.text("Zulbera", logoX, COVER_MARGIN + 4);
     }
   } else {
     doc.setFontSize(18);
     doc.setTextColor(...COVER_DARK_GREY);
     doc.setFont(OFFER_PDF_FONT, "bold");
-    doc.text("Zulbera", logoX, logoY + logoH - 6);
+    doc.text("Zulbera", logoX, COVER_MARGIN + 4);
   }
+
+  doc.setFontSize(9);
+  doc.setTextColor(...PALETTE.textSecondary);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.text(WEBSITE_URL, w - COVER_MARGIN, COVER_MARGIN, { align: "right" });
 
   // ----- Bottom dark band: Offer (upper part), For (lower part), date -----
   const white: [number, number, number] = [255, 255, 255];
@@ -360,7 +411,7 @@ function drawCoverPage(
   doc.setFontSize(9);
   doc.setTextColor(220, 220, 220);
   doc.setFont(OFFER_PDF_FONT, "normal");
-  doc.text(dateStr, w - bandPadding, h - bandPadding, { align: "right" });
+  doc.text(dateStr, w - bandPadding, h - bandPadding - 18, { align: "right" });
 }
 
 const MAX_DESC_LENGTH = 380;
@@ -383,104 +434,6 @@ function hasContent(s: string | undefined): boolean {
   return trim(s).length > 0;
 }
 
-// ---- Reusable building blocks ----
-
-/** SectionLabel: uppercase, letter-spacing feel, medium weight. Returns Y after label. */
-function SectionLabel(doc: jsPDF, x: number, y: number, label: string): number {
-  doc.setFontSize(FONT.sectionLabel);
-  doc.setTextColor(...PALETTE.meta);
-  doc.setFont(OFFER_PDF_FONT, "normal");
-  doc.text(label.toUpperCase(), x, y + 3);
-  return y + 4 + metaLead();
-}
-
-/** Thin horizontal Divider. Returns Y after line. */
-function Divider(doc: jsPDF, x: number, y: number, w: number): number {
-  doc.setDrawColor(...PALETTE.border);
-  doc.setLineWidth(0.3);
-  doc.line(x, y, x + w, y);
-  return y + SPACE_8;
-}
-
-/** KeyValueStack: label (meta) + value (body) pairs. Returns final Y. */
-function KeyValueStack(
-  doc: jsPDF,
-  x: number,
-  y: number,
-  items: { label: string; value: string }[],
-  valueWidth: number,
-  rowGap: number = SPACE_8
-): number {
-  const bl = bodyLead();
-  items.forEach((item) => {
-    doc.setFontSize(FONT.meta);
-    doc.setTextColor(...PALETTE.meta);
-    doc.setFont(OFFER_PDF_FONT, "normal");
-    doc.text(item.label, x, y + 2);
-    doc.setFontSize(FONT.body);
-    doc.setTextColor(...PALETTE.text);
-    const lines = doc.splitTextToSize(normalizeText(item.value), valueWidth);
-    doc.text(lines, x + 64, y + 2);
-    y += Math.max(metaLead() + 2, lines.length * bl) + rowGap;
-  });
-  return y;
-}
-
-/** TagList: pills with subtle border (no fill). Returns Y after last tag row. */
-function TagList(doc: jsPDF, x: number, y: number, tags: string[], maxW: number): number {
-  const tagH = 16;
-  const pad = 6;
-  let cx = x;
-  let rowY = y;
-  doc.setFontSize(FONT.body);
-  doc.setFont(OFFER_PDF_FONT, "normal");
-  doc.setTextColor(...PALETTE.text);
-  tags.forEach((tag) => {
-    const t = normalizeText(tag) || "—";
-    const tw = doc.getTextWidth(t) + pad * 2;
-    if (cx + tw > x + maxW && cx > x) {
-      cx = x;
-      rowY += tagH + 4;
-    }
-    doc.setDrawColor(...PALETTE.border);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(cx, rowY - 10, tw, tagH, 1.5, 1.5, "S");
-    doc.text(t, cx + pad, rowY);
-    cx += tw + 6;
-  });
-  return rowY + 6;
-}
-
-/** MilestoneList: items with subtle left accent line. Returns final Y. */
-function MilestoneList(doc: jsPDF, x: number, y: number, items: { label: string; duration: string }[], colW: number): number {
-  const bl = bodyLead();
-  const accentX = x + 4;
-  doc.setDrawColor(...PALETTE.accent);
-  doc.setLineWidth(ACCENT_RULE * 0.5);
-  const startY = y;
-  let lastY = y;
-  items.forEach((item, i) => {
-    const text = `${normalizeText(item.label)}${item.duration ? ` — ${normalizeText(item.duration)}` : ""}`;
-    const lines = doc.splitTextToSize(text, colW - 16);
-    doc.setFontSize(FONT.body);
-    doc.setFont(OFFER_PDF_FONT, "normal");
-    doc.setTextColor(...PALETTE.text);
-    doc.text(lines, accentX + 8, y + 4);
-    const h = lines.length * bl + SPACE_8;
-    if (i > 0) {
-      doc.setDrawColor(...PALETTE.border);
-      doc.setLineWidth(0.2);
-      doc.line(accentX, y - 2, x + colW, y - 2);
-    }
-    lastY = y + h;
-    y = lastY;
-  });
-  doc.setDrawColor(...PALETTE.accent);
-  doc.setLineWidth(ACCENT_RULE * 0.5);
-  doc.line(accentX, startY, accentX, lastY);
-  return lastY + SPACE_8;
-}
-
 /** Refined card: optional very subtle fill, thin border. */
 function RefinedCard(doc: jsPDF, x: number, y: number, w: number, h: number, filled: boolean = false): void {
   if (filled) {
@@ -492,19 +445,6 @@ function RefinedCard(doc: jsPDF, x: number, y: number, w: number, h: number, fil
   doc.roundedRect(x, y, w, h, CARD_RADIUS, CARD_RADIUS, "S");
 }
 
-/** Draw section title: uppercase label + thin divider. Returns Y after title block. */
-function drawSectionTitle(doc: jsPDF, x: number, y: number, label: string, w: number): number {
-  doc.setFontSize(FONT.sectionLabel);
-  doc.setTextColor(...PALETTE.textSecondary);
-  doc.setFont(OFFER_PDF_FONT, "normal");
-  doc.text(label.toUpperCase(), x, y + 3);
-  const lineY = y + 8;
-  doc.setDrawColor(...PALETTE.border);
-  doc.setLineWidth(0.5);
-  doc.line(x, lineY, x + Math.min(24, w), lineY);
-  return lineY + SPACE_8;
-}
-
 /** Draw a light card (fill + 1px border, rounded). */
 function drawCard(doc: jsPDF, x: number, y: number, w: number, h: number): void {
   doc.setFillColor(...PALETTE.cardBg);
@@ -514,179 +454,304 @@ function drawCard(doc: jsPDF, x: number, y: number, w: number, h: number): void 
   doc.roundedRect(x, y, w, h, CARD_RADIUS, CARD_RADIUS, "S");
 }
 
-/** Page 2 (Overview): full-width Client & Project card, then 2-column (Summary, What We Need, Timeline, Roadmap, Deliverables | Tech, Next Steps). */
-function drawOverviewPage(doc: jsPDF, data: OfferProposalData, _proposalId: string, _logoDataUrl: string | null): void {
+/** Page 2 (Overview): split client card (info left | project title right), then 2-col body. */
+function drawOverviewPage(
+  doc: jsPDF,
+  data: OfferProposalData,
+  _proposalId: string,
+  _logoDataUrl: string | null,
+  techLogos: Record<string, string> = {}
+): void {
   doc.addPage();
-  const w = getPageWidth(doc);
   const contentW = CONTENT_WIDTH;
-  const colGap = SPACE_24;
-  const leftColW = (contentW - colGap) / 2;
-  const rightColW = leftColW;
-  const leftColX = MARGIN;
-  const rightColX = MARGIN + leftColW + colGap;
-  const lineHeightBody = 8;
-  const sectionTitleToBody = 14;
-  const sectionBottomGap = 24;
-  const bl = bodyLead();
-
   let y = MARGIN + OVERVIEW_HEADER_RESERVED;
 
-  // ----- Client & Project card (full width) -----
-  const rows: { label: string; value: string }[] = [];
-  if (hasContent(data.clientName)) rows.push({ label: "Name", value: trim(data.clientName) });
-  if (hasContent(data.clientEmail)) rows.push({ label: "Email", value: trim(data.clientEmail!) });
-  if (hasContent(data.clientCompany)) rows.push({ label: "Company", value: trim(data.clientCompany!) });
-  if (hasContent(data.clientPhone)) rows.push({ label: "Phone", value: trim(data.clientPhone!) });
-  if (rows.length === 0) rows.push({ label: "Prepared for", value: "—" });
-
-  const cardPad = 14;
-  let cardContentH = 0;
-  doc.setFontSize(FONT.body);
-  rows.forEach((r) => {
-    const valLines = doc.splitTextToSize(r.value, contentW - cardPad * 2 - 80);
-    cardContentH += Math.max(12, valLines.length * lineHeightBody) + 2;
-  });
-  if (hasContent(data.pageTitle)) {
-    cardContentH += SPACE_8;
-    const titleLines = doc.splitTextToSize(trim(data.pageTitle), contentW - cardPad * 2);
-    cardContentH += titleLines.length * (FONT.body + 2);
-  }
-  const cardH = cardPad + Math.max(32, cardContentH) + cardPad;
-  drawCard(doc, leftColX, y, contentW, cardH);
-
-  doc.setFontSize(FONT.meta);
-  doc.setTextColor(...PALETTE.textSecondary);
-  doc.setFont(OFFER_PDF_FONT, "normal");
-  doc.text("Prepared for", leftColX + cardPad, y + cardPad - 2);
-  let rowY = y + cardPad + 10;
-  rows.forEach((r) => {
+  // ── Section header helper: full-width rule under label ──────────────
+  const drawSection = (x: number, curY: number, label: string, colW: number): number => {
     doc.setFontSize(FONT.meta);
+    doc.setTextColor(...PALETTE.meta);
+    doc.setFont(OFFER_PDF_FONT, "normal");
+    doc.text(label.toUpperCase(), x, curY + 3);
+    curY += 10;
+    doc.setDrawColor(...PALETTE.border);
+    doc.setLineWidth(0.3);
+    doc.line(x, curY, x + colW, curY);
+    return curY + SPACE_8 + 2;
+  };
+
+  // ── Client + Project card (full width) ──────────────────────────────
+  // Left 48%: accent bar + "PREPARED FOR" + hero name + contact details
+  // Vertical divider
+  // Right 52%: "PROJECT" micro-label + title (vertically centred)
+  const cardPad = 18;
+  const accentW = 4;
+  const cardX = MARGIN;
+  const cardW = contentW;
+  const dividerRatio = 0.48;
+  const dividerX = cardX + Math.round(cardW * dividerRatio);
+
+  const rightContentX = dividerX + cardPad;
+  const rightContentW = cardX + cardW - rightContentX - cardPad;
+  const leftContentX = cardX + cardPad;
+  const leftContentW = dividerX - cardX - cardPad * 2;
+
+  doc.setFontSize(FONT.sectionTitle + 2);
+  const titleLines = hasContent(data.pageTitle)
+    ? doc.splitTextToSize(trim(data.pageTitle), rightContentW)
+    : ["—"];
+
+  // Measure hero name
+  const heroName = trim(data.clientName) || "—";
+  doc.setFontSize(20);
+  doc.setFont(OFFER_PDF_FONT, "bold");
+  const heroNameLines = doc.splitTextToSize(heroName, leftContentW);
+
+  // Contact items below separator (email | company+phone)
+  const emailStr = trim(data.clientEmail || "");
+  const companyPhone = [trim(data.clientCompany || ""), trim(data.clientPhone || "")].filter(Boolean).join("  ·  ");
+
+  // Calculate card height from content
+  const leftH =
+    cardPad           // top
+    + metaLead()      // "PREPARED FOR" label
+    + 8               // gap
+    + heroNameLines.length * 24  // hero name lines
+    + 12              // gap before separator
+    + 1               // separator
+    + 11              // gap after separator
+    + (emailStr ? 14 : 0)  // email line
+    + (companyPhone ? 14 : 0)  // company+phone line
+    + cardPad;        // bottom
+
+  const rightH = cardPad * 2 + metaLead() + 12 + titleLines.length * (FONT.sectionTitle + 6);
+  const cardH = Math.max(leftH, rightH, 100);
+
+  drawCard(doc, cardX, y, cardW, cardH);
+
+  // Left accent bar (dark, full card height)
+  doc.setFillColor(...PALETTE.text);
+  doc.rect(cardX, y, accentW, cardH, "F");
+
+  // "PREPARED FOR" micro-label
+  doc.setFontSize(FONT.meta - 1);
+  doc.setTextColor(...PALETTE.meta);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  const prepLabelY = y + cardPad + 3;
+  doc.text("PREPARED FOR", leftContentX, prepLabelY);
+
+  // Hero client name
+  const heroY = prepLabelY + metaLead() + 8;
+  doc.setFontSize(20);
+  doc.setFont(OFFER_PDF_FONT, "bold");
+  doc.setTextColor(...PALETTE.text);
+  doc.text(heroNameLines, leftContentX, heroY);
+
+  // Thin separator line below name
+  const sepY = heroY + heroNameLines.length * 24 + 10;
+  doc.setDrawColor(...PALETTE.border);
+  doc.setLineWidth(0.3);
+  doc.line(leftContentX, sepY, dividerX - cardPad, sepY);
+
+  // Contact details below separator
+  let contactY = sepY + 12;
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  if (emailStr) {
+    doc.setFontSize(FONT.body - 1);
     doc.setTextColor(...PALETTE.textSecondary);
-    doc.text(r.label + ":", leftColX + cardPad, rowY + 2);
-    doc.setFontSize(FONT.body);
-    doc.setTextColor(...PALETTE.text);
-    const valLines = doc.splitTextToSize(r.value, contentW - cardPad * 2 - 80);
-    doc.text(valLines, leftColX + cardPad + 76, rowY + 2);
-    rowY += Math.max(12, valLines.length * lineHeightBody) + 2;
-  });
+    doc.text(emailStr, leftContentX, contactY, { maxWidth: leftContentW });
+    contactY += 14;
+  }
+  if (companyPhone) {
+    doc.setFontSize(FONT.body - 1);
+    doc.setTextColor(...PALETTE.meta);
+    doc.text(companyPhone, leftContentX, contactY, { maxWidth: leftContentW });
+  }
+
+  // Vertical divider
+  doc.setDrawColor(...PALETTE.border);
+  doc.setLineWidth(0.4);
+  doc.line(dividerX, y + cardPad, dividerX, y + cardH - cardPad);
+
+  // Right: "PROJECT" micro-label + title vertically centred
+  doc.setFontSize(FONT.meta - 1);
+  doc.setTextColor(...PALETTE.meta);
+  doc.setFont(OFFER_PDF_FONT, "normal");
+  doc.text("PROJECT", rightContentX, prepLabelY);
+
   if (hasContent(data.pageTitle)) {
-    rowY += SPACE_8;
-    doc.setFontSize(FONT.sectionTitle);
+    const titleBlockH = titleLines.length * (FONT.sectionTitle + 6);
+    const titleY = y + (cardH - titleBlockH) / 2 + FONT.sectionTitle;
+    doc.setFontSize(FONT.sectionTitle + 2);
     doc.setFont(OFFER_PDF_FONT, "bold");
     doc.setTextColor(...PALETTE.text);
-    const titleLines = doc.splitTextToSize(trim(data.pageTitle), contentW - cardPad * 2);
-    doc.text(titleLines, leftColX + cardPad, rowY);
+    doc.text(titleLines, rightContentX, titleY);
   }
-  y += cardH + SECTION_GAP;
+
+  y += cardH + SPACE_32 + 14;
+
+  // ── Two-column body: left 60% narrative | right 40% specs ───────────
+  const colGap = SPACE_32;
+  const leftColW = Math.round(contentW * 0.575);
+  const rightColW = contentW - leftColW - colGap;
+  const leftColX = MARGIN;
+  const rightColX = MARGIN + leftColW + colGap;
+  const lineH = 8;
+  const sectionGap = 34;
 
   let leftY = y;
   let rightY = y;
 
-  // ----- Left: Project Summary -----
-  if (hasContent(data.pageTitle) || hasContent(data.description)) {
-    leftY = drawSectionTitle(doc, leftColX, leftY, "Project Summary", leftColW);
+  // ── LEFT: Project Summary (description only — title lives in the card)
+  if (hasContent(data.description)) {
+    leftY = drawSection(leftColX, leftY, "Project Summary", leftColW);
+    leftY += 8; // breathing room between rule and subtitle
     if (hasContent(data.pageTitle)) {
       doc.setFontSize(FONT.body + 1);
       doc.setFont(OFFER_PDF_FONT, "bold");
-      doc.text(trim(data.pageTitle), leftColX, leftY);
-      leftY += 12;
+      doc.setTextColor(...PALETTE.text);
+      const subTitle = doc.splitTextToSize(trim(data.pageTitle), leftColW);
+      doc.text(subTitle, leftColX, leftY);
+      leftY += subTitle.length * 13 + 4;
     }
     doc.setFont(OFFER_PDF_FONT, "normal");
     doc.setFontSize(FONT.body);
-    doc.setTextColor(...PALETTE.text);
+    doc.setTextColor(...PALETTE.textSecondary);
     const rawDesc = trim(data.description) || "—";
     const desc = rawDesc.length > MAX_DESC_LENGTH ? rawDesc.slice(0, MAX_DESC_LENGTH).trim() + "…" : rawDesc;
-    const summaryLines = doc.splitTextToSize(desc, leftColW);
-    doc.text(summaryLines, leftColX, leftY);
-    leftY += summaryLines.length * lineHeightBody + sectionBottomGap;
+    const descLines = doc.splitTextToSize(desc, leftColW);
+    doc.text(descLines, leftColX, leftY);
+    leftY += descLines.length * lineH + sectionGap + 12;
   }
 
-  // ----- Left: What We Need -----
+  // ── LEFT: What We Need ──────────────────────────────────────────────
   if (hasContent(data.whatWeNeed)) {
-    leftY = drawSectionTitle(doc, leftColX, leftY, "What We Need", leftColW);
+    leftY = drawSection(leftColX, leftY, "What We Need", leftColW);
     doc.setFontSize(FONT.body);
     doc.setFont(OFFER_PDF_FONT, "normal");
-    doc.setTextColor(...PALETTE.text);
+    doc.setTextColor(...PALETTE.textSecondary);
     const lines = doc.splitTextToSize(trim(data.whatWeNeed!), leftColW);
     doc.text(lines, leftColX, leftY);
-    leftY += lines.length * lineHeightBody + sectionBottomGap;
+    leftY += lines.length * lineH + sectionGap;
   }
 
-  // ----- Left: Timeline -----
+  // ── LEFT: Roadmap ────────────────────────────────────────────────────
+  if (hasContent(data.roadmap)) {
+    leftY = drawSection(leftColX, leftY, "Roadmap", leftColW);
+    doc.setFontSize(FONT.body);
+    doc.setFont(OFFER_PDF_FONT, "normal");
+    doc.setTextColor(...PALETTE.textSecondary);
+    const lines = doc.splitTextToSize(trim(data.roadmap!), leftColW);
+    doc.text(lines, leftColX, leftY);
+    leftY += lines.length * lineH + sectionGap;
+  }
+
+  // ── RIGHT: Tech Stack (logos if available, text fallback) ───────────
+  const globalTechs: string[] =
+    data.techStack && data.techStack.length > 0
+      ? data.techStack
+      : (() => {
+          const s = new Set<string>();
+          data.products.forEach((p) => {
+            const arr = Array.isArray(p.techStack)
+              ? p.techStack
+              : String(p.techStack || "").split(",").map((t) => t.trim()).filter(Boolean);
+            arr.forEach((t) => s.add(t));
+          });
+          return Array.from(s);
+        })();
+
+  if (globalTechs.length > 0) {
+    rightY = drawSection(rightColX, rightY, "Tech Stack", rightColW);
+
+    const LOGO_PT = 22;   // rendered size in PDF points
+    const LOGO_GAP = 10;  // gap between icons
+    const ROW_STRIDE = LOGO_PT + LOGO_GAP;
+    let lx = rightColX;
+    let ly = rightY;
+
+    globalTechs.forEach((techName) => {
+      // Wrap to next row if needed
+      if (lx + LOGO_PT > rightColX + rightColW) {
+        lx = rightColX;
+        ly += ROW_STRIDE;
+      }
+
+      const logoDataUrl = techLogos[techName];
+      if (logoDataUrl) {
+        try {
+          doc.addImage(logoDataUrl, "PNG", lx, ly, LOGO_PT, LOGO_PT);
+        } catch {
+          // fallback: small text label
+          doc.setFontSize(7);
+          doc.setFont(OFFER_PDF_FONT, "normal");
+          doc.setTextColor(...PALETTE.meta);
+          doc.text(techName.slice(0, 8), lx, ly + LOGO_PT - 4, { maxWidth: LOGO_PT + 4 });
+        }
+      } else {
+        // No logo fetched — draw a subtle bordered square with initials
+        doc.setDrawColor(...PALETTE.border);
+        doc.setLineWidth(0.4);
+        doc.roundedRect(lx, ly, LOGO_PT, LOGO_PT, 2, 2, "S");
+        const initials = techName.replace(/[^A-Z0-9]/gi, "").slice(0, 2).toUpperCase();
+        doc.setFontSize(7);
+        doc.setFont(OFFER_PDF_FONT, "bold");
+        doc.setTextColor(...PALETTE.meta);
+        doc.text(initials, lx + LOGO_PT / 2, ly + LOGO_PT / 2 + 2.5, { align: "center" });
+      }
+
+      lx += LOGO_PT + LOGO_GAP;
+    });
+
+    rightY = ly + LOGO_PT + sectionGap;
+  }
+
+  // ── RIGHT: Timeline ──────────────────────────────────────────────────
   const productsWithTimeline = data.products.filter((p) => hasContent(p.timeline) || hasContent(p.name));
   if (productsWithTimeline.length > 0) {
-    leftY = drawSectionTitle(doc, leftColX, leftY, "Timeline", leftColW);
-    const timelineLeft = leftColX + 8;
-    const timelineW = leftColW - 18;
+    rightY = drawSection(rightColX, rightY, "Timeline", rightColW);
     productsWithTimeline.forEach((p, i) => {
       const label = normalizeText(p.name) || `Phase ${i + 1}`;
       const duration = hasContent(p.timeline) ? ` — ${p.timeline}` : "";
-      const wrapped = doc.splitTextToSize(label + duration, timelineW);
+      const wrapped = doc.splitTextToSize(label + duration, rightColW - 8);
       doc.setFontSize(FONT.body);
       doc.setTextColor(...PALETTE.text);
       doc.setFont(OFFER_PDF_FONT, "normal");
-      doc.text(wrapped, timelineLeft + 10, leftY + 6);
-      leftY += wrapped.length * lineHeightBody + 10;
+      doc.text(wrapped, rightColX + 6, rightY + 4);
+      rightY += wrapped.length * lineH + 10;
     });
-    leftY += sectionBottomGap;
+    rightY += sectionGap;
   }
 
-  // ----- Left: Roadmap -----
-  if (hasContent(data.roadmap)) {
-    leftY = drawSectionTitle(doc, leftColX, leftY, "Roadmap", leftColW);
-    doc.setFontSize(FONT.body);
-    doc.setFont(OFFER_PDF_FONT, "normal");
-    doc.setTextColor(...PALETTE.text);
-    const lines = doc.splitTextToSize(trim(data.roadmap!), leftColW);
-    doc.text(lines, leftColX, leftY);
-    leftY += lines.length * lineHeightBody + sectionBottomGap;
-  }
-
-  // ----- Left: Services & Deliverables -----
+  // ── RIGHT: Services & Deliverables ──────────────────────────────────
   const deliverables = data.products.map((p) => p.name?.trim()).filter(Boolean).slice(0, MAX_SCOPE_ITEMS);
   if (deliverables.length > 0) {
-    leftY = drawSectionTitle(doc, leftColX, leftY, "Services & Deliverables", leftColW);
+    rightY = drawSection(rightColX, rightY, "Services & Deliverables", rightColW);
     doc.setFontSize(FONT.body);
     doc.setFont(OFFER_PDF_FONT, "normal");
     doc.setTextColor(...PALETTE.text);
-    deliverables.forEach((name, i) => {
-      const wrapped = doc.splitTextToSize("• " + name, leftColW);
-      doc.text(wrapped, leftColX, leftY);
-      leftY += wrapped.length * lineHeightBody + 8;
+    deliverables.forEach((name) => {
+      const wrapped = doc.splitTextToSize("• " + name, rightColW);
+      doc.text(wrapped, rightColX, rightY);
+      rightY += wrapped.length * lineH + 7;
     });
-    leftY += sectionBottomGap;
+    rightY += sectionGap;
   }
 
-  // ----- Right: Tech Stack -----
-  const techSet = new Set<string>();
-  data.products.forEach((p) => {
-    const arr = Array.isArray(p.techStack) ? p.techStack : String(p.techStack || "").split(",").map((t) => t.trim()).filter(Boolean);
-    arr.forEach((t) => techSet.add(t));
-  });
-  if (techSet.size > 0) {
-    rightY = drawSectionTitle(doc, rightColX, rightY, "Tech Stack", rightColW);
-    const techStr = Array.from(techSet).join(" · ");
-    doc.setFontSize(FONT.body);
-    doc.setFont(OFFER_PDF_FONT, "normal");
-    doc.setTextColor(...PALETTE.text);
-    const techLines = doc.splitTextToSize(techStr, rightColW);
-    doc.text(techLines, rightColX, rightY);
-    rightY += techLines.length * lineHeightBody + sectionBottomGap;
-  }
-
-  // ----- Right: Next Steps -----
-  rightY = drawSectionTitle(doc, rightColX, rightY, "Next Steps", rightColW);
+  // ── RIGHT: Next Steps ────────────────────────────────────────────────
+  rightY = drawSection(rightColX, rightY, "Next Steps", rightColW);
+  const nextSteps = ["Review this proposal and confirm scope.", "Sign off and kickoff schedule."];
   doc.setFontSize(FONT.body);
   doc.setFont(OFFER_PDF_FONT, "normal");
   doc.setTextColor(...PALETTE.text);
-  const nextSteps = ["Review this proposal and confirm scope.", "Sign off and kickoff schedule."];
   nextSteps.forEach((step, i) => {
-    doc.text(`${i + 1}. ${step}`, rightColX, rightY);
-    rightY += 12 + lineHeightBody;
+    const wrapped = doc.splitTextToSize(`${i + 1}. ${step}`, rightColW);
+    doc.text(wrapped, rightColX, rightY);
+    rightY += wrapped.length * lineH + 9;
   });
-  rightY += 14;
+  rightY += 16;
+
   doc.setFontSize(FONT.meta);
-  doc.setTextColor(...PALETTE.textSecondary);
+  doc.setTextColor(...PALETTE.meta);
   doc.text("Valid for 14 days", rightColX, rightY);
 }
 
@@ -696,7 +761,6 @@ function drawPricingPage(doc: jsPDF, data: OfferProposalData, proposalId: string
   const contentW = CONTENT_WIDTH;
   let y = MARGIN + OVERVIEW_HEADER_RESERVED;
   const bl = bodyLead();
-  const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
   // ----- PricingHero: left = Total Investment + amount + currency; right = payment terms + validity + ID; thin accent, no heavy fill -----
   const bandH = 56;
@@ -792,7 +856,7 @@ function drawPricingPage(doc: jsPDF, data: OfferProposalData, proposalId: string
   y += bl + 4;
   doc.setTextColor(...PALETTE.meta);
   doc.text("Taxes (if any)", breakdownX, y);
-  doc.text(taxes === 0 ? "—" : `€${taxes.toFixed(2)}`, breakdownX + breakdownW, y, { align: "right" });
+  doc.text(taxes === 0 ? "—" : `€${(taxes as number).toFixed(2)}`, breakdownX + breakdownW, y, { align: "right" });
   y += bl + 8;
   doc.setDrawColor(...PALETTE.border);
   doc.setLineWidth(0.5);
@@ -938,13 +1002,29 @@ export async function generateOfferProposalPdf(data: OfferProposalData): Promise
     // fallback: cover drawn without SVG background in drawCoverPage
   }
 
+  // Pre-fetch tech logos (best-effort — failures fall back to initials box)
+  const techsToLoad =
+    data.techStack && data.techStack.length > 0
+      ? data.techStack
+      : (() => {
+          const s = new Set<string>();
+          data.products.forEach((p) => {
+            const arr = Array.isArray(p.techStack)
+              ? p.techStack
+              : String(p.techStack || "").split(",").map((t) => t.trim()).filter(Boolean);
+            arr.forEach((t) => s.add(t));
+          });
+          return Array.from(s);
+        })();
+  const techLogos = techsToLoad.length > 0 ? await preloadTechLogos(techsToLoad) : {};
+
   const proposalId = `PROP-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   OFFER_PDF_FONT = await registerInterFont(doc);
   doc.setFont(OFFER_PDF_FONT, "normal");
 
   drawCoverPage(doc, data, logoDataUrl, proposalId, coverBgDataUrl);
-  drawOverviewPage(doc, data, proposalId, logoDataUrl);
+  drawOverviewPage(doc, data, proposalId, logoDataUrl, techLogos);
   drawPricingPage(doc, data, proposalId);
 
   addFootersToAllPages(doc, data.pageTitle, { logoDataUrl: logoDataUrl ?? null, proposalId });

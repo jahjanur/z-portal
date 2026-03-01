@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { generateOfferProposalPdf } from "../utils/pdf/generateOfferProposalPdf";
+import { TechStackSelector } from "./TechStackSelector";
 
 const CONTROL =
   "h-11 w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]";
@@ -26,6 +27,7 @@ const Offers: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([
     { id: "1", name: "", price: undefined, timeline: "", techStack: "" },
   ]);
+  const [selectedTechs, setSelectedTechs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   const addProduct = () => {
@@ -79,6 +81,7 @@ const Offers: React.FC = () => {
       setRecipientEmail("");
       setPageTitle("");
       setDescription("");
+      setSelectedTechs([]);
       setProducts([{ id: "1", name: "", price: undefined, timeline: "", techStack: "" }]);
     } catch (err) {
       console.error("Error sending offer PDF:", err);
@@ -106,6 +109,7 @@ const Offers: React.FC = () => {
         whatWeNeed: whatWeNeed || undefined,
         roadmap: roadmap || undefined,
         whyToInvest: whyToInvest || undefined,
+        techStack: selectedTechs.length > 0 ? selectedTechs : undefined,
         products: products.map((p) => ({
           name: p.name,
           price: p.price,
@@ -222,6 +226,23 @@ const Offers: React.FC = () => {
             className={`${CONTROL} min-h-[60px] resize-y py-3`}
           />
         </div>
+      </section>
+
+      {/* Tech Stack */}
+      <section
+        className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-6"
+        aria-labelledby="techstack-heading"
+      >
+        <h3
+          id="techstack-heading"
+          className="mb-1 text-sm font-semibold uppercase tracking-wide text-[var(--color-text-muted)]"
+        >
+          Tech Stack
+        </h3>
+        <p className="mb-4 text-xs text-[var(--color-text-muted)]">
+          Selected technologies will appear as logos in the PDF.
+        </p>
+        <TechStackSelector selected={selectedTechs} onChange={setSelectedTechs} />
       </section>
 
       {/* Products */}

@@ -10,13 +10,16 @@ const client_1 = require("@prisma/client");
 const router = express_1.default.Router();
 const prisma = new client_1.PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
-// =================== LOGIN ===================
+// login
 router.post("/login", async (req, res) => {
     try {
-        const { email, password } = req.body;
-        if (!email || !password) {
+        const rawEmail = req.body.email;
+        const rawPassword = req.body.password;
+        if (!rawEmail || !rawPassword) {
             return res.status(400).json({ message: "Email and password required" });
         }
+        const email = String(rawEmail).trim().toLowerCase();
+        const password = String(rawPassword).trim();
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
             return res.status(401).json({ message: "Invalid credentials" });
@@ -41,10 +44,13 @@ router.post("/login", async (req, res) => {
     }
     catch (err) {
         console.error("Login error:", err);
-        return res.status(500).json({ message: "Login failed" });
+        const message = process.env.NODE_ENV === "development" && err instanceof Error
+            ? `Login failed: ${err.message}`
+            : "Login failed";
+        return res.status(500).json({ message });
     }
 });
-// =================== VERIFY TOKEN ===================
+// verification
 router.get("/verify", async (req, res) => {
     try {
         const token = req.headers.authorization?.split(" ")[1];
