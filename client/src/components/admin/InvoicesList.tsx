@@ -74,7 +74,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 min-w-0 max-w-full">
       {paginatedInvoices.map((inv) => {
         const overdue = isOverdue(inv.dueDate, inv.status);
         

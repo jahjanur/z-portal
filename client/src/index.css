@@ -6,11 +6,24 @@
 
 /* ---------------------------------------------------------------------------
    Global: theme-aware body and grid (tokens from theme.css)
+   Prevent horizontal scroll on mobile; viewport stays within screen width.
    --------------------------------------------------------------------------- */
+html {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 body {
   background-color: var(--color-bg);
   color: var(--color-text-primary);
   font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+#root {
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* ---------------------------------------------------------------------------
@@ -97,6 +110,59 @@ select:focus {
   outline: none;
   border-color: var(--color-border-focus);
   box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+
+/* ---------------------------------------------------------------------------
+   Date / time inputs: modern look (mobile + desktop)
+   --------------------------------------------------------------------------- */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"] {
+  padding-left: 1rem;
+  padding-right: 2.75rem;
+  min-height: 2.75rem;
+  font-size: 0.9375rem;
+  letter-spacing: 0.01em;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+/* Native picker popup: match theme (dark/light) */
+[data-theme="dark"] input[type="date"],
+[data-theme="dark"] input[type="datetime-local"],
+[data-theme="dark"] input[type="time"],
+[data-theme="dark"] input[type="month"],
+[data-theme="dark"] input[type="week"] {
+  color-scheme: dark;
+}
+[data-theme="light"] input[type="date"],
+[data-theme="light"] input[type="datetime-local"],
+[data-theme="light"] input[type="time"],
+[data-theme="light"] input[type="month"],
+[data-theme="light"] input[type="week"] {
+  color-scheme: light;
+}
+input[type="date"]:focus,
+input[type="datetime-local"]:focus,
+input[type="time"]:focus,
+input[type="month"]:focus,
+input[type="week"]:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px var(--color-focus-ring);
+}
+@media (max-width: 640px) {
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"],
+  input[type="month"],
+  input[type="week"] {
+    min-height: 3rem;
+    padding-left: 1rem;
+    padding-right: 3rem;
+    font-size: 1rem;
+  }
 }
 select option {
   color: var(--color-text-primary);

@@ -300,8 +300,8 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 
   return (
-    <div className="min-h-screen py-12 bg-app">
-      <div className="max-w-3xl px-4 mx-auto">
+    <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden py-12 bg-app">
+      <div className="max-w-3xl min-w-0 px-4 mx-auto">
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="inline-block p-4 mb-4 rounded-full border border-border-subtle bg-card">

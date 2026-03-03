@@ -314,8 +314,8 @@ const TaskDetailPage: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-app py-24">
-      <div className="mx-auto max-w-7xl px-4">
+    <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-app py-24">
+      <div className="mx-auto max-w-7xl min-w-0 px-4">
         {/* Back Button */}
         <button
           onClick={() => navigate("/dashboard")}

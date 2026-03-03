@@ -19,7 +19,7 @@ export default function AdminClientsPage() {
   const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
       <div className="mt-6 rounded-2xl card-panel p-6 shadow-xl backdrop-blur-xl">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Clients Management</h2>
         <ClientForm onSubmit={createClient} colors={colors} hideDomainAndHosting={isEraSphere} />

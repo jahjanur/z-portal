@@ -96,7 +96,7 @@ export default function AdminEraSpherePartnersPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1200px]">
+      <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Partners</h2>
         <div className="flex min-h-[200px] items-center justify-center rounded-2xl card-panel p-8">
           <span className="text-[var(--color-text-muted)]">Loading...</span>
@@ -107,7 +107,7 @@ export default function AdminEraSpherePartnersPage() {
 
   if (error) {
     return (
-      <div className="mx-auto max-w-[1200px]">
+      <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Partners</h2>
         <div className="rounded-2xl card-panel p-6 border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)]">
           <p className="text-[var(--color-destructive-text)]">{error}</p>
@@ -120,7 +120,7 @@ export default function AdminEraSpherePartnersPage() {
   const totalTasks = partners.reduce((s, p) => s + p.tasksCount, 0);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
       <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Partners</h2>
 
       {/* Invite EraSphere Partner */}
@@ -191,7 +191,7 @@ export default function AdminEraSpherePartnersPage() {
       </div>
 
       {/* Partners table */}
-      <div className="rounded-2xl card-panel p-4 shadow-xl backdrop-blur-xl sm:p-6">
+      <div className="rounded-2xl card-panel p-4 shadow-xl backdrop-blur-xl sm:p-6 min-w-0 max-w-full">
         <p className="mb-4 text-sm text-[var(--color-text-muted)]">
           B2B partners who can manage clients and tasks. They have their own analytics dashboard. They do not have access to workers, invoices, domains, timesheets, or send offer.
         </p>

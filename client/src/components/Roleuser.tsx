@@ -218,8 +218,8 @@ const fetchAll = async () => {
   }
 
   return (
-    <div className="min-h-screen bg-transparent py-24">
-      <div className="px-4 mx-auto max-w-7xl">
+    <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-transparent py-24">
+      <div className="px-4 mx-auto max-w-7xl min-w-0">
         {/* Header */}
         <div className="mb-8">
           <h1 className="mb-2 text-4xl font-bold text-[var(--color-text-primary)]">

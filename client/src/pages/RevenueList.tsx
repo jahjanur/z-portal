@@ -124,8 +124,8 @@ export default function RevenueList() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-24 bg-app md:px-8">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden px-4 py-24 bg-app md:px-8">
+      <div className="mx-auto max-w-7xl min-w-0">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <button
@@ -246,7 +246,7 @@ export default function RevenueList() {
         </div>
 
         {/* Revenue by Client Table */}
-        <div className="p-6 mb-8 border border-border-subtle bg-card shadow-sm rounded-2xl">
+        <div className="p-6 mb-8 border border-border-subtle bg-card shadow-sm rounded-2xl min-w-0 max-w-full">
           <h2 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">Revenue by Client</h2>
           <div className="overflow-x-auto">
             <table className="w-full">

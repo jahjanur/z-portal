@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../hooks/useNotifications";
 
@@ -28,6 +29,8 @@ const TYPE_ICONS: Record<string, string> = {
 export default function NotificationDropdown() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const navigate = useNavigate();
   const { notifications, unreadCount, fetchNotifications, markRead, markAllRead } =
     useNotifications();
@@ -36,24 +39,48 @@ export default function NotificationDropdown() {
     if (open) fetchNotifications();
   }, [open, fetchNotifications]);
 
+  useLayoutEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const padding = 12;
+    const dropdownWidth = Math.min(320, window.innerWidth - padding * 2);
+    const left = Math.max(padding, Math.min(rect.left, window.innerWidth - dropdownWidth - padding));
+    setDropdownStyle({
+      position: "fixed",
+      top: rect.bottom + 6,
+      left,
+      width: dropdownWidth,
+      zIndex: 9999,
+    });
+  }, [open]);
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      const target = e.target as Node;
+      if (dropdownRef.current && dropdownRef.current.contains(target)) return;
+      const el = e.target as Element;
+      if (el.closest?.("[data-notification-dropdown]")) return;
+      setOpen(false);
     }
     if (open) document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
+  const handleClearAll = () => {
+    markAllRead();
+    setOpen(false);
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Bell button */}
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="relative flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
         aria-label="Notifications"
+        aria-expanded={open}
       >
         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
@@ -70,87 +97,105 @@ export default function NotificationDropdown() {
         )}
       </button>
 
-      {/* Dropdown */}
-      {open && (
-        <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-xl">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-              Notifications
-            </h3>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={markAllRead}
-                className="text-xs font-medium text-[var(--color-btn-primary-bg)] hover:underline"
-              >
-                Mark all read
-              </button>
-            )}
-          </div>
-
-          {/* List */}
-          <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="py-8 text-center text-sm text-[var(--color-text-muted)]">
-                No notifications yet
-              </div>
-            ) : (
-              notifications.map((n) => {
-                const iconPath =
-                  TYPE_ICONS[n.type] ||
-                  "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z";
-                return (
+      {/* Dropdown: render via portal so it's visible on mobile (not clipped by navbar) */}
+      {open &&
+        createPortal(
+          <div
+            data-notification-dropdown
+            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-xl w-80 max-w-[calc(100vw-24px)]"
+            style={dropdownStyle}
+          >
+            {/* Header: title, Clear all, X */}
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-4 py-3">
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                Notifications
+              </h3>
+              <div className="flex items-center gap-1">
+                {notifications.length > 0 && (
                   <button
-                    key={n.id}
                     type="button"
-                    onClick={() => {
-                      if (!n.read) markRead(n.id);
-                      if (n.link) navigate(n.link);
-                      setOpen(false);
-                    }}
-                    className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-2)] ${
-                      !n.read ? "bg-[var(--color-surface-2)]/50" : ""
-                    }`}
+                    onClick={handleClearAll}
+                    className="text-xs font-medium text-[var(--color-btn-primary-bg)] hover:underline whitespace-nowrap"
                   >
-                    <div className="mt-0.5 shrink-0">
-                      <svg
-                        className={`h-5 w-5 ${!n.read ? "text-[var(--color-btn-primary-bg)]" : "text-[var(--color-text-muted)]"}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d={iconPath}
-                        />
-                      </svg>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={`text-sm ${!n.read ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}
-                      >
-                        {n.title}
-                      </p>
-                      <p className="mt-0.5 text-xs text-[var(--color-text-muted)] line-clamp-2">
-                        {n.message}
-                      </p>
-                      <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
-                        {timeAgo(n.createdAt)}
-                      </p>
-                    </div>
-                    {!n.read && (
-                      <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[var(--color-btn-primary-bg)]" />
-                    )}
+                    Clear all
                   </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
+                )}
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)] transition"
+                  aria-label="Close notifications"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="max-h-80 overflow-y-auto">
+              {notifications.length === 0 ? (
+                <div className="py-8 text-center text-sm text-[var(--color-text-muted)]">
+                  No notifications yet
+                </div>
+              ) : (
+                notifications.map((n) => {
+                  const iconPath =
+                    TYPE_ICONS[n.type] ||
+                    "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z";
+                  return (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => {
+                        if (!n.read) markRead(n.id);
+                        if (n.link) navigate(n.link);
+                        setOpen(false);
+                      }}
+                      className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-2)] ${
+                        !n.read ? "bg-[var(--color-surface-2)]/50" : ""
+                      }`}
+                    >
+                      <div className="mt-0.5 shrink-0">
+                        <svg
+                          className={`h-5 w-5 ${!n.read ? "text-[var(--color-btn-primary-bg)]" : "text-[var(--color-text-muted)]"}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d={iconPath}
+                          />
+                        </svg>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={`text-sm ${!n.read ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}
+                        >
+                          {n.title}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[var(--color-text-muted)] line-clamp-2">
+                          {n.message}
+                        </p>
+                        <p className="mt-1 text-[10px] text-[var(--color-text-muted)]">
+                          {timeAgo(n.createdAt)}
+                        </p>
+                      </div>
+                      {!n.read && (
+                        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[var(--color-btn-primary-bg)]" />
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

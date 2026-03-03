@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import API from "../api";
 import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT, CONTROL_TEXTAREA } from "./ui/controls";
+import DatePicker from "./ui/DatePicker";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -689,11 +690,11 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Date *</label>
-              <input
-                type="date"
+              <DatePicker
                 value={entryDate}
-                onChange={(e) => setEntryDate(e.target.value)}
-                className="input-dark w-full rounded-lg px-3 py-2 text-sm"
+                onChange={setEntryDate}
+                placeholder="yyyy/mm/dd"
+                className="input-dark w-full rounded-lg px-3 py-2 text-sm min-h-[40px]"
               />
             </div>
             

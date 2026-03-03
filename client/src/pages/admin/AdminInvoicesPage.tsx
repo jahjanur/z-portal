@@ -10,7 +10,7 @@ export default function AdminInvoicesPage() {
   const [showPaidInvoices, setShowPaidInvoices] = useState(false);
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
       <div className="rounded-2xl card-panel p-4 shadow-xl backdrop-blur-xl sm:p-6">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Invoices Management</h2>
         <InvoiceForm onSubmit={createInvoice} clients={clients} colors={colors} />

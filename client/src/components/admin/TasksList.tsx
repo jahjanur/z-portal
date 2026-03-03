@@ -197,7 +197,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
   );
 
   return (
-    <section className="space-y-4" aria-labelledby="tasks-heading">
+    <section className="space-y-4 min-w-0 max-w-full" aria-labelledby="tasks-heading">
       {/* Header with Controls */}
       <header className="flex flex-col gap-4 rounded-xl card-panel p-4 shadow-lg backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">

@@ -88,22 +88,22 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
                       key={c.id}
                       className="flex items-center justify-between p-3 transition-colors rounded-lg hover:bg-[var(--color-surface-2)]"
                     >
-                      <div 
-                        className="flex-1 cursor-pointer"
+                      <div
+                        className="flex-1 cursor-pointer min-w-0"
                         onClick={() => {
                           navigate(`/clients/${c.id}`);
                           setSearch("");
                         }}
                       >
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-[var(--color-text-primary)]">{c.name}</p>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <p className="font-semibold text-[var(--color-text-primary)] truncate">{c.name}</p>
                           {isIncomplete && (
-                            <span className="px-2 py-0.5 text-xs font-semibold text-amber-400 bg-amber-500/20 rounded-full">
+                            <span className="px-2 py-0.5 text-xs font-semibold text-amber-400 bg-amber-500/20 rounded-full shrink-0">
                               Incomplete
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-[var(--color-text-muted)]">
+                        <p className="text-sm text-[var(--color-text-muted)] truncate">
                           {c.company} • {c.email}
                         </p>
                       </div>

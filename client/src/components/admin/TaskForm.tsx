@@ -2,6 +2,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { CONTROL_INPUT, CONTROL_SELECT } from "../ui/controls";
 import WorkerMultiSelect from "../ui/WorkerMultiSelect";
+import DatePicker from "../ui/DatePicker";
 
 interface User {
   id: number;
@@ -148,7 +149,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       )}
 
       {/* Task Form */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-6 min-w-0">
         <input
           placeholder="Task title *"
           value={formData.title}
@@ -204,11 +205,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
           autoApply
         />
         )}
-        <input
-          type="date"
+        <DatePicker
           value={formData.dueDate}
-          onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-          className={CONTROL_INPUT}
+          onChange={(dueDate) => setFormData({ ...formData, dueDate })}
+          placeholder="yyyy/mm/dd"
         />
       </div>
       <button
