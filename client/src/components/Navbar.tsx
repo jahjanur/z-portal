@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
+import { useMobileMenu } from "../contexts/MobileMenuContext";
 import { ThemeToggle } from "./ThemeToggle";
 import NotificationDropdown from "./NotificationDropdown";
 import logoLight from "../assets/Artboard 2.svg";
@@ -49,7 +50,7 @@ export default function Navbar() {
   const isOnEraSphereSection = role === "ADMIN" && (location.pathname === "/admin/erasphere" || location.pathname.startsWith("/admin/erasphere/"));
   const isDashboard = location.pathname === "/dashboard" || location.pathname.startsWith("/admin");
   const logoSrc = theme === "dark" ? logoDark : logoLight;
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { mobileMenuOpen, setMobileMenuOpen } = useMobileMenu();
 
   const logout = () => {
     localStorage.clear();
@@ -72,10 +73,10 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 z-50 w-full border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-md">
-        <div className="px-4 sm:px-6 mx-auto max-w-[1920px]">
+      <nav className="fixed top-0 z-50 w-full max-w-full overflow-x-hidden border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-md">
+        <div className="px-4 sm:px-6 mx-auto max-w-[1920px] min-w-0">
           <div className="flex items-center justify-between h-16 gap-2 min-w-0">
-            <div className="flex items-center gap-4 sm:gap-6 min-w-0 flex-1 overflow-x-auto">
+            <div className="flex items-center gap-3 sm:gap-6 min-w-0 flex-1 overflow-x-auto">
               <Link to="/" className="flex items-center gap-2 group shrink-0" onClick={() => setMobileMenuOpen(false)}>
                 <img
                   src={logoSrc}
@@ -83,6 +84,13 @@ export default function Navbar() {
                   className="h-7 transition-transform group-hover:scale-105"
                 />
               </Link>
+              {/* Notification and theme next to logo (all screen sizes) */}
+              {token && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <NotificationDropdown />
+                  <ThemeToggle />
+                </div>
+              )}
 
             {/* Desktop: Analytics + Dashboard + EraSphere (admin only) */}
             <div className="items-center gap-1 shrink-0 hidden md:flex">
@@ -175,16 +183,8 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Desktop: right side (theme + user + logout; on mobile only hamburger) */}
+          {/* Desktop: right side (user + logout; notification/theme are next to logo) */}
           <div className="flex items-center gap-3 shrink-0">
-            {token && (
-              <div className="hidden md:block">
-                <NotificationDropdown />
-              </div>
-            )}
-            <div className="hidden md:block">
-              <ThemeToggle />
-            </div>
             {token ? (
               <>
                 <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--color-glass)] border border-[var(--color-border)]">
@@ -283,6 +283,7 @@ export default function Navbar() {
               )}
               {token && (isAdmin || isEraSphere) && (
                 <>
+                  {/* Admin / EraSphere tabs (no EraSphere link mixed in here) */}
                   <div className="mx-4 mt-3 mb-1 border-t border-[var(--color-border)]" />
                   <p className="px-4 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
                     {isAdmin ? "Admin" : "EraSphere"}
@@ -301,42 +302,39 @@ export default function Navbar() {
                       </Link>
                     );
                   })}
+                  {/* EraSphere section at bottom, separated by hr (admin only) */}
                   {token && isAdmin && (
-                    <Link
-                      to="/admin/erasphere"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`${mobileLinkClass} ${isOnEraSphereSection ? mobileLinkActive : mobileLinkInactive}`}
-                    >
-                      EraSphere
-                    </Link>
-                  )}
-                  {token && isAdmin && isOnEraSphereSection && ADMIN_ERASPHERE_TABS.map(({ path, label }) => {
-                    const to = `/admin/erasphere/${path}`;
-                    const isActive = location.pathname === to || (path === "analytics" && location.pathname === "/admin/erasphere");
-                    return (
+                    <>
+                      <hr className="mx-4 my-3 border-[var(--color-border)]" />
+                      <p className="px-4 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                        EraSphere
+                      </p>
                       <Link
-                        key={path}
-                        to={to}
+                        to="/admin/erasphere"
                         onClick={() => setMobileMenuOpen(false)}
-                        className={`${mobileLinkClass} ${isActive ? mobileLinkActive : mobileLinkInactive} pl-8`}
+                        className={`${mobileLinkClass} ${isOnEraSphereSection ? mobileLinkActive : mobileLinkInactive}`}
                       >
-                        {label}
+                        EraSphere
                       </Link>
-                    );
-                  })}
+                      {isOnEraSphereSection && ADMIN_ERASPHERE_TABS.map(({ path, label }) => {
+                        const to = `/admin/erasphere/${path}`;
+                        const isActive = location.pathname === to || (path === "analytics" && location.pathname === "/admin/erasphere");
+                        return (
+                          <Link
+                            key={path}
+                            to={to}
+                            onClick={() => setMobileMenuOpen(false)}
+                            className={`${mobileLinkClass} ${isActive ? mobileLinkActive : mobileLinkInactive} pl-8`}
+                          >
+                            {label}
+                          </Link>
+                        );
+                      })}
+                    </>
+                  )}
                 </>
               )}
-              <div className="mx-4 mt-3 mb-1 border-t border-[var(--color-border)]" />
-              {token && (
-                <div className="flex items-center justify-between px-4 py-2">
-                  <span className="text-sm text-[var(--color-text-muted)]">Notifications</span>
-                  <NotificationDropdown />
-                </div>
-              )}
-              <div className="flex items-center justify-between px-4 py-2">
-                <span className="text-sm text-[var(--color-text-muted)]">Theme</span>
-                <ThemeToggle />
-              </div>
+              {/* Notification/theme moved to header next to logo - no longer in menu */}
               {token ? (
                 <>
                   <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-[var(--color-surface-2)] mx-2">

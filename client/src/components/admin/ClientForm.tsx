@@ -1,5 +1,6 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import DatePicker from "../ui/DatePicker";
 
 interface ClientFormProps {
   onSubmit: (data: {
@@ -225,11 +226,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAnd
                 <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
                   Domain Expiry Date
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   value={formData.domainExpiry}
-                  onChange={(e) => setFormData({ ...formData, domainExpiry: e.target.value })}
-                  className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
+                  onChange={(domainExpiry) => setFormData({ ...formData, domainExpiry })}
+                  placeholder="yyyy/mm/dd"
+                  className="w-full rounded-xl border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)]"
                 />
               </div>
             </div>
@@ -250,11 +251,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAnd
                 <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
                   Hosting Expiry Date
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   value={formData.hostingExpiry}
-                  onChange={(e) => setFormData({ ...formData, hostingExpiry: e.target.value })}
-                  className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
+                  onChange={(hostingExpiry) => setFormData({ ...formData, hostingExpiry })}
+                  placeholder="yyyy/mm/dd"
+                  className="w-full rounded-xl border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)]"
                 />
               </div>
             </div>

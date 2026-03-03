@@ -84,7 +84,7 @@ export default function EraSphereAnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1400px] px-4 py-8">
+      <div className="mx-auto max-w-[1400px] w-full max-w-full min-w-0 px-4 py-8">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Dashboard</h2>
         <div className="flex min-h-[300px] items-center justify-center">
           <div className="flex flex-col items-center gap-4">
@@ -102,7 +102,7 @@ export default function EraSphereAnalyticsPage() {
 
   if (error || !data) {
     return (
-      <div className="mx-auto max-w-[1400px] px-4 py-8">
+      <div className="mx-auto max-w-[1400px] w-full max-w-full min-w-0 px-4 py-8">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Dashboard</h2>
         <div className="rounded-2xl card-panel p-6 border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)]">
           <p className="text-[var(--color-destructive-text)]">{error || "No data available"}</p>
@@ -117,7 +117,7 @@ export default function EraSphereAnalyticsPage() {
   const recentInvoices = [...invoices].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-8">
+    <div className="mx-auto max-w-[1400px] w-full max-w-full min-w-0 px-4 py-8">
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Dashboard</h2>
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">Overview of your referred clients, projects, and earnings</p>
@@ -219,7 +219,7 @@ export default function EraSphereAnalyticsPage() {
         </div>
 
         {/* Recent Invoices (read-only view of their clients' invoices) */}
-        <div className="rounded-2xl card-panel p-5 shadow-lg backdrop-blur-xl lg:col-span-2">
+        <div className="rounded-2xl card-panel p-5 shadow-lg backdrop-blur-xl lg:col-span-2 min-w-0 max-w-full">
           <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Revenue Breakdown</h3>
           {recentInvoices.length === 0 ? (
             <p className="py-6 text-center text-[var(--color-text-muted)]">No invoices yet.</p>

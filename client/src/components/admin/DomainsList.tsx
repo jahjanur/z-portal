@@ -41,7 +41,7 @@ const DomainsList: React.FC<DomainsListProps> = ({ domains, onEdit, onDelete, co
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 min-w-0 max-w-full">
       {domains.map((domain) => (
         <div
           key={domain.id}

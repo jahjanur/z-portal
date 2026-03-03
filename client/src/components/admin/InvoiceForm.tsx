@@ -1,6 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT } from "../ui/controls";
+import DatePicker from "../ui/DatePicker";
 
 interface User {
   id: number;
@@ -167,12 +168,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients, colors }) 
           <label className={CONTROL_LABEL}>
             Due Date <span className="text-red-400">*</span>
           </label>
-          <input
-            type="date"
+          <DatePicker
             value={formData.dueDate}
-            onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            className={CONTROL_INPUT}
-            required
+            onChange={(dueDate) => setFormData({ ...formData, dueDate })}
+            placeholder="yyyy/mm/dd"
           />
         </div>
       </div>

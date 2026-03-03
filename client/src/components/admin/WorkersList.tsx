@@ -22,7 +22,7 @@ function getInitials(name: string): string {
 
 const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete, canDelete = true }) => {
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 min-w-0 max-w-full">
       {workers.map((w) => (
         <div
           key={w.id}

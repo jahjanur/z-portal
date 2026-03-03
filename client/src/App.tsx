@@ -25,6 +25,7 @@ import EraSphereClientsPage from "./pages/admin/EraSphereClientsPage";
 import EraSphereTasksPage from "./pages/admin/EraSphereTasksPage";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import { MobileMenuProvider } from "./contexts/MobileMenuContext";
 
 function App() {
   const token = localStorage.getItem("token");
@@ -35,10 +36,11 @@ function App() {
 
   return (
     <Router>
+      <MobileMenuProvider>
       <Toaster position="top-right" />
-      <div className="flex w-full min-h-screen flex-col bg-app-grid">
+      <div className="flex w-full max-w-full min-w-0 min-h-screen flex-col bg-app-grid overflow-x-hidden">
         <Navbar />
-        <main className="relative z-10 flex-grow min-h-0">
+        <main className="relative z-10 flex-grow min-h-0 min-w-0 overflow-x-hidden">
           <Routes>
             {/* Home page - Admin only (EraSphere redirects to their dashboard) */}
             <Route
@@ -189,6 +191,7 @@ function App() {
         </main>
         <Footer />
       </div>
+      </MobileMenuProvider>
     </Router>
   );
 }

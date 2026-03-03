@@ -95,7 +95,7 @@ const WorkerMultiSelect: React.FC<WorkerMultiSelectProps> = ({
     <div
       role="listbox"
       data-dropdown="worker-multiselect"
-      className="min-w-[240px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-xl shadow-black/20"
+      className="min-w-0 sm:min-w-[240px] max-w-[100vw] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-xl shadow-black/20"
       style={
         usePortal
           ? {

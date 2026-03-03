@@ -107,8 +107,8 @@ export default function TasksOverview() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-24 bg-app md:px-8">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden px-4 py-24 bg-app md:px-8">
+      <div className="mx-auto max-w-7xl min-w-0">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <button

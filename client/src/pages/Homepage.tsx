@@ -354,8 +354,8 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent px-4 py-24 md:px-8">
-      <div className="mx-auto max-w-7xl">
+    <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-transparent px-4 py-24 md:px-8">
+      <div className="mx-auto max-w-7xl min-w-0">
         {/* Header */}
         <div className="flex flex-col gap-4 mb-8 md:flex-row md:items-center md:justify-between">
           <div>
@@ -481,7 +481,7 @@ export default function HomePage() {
         {/* Charts Row 1 */}
         <div className="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-3">
           {/* Revenue Trend */}
-          <div className={`p-6 lg:col-span-2 ${cardClass}`}>
+          <div className={`p-6 lg:col-span-2 min-w-0 overflow-hidden ${cardClass}`}>
             <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Revenue Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={getRevenueByPeriod()}>
@@ -507,7 +507,7 @@ export default function HomePage() {
           </div>
 
           {/* Task Distribution */}
-          <div className={`p-6 ${cardClass}`}>
+          <div className={`p-6 min-w-0 overflow-hidden ${cardClass}`}>
             <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Task Status</h3>
             {taskDistribution.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -541,7 +541,7 @@ export default function HomePage() {
         {/* Charts Row 2 */}
         <div className="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-2">
           {/* Top Clients by Revenue */}
-          <div className={`p-6 ${cardClass}`}>
+          <div className={`p-6 min-w-0 overflow-hidden ${cardClass}`}>
             <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Top Clients by Revenue</h3>
             {getTopClientsByRevenue().length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -561,7 +561,7 @@ export default function HomePage() {
           </div>
 
           {/* Worker Performance */}
-          <div className={`p-6 ${cardClass}`}>
+          <div className={`p-6 min-w-0 overflow-hidden ${cardClass}`}>
             <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Worker Performance</h3>
             {getWorkerPerformance().length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
@@ -584,7 +584,7 @@ export default function HomePage() {
         </div>
 
         {/* Task Completion Trend */}
-        <div className={`p-6 mb-8 ${cardClass}`}>
+        <div className={`p-6 mb-8 min-w-0 overflow-hidden ${cardClass}`}>
           <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Task Completion Trend</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={getTaskCompletionTrend()}>

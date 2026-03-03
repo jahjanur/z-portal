@@ -271,8 +271,8 @@ const fetchAllFiles = async () => {
   const domains = client.domains || [];
 
   return (
-    <div className="min-h-screen py-24 bg-app">
-      <div className="mx-auto max-w-7xl px-4">
+    <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden py-24 bg-app">
+      <div className="mx-auto max-w-7xl min-w-0 px-4">
         {/* Back Button */}
         <button
           type="button"

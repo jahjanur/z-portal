@@ -43,7 +43,7 @@ export default function EraSphereTasksPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1200px]">
+      <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Tasks</h2>
         <div className="flex min-h-[200px] items-center justify-center rounded-2xl card-panel p-8">
           <span className="text-[var(--color-text-muted)]">Loading...</span>
@@ -53,7 +53,7 @@ export default function EraSphereTasksPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1200px]">
+    <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
       <div className="rounded-2xl card-panel p-4 shadow-xl backdrop-blur-xl sm:p-6">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Tasks</h2>
         <p className="mb-6 text-sm text-[var(--color-text-muted)]">

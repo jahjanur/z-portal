@@ -32,7 +32,7 @@ function AdminLayoutInner() {
   }
 
   return (
-    <div className="min-h-0 flex-1 bg-transparent py-6">
+    <div className="min-h-0 flex-1 min-w-0 overflow-x-hidden bg-transparent py-6">
       <Outlet />
     </div>
   );
@@ -41,8 +41,8 @@ function AdminLayoutInner() {
 export default function AdminLayout() {
   return (
     <AdminProvider>
-      <div className="flex min-h-screen flex-col bg-transparent pt-16">
-        <main className="relative z-10 flex min-h-0 flex-1 flex-col px-4 sm:px-6 lg:px-8">
+      <div className="flex min-h-screen flex-col min-w-0 overflow-x-hidden bg-transparent pt-16">
+        <main className="relative z-10 flex min-h-0 flex-1 flex-col min-w-0 overflow-x-hidden px-4 sm:px-6 lg:px-8">
           <AdminLayoutInner />
         </main>
       </div>
