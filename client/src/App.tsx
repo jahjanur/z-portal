@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import AuthPage from "./pages/Authpage";
 import Dashboard from "./pages/Dashboard";
@@ -18,6 +18,11 @@ import AdminInvoicesPage from "./pages/admin/AdminInvoicesPage";
 import AdminDomainsPage from "./pages/admin/AdminDomainsPage";
 import AdminSendOfferPage from "./pages/admin/AdminSendOfferPage";
 import AdminTimesheetsPage from "./pages/admin/AdminTimesheetsPage";
+import AdminEraSpherePartnersPage from "./pages/admin/AdminEraSpherePartnersPage";
+import EraSphereAnalyticsPage from "./pages/admin/EraSphereAnalyticsPage";
+import EraSphereAnalyticsAdminPage from "./pages/admin/EraSphereAnalyticsAdminPage";
+import EraSphereClientsPage from "./pages/admin/EraSphereClientsPage";
+import EraSphereTasksPage from "./pages/admin/EraSphereTasksPage";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 
@@ -25,6 +30,8 @@ function App() {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
   const isAdmin = role === "ADMIN";
+  const isEraSphere = role === "ERASPHERE";
+  const isAdminOrEraSphere = isAdmin || isEraSphere;
 
   return (
     <Router>
@@ -33,12 +40,14 @@ function App() {
         <Navbar />
         <main className="relative z-10 flex-grow min-h-0">
           <Routes>
-            {/* Home page - Admin only */}
+            {/* Home page - Admin only (EraSphere redirects to their dashboard) */}
             <Route
               path="/"
               element={
                 token && isAdmin ? (
                   <HomePage />
+                ) : token && isEraSphere ? (
+                  <Navigate to="/admin/erasphere-dashboard" replace />
                 ) : token ? (
                   <Navigate to="/dashboard" />
                 ) : (
@@ -53,12 +62,14 @@ function App() {
               element={token ? <Navigate to="/dashboard" /> : <AuthPage />}
             />
             
-            {/* Dashboard - Workers and Clients use legacy dashboard; Admins use /admin/* */}
+            {/* Dashboard - Admin goes to admin area; EraSphere to their dashboard; Workers/Clients use dashboard */}
             <Route
               path="/dashboard"
               element={
                 token && isAdmin ? (
                   <Navigate to="/admin/workers" replace />
+                ) : token && isEraSphere ? (
+                  <Navigate to="/admin/erasphere-dashboard" replace />
                 ) : token ? (
                   <Dashboard />
                 ) : (
@@ -67,16 +78,25 @@ function App() {
               }
             />
 
-            {/* Admin area - each tab is its own route */}
-            <Route path="/admin" element={token && isAdmin ? <AdminLayout /> : <Navigate to="/login" />}>
-              <Route index element={<Navigate to="/admin/workers" replace />} />
-              <Route path="workers" element={<AdminWorkersPage />} />
+            {/* Admin area - Admin has full access; EraSphere only clients, tasks, analytics */}
+            <Route path="/admin" element={token && isAdminOrEraSphere ? <AdminLayout /> : <Navigate to="/login" />}>
+              <Route index element={isEraSphere ? <Navigate to="/admin/erasphere-dashboard" replace /> : <Navigate to="/admin/workers" replace />} />
+              <Route path="workers" element={isAdmin ? <AdminWorkersPage /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
               <Route path="clients" element={<AdminClientsPage />} />
               <Route path="tasks" element={<AdminTasksPage />} />
-              <Route path="invoices" element={<AdminInvoicesPage />} />
-              <Route path="domains" element={<AdminDomainsPage />} />
-              <Route path="send-offer" element={<AdminSendOfferPage />} />
-              <Route path="timesheets" element={<AdminTimesheetsPage />} />
+              <Route path="invoices" element={isAdmin ? <AdminInvoicesPage /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
+              <Route path="domains" element={isAdmin ? <AdminDomainsPage /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
+              <Route path="send-offer" element={isAdmin ? <AdminSendOfferPage /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
+              <Route path="timesheets" element={isAdmin ? <AdminTimesheetsPage /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
+              <Route path="erasphere" element={isAdmin ? <Outlet /> : <Navigate to="/admin/erasphere-dashboard" replace />}>
+                <Route index element={<Navigate to="/admin/erasphere/analytics" replace />} />
+                <Route path="analytics" element={<EraSphereAnalyticsAdminPage />} />
+                <Route path="partners" element={<AdminEraSpherePartnersPage />} />
+                <Route path="clients" element={<EraSphereClientsPage />} />
+                <Route path="tasks" element={<EraSphereTasksPage />} />
+              </Route>
+              <Route path="erasphere-partners" element={<Navigate to="/admin/erasphere/partners" replace />} />
+              <Route path="erasphere-dashboard" element={isEraSphere ? <EraSphereAnalyticsPage /> : <Navigate to="/admin/workers" replace />} />
             </Route>
             
             {/* Task Detail Page - All authenticated users */}
@@ -85,11 +105,11 @@ function App() {
               element={token ? <TaskDetailPage /> : <Navigate to="/login" />}
             />
             
-            {/* Client Detail Page - Admin only */}
+            {/* Client Detail Page - Admin and EraSphere */}
             <Route
               path="/clients/:id"
               element={
-                token && isAdmin ? (
+                token && isAdminOrEraSphere ? (
                   <ClientDetailPage />
                 ) : (
                   <Navigate to="/login" />
@@ -103,17 +123,19 @@ function App() {
               element={
                 token && isAdmin ? (
                   <RevenueList />
+                ) : token && isEraSphere ? (
+                  <Navigate to="/admin/erasphere-dashboard" replace />
                 ) : (
                   <Navigate to="/login" />
                 )
               }
             />
             
-            {/* Clients List - Admin only */}
+            {/* Clients List - Admin and EraSphere */}
             <Route
               path="/clients"
               element={
-                token && isAdmin ? (
+                token && isAdminOrEraSphere ? (
                   <ClientsList />
                 ) : (
                   <Navigate to="/login" />
@@ -121,11 +143,11 @@ function App() {
               }
             />
             
-            {/* Tasks Overview - Admin only */}
+            {/* Tasks Overview - Admin and EraSphere */}
             <Route
               path="/tasks-overview"
               element={
-                token && isAdmin ? (
+                token && isAdminOrEraSphere ? (
                   <TasksOverview />
                 ) : (
                   <Navigate to="/login" />
@@ -133,11 +155,11 @@ function App() {
               }
             />
             
-            {/* Alerts Page - Admin only */}
+            {/* Alerts Page - Admin and EraSphere */}
             <Route
               path="/alerts"
               element={
-                token && isAdmin ? (
+                token && isAdminOrEraSphere ? (
                   <AlertsPage />
                 ) : (
                   <Navigate to="/login" />
@@ -154,6 +176,8 @@ function App() {
               element={
                 token && isAdmin ? (
                   <Navigate to="/admin/workers" />
+                ) : token && isEraSphere ? (
+                  <Navigate to="/admin/erasphere-dashboard" />
                 ) : token ? (
                   <Navigate to="/dashboard" />
                 ) : (

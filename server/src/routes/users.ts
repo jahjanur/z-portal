@@ -1,16 +1,16 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { verifyJWT, verifyAdmin } from "../middleware/auth";
+import { verifyJWT, verifyAdmin, verifyAdminOrEraSphere } from "../middleware/auth";
 import { notifyProfileCompleted } from "../services/notifications";
+import { notifyAdmins } from "../services/notificationStore";
+import prisma from "../lib/prisma";
 
 const router = Router();
-const prisma = new PrismaClient();
 const SALT_ROUNDS = 10;
 
 const filesDir = "uploads/files";
@@ -44,14 +44,20 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// get all users
-router.get("/", verifyJWT, verifyAdmin, async (req, res) => {
+// get all users (admin sees all; EraSphere sees only clients they referred)
+router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
-    const users = await prisma.user.findMany({ 
-      select: { 
+    const { role, userId } = req.user;
+    const whereClause =
+      role === "ERASPHERE"
+        ? { role: "CLIENT" as const, referredById: userId }
+        : {};
+    const users = await prisma.user.findMany({
+      where: whereClause,
+      select: {
         id: true,
-        email: true, 
-        role: true, 
+        email: true,
+        role: true,
         name: true,
         company: true,
         logo: true,
@@ -61,12 +67,188 @@ router.get("/", verifyJWT, verifyAdmin, async (req, res) => {
         postalAddress: true,
         address: true,
         phoneNumber: true,
-      } 
+        referredById: true,
+      },
     });
     res.json(users);
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// get EraSphere partners (admin only) with stats: clientsCount, tasksCount
+router.get("/erasphere", verifyJWT, verifyAdmin, async (req, res) => {
+  try {
+    const partners = await prisma.user.findMany({
+      where: { role: "ERASPHERE" },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        company: true,
+        createdAt: true,
+        profileStatus: true,
+      },
+    });
+
+    const partnersWithStats = await Promise.all(
+      partners.map(async (p) => {
+        const referredClients = await prisma.user.findMany({
+          where: { role: "CLIENT", referredById: p.id },
+          select: { id: true },
+        });
+        const clientIds = referredClients.map((c) => c.id);
+        const tasksCount =
+          clientIds.length === 0
+            ? 0
+            : await prisma.task.count({
+                where: { clientId: { in: clientIds } },
+              });
+        return {
+          ...p,
+          clientsCount: clientIds.length,
+          tasksCount,
+        };
+      })
+    );
+
+    res.json(partnersWithStats);
+  } catch (error) {
+    console.error("Error fetching EraSphere partners:", error);
+    res.status(500).json({ error: "Failed to fetch EraSphere partners" });
+  }
+});
+
+// admin-only: aggregate EraSphere analytics (all partners, their clients, tasks, revenue)
+router.get("/erasphere/admin-analytics", verifyJWT, verifyAdmin, async (req: any, res) => {
+  try {
+    const partners = await prisma.user.findMany({
+      where: { role: "ERASPHERE" },
+      select: { id: true },
+    });
+    const partnerIds = partners.map((p) => p.id);
+
+    const erasphereClients = await prisma.user.findMany({
+      where: { role: "CLIENT", referredById: { in: partnerIds } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        company: true,
+        createdAt: true,
+        profileStatus: true,
+        referredById: true,
+      },
+    });
+    const clientIds = erasphereClients.map((c) => c.id);
+
+    const [tasks, projects, invoices] = await Promise.all([
+      prisma.task.findMany({
+        where: { clientId: { in: clientIds } },
+        select: { id: true, title: true, status: true, clientId: true, createdAt: true },
+      }),
+      prisma.project.findMany({
+        where: { clientId: { in: clientIds } },
+        select: { id: true, name: true, status: true, clientId: true, createdAt: true },
+      }),
+      prisma.invoice.findMany({
+        where: { clientId: { in: clientIds } },
+        select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true },
+      }),
+    ]);
+
+    const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
+    const paidRevenue = invoices.filter((inv) => inv.status === "PAID").reduce((sum, inv) => sum + inv.amount, 0);
+    const pendingRevenue = invoices.filter((inv) => inv.status === "PENDING").reduce((sum, inv) => sum + inv.amount, 0);
+
+    res.json({
+      clients: erasphereClients,
+      tasks,
+      projects,
+      invoices,
+      stats: {
+        totalPartners: partnerIds.length,
+        totalClients: erasphereClients.length,
+        totalTasks: tasks.length,
+        activeTasks: tasks.filter((t) => t.status !== "COMPLETED").length,
+        completedTasks: tasks.filter((t) => t.status === "COMPLETED").length,
+        totalProjects: projects.length,
+        totalRevenue,
+        paidRevenue,
+        pendingRevenue,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching EraSphere admin analytics:", error);
+    res.status(500).json({ error: "Failed to fetch analytics" });
+  }
+});
+
+// get EraSphere member analytics (own clients, projects, tasks, invoice totals)
+router.get("/erasphere/analytics", verifyJWT, async (req: any, res) => {
+  try {
+    const { role, userId } = req.user;
+    if (role !== "ERASPHERE") {
+      return res.status(403).json({ error: "Only EraSphere members can access this" });
+    }
+
+    const myClients = await prisma.user.findMany({
+      where: { role: "CLIENT", referredById: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        company: true,
+        createdAt: true,
+        profileStatus: true,
+      },
+    });
+
+    const clientIds = myClients.map((c) => c.id);
+
+    const [tasks, projects, invoices] = await Promise.all([
+      prisma.task.findMany({
+        where: { clientId: { in: clientIds } },
+        select: { id: true, title: true, status: true, clientId: true, createdAt: true },
+      }),
+      prisma.project.findMany({
+        where: { clientId: { in: clientIds } },
+        select: { id: true, name: true, status: true, clientId: true, createdAt: true },
+      }),
+      prisma.invoice.findMany({
+        where: { clientId: { in: clientIds } },
+        select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true },
+      }),
+    ]);
+
+    const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
+    const paidRevenue = invoices
+      .filter((inv) => inv.status === "PAID")
+      .reduce((sum, inv) => sum + inv.amount, 0);
+    const pendingRevenue = invoices
+      .filter((inv) => inv.status === "PENDING")
+      .reduce((sum, inv) => sum + inv.amount, 0);
+
+    res.json({
+      clients: myClients,
+      tasks,
+      projects,
+      invoices,
+      stats: {
+        totalClients: myClients.length,
+        totalTasks: tasks.length,
+        activeTasks: tasks.filter((t) => t.status !== "COMPLETED").length,
+        completedTasks: tasks.filter((t) => t.status === "COMPLETED").length,
+        totalProjects: projects.length,
+        totalRevenue,
+        paidRevenue,
+        pendingRevenue,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching EraSphere analytics:", error);
+    res.status(500).json({ error: "Failed to fetch analytics" });
   }
 });
 
@@ -117,8 +299,8 @@ router.post("/:id/resend-invite", verifyJWT, verifyAdmin, async (req, res) => {
       where: { id: Number(id) },
     });
 
-    if (!user || user.role !== "CLIENT") {
-      return res.status(404).json({ error: "Client not found" });
+    if (!user || (user.role !== "CLIENT" && user.role !== "ERASPHERE")) {
+      return res.status(404).json({ error: "User not found" });
     }
 
     const inviteToken = crypto.randomBytes(32).toString('hex');
@@ -130,15 +312,22 @@ router.post("/:id/resend-invite", verifyJWT, verifyAdmin, async (req, res) => {
     });
 
     const inviteLink = `${process.env.CLIENT_URL || 'http://localhost:3000'}/complete-profile?token=${inviteToken}`;
+    const isEraSphere = user.role === "ERASPHERE";
+    const emailSubject = isEraSphere
+      ? 'Complete Your EraSphere Profile - Reminder'
+      : 'Complete Your Company Profile - Reminder';
+    const emailBody = isEraSphere
+      ? 'This is a reminder to complete your EraSphere partner profile:'
+      : 'This is a reminder to complete your company profile:';
 
     try {
       await transporter.sendMail({
         from: process.env.SMTP_USER,
         to: user.email,
-        subject: 'Complete Your Company Profile - Reminder',
+        subject: emailSubject,
         html: `
           <h2>Hi ${user.name}!</h2>
-          <p>This is a reminder to complete your company profile:</p>
+          <p>${emailBody}</p>
           <a href="${inviteLink}" style="display: inline-block; padding: 10px 20px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 5px;">Complete Profile</a>
           <p>This link will expire in 7 days.</p>
         `,
@@ -155,15 +344,16 @@ router.post("/:id/resend-invite", verifyJWT, verifyAdmin, async (req, res) => {
   }
 });
 
-// get user if
-router.get("/:id", verifyJWT, verifyAdmin, async (req, res) => {
+// get user by id (admin: any; EraSphere: only their referred clients)
+router.get("/:id", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
+    const requestedId = Number(req.params.id);
     const user = await prisma.user.findUnique({
-      where: { id: Number(req.params.id) },
-      select: { 
-        id: true, 
-        email: true, 
-        role: true, 
+      where: { id: requestedId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
         name: true,
         company: true,
         logo: true,
@@ -176,18 +366,27 @@ router.get("/:id", verifyJWT, verifyAdmin, async (req, res) => {
         extraEmails: true,
         brandPattern: true,
         shortInfo: true,
+        referredById: true,
       },
     });
     if (!user) return res.status(404).json({ error: "User not found" });
-    res.json(user);
+
+    if (req.user?.role === "ERASPHERE") {
+      if (user.role !== "CLIENT" || user.referredById !== req.user.userId) {
+        return res.status(403).json({ error: "You can only view clients you referred" });
+      }
+    }
+
+    const { referredById, ...rest } = user;
+    res.json(rest);
   } catch (error) {
     console.error("Error fetching user:", error);
     res.status(500).json({ error: "Failed to fetch user" });
   }
 });
 
-// create user
-router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
+// create user (admin can create any role; EraSphere can create CLIENT only)
+router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
     const { 
       email, 
@@ -208,17 +407,23 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(400).json({ error: "Email already in use" });
 
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    const roleNormalized = role.toUpperCase();
+    const reqRole = req.user?.role;
+    const bodyRole = (role || "").toUpperCase();
+    if (reqRole !== "ADMIN" && bodyRole !== "CLIENT") {
+      return res.status(403).json({ error: "Only admins can create workers or EraSphere partners" });
+    }
 
-    if (!["ADMIN", "WORKER", "CLIENT"].includes(roleNormalized)) {
-      return res.status(400).json({ error: "Invalid role. Must be ADMIN, WORKER, or CLIENT" });
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const roleNormalized = bodyRole;
+
+    if (!["ADMIN", "WORKER", "CLIENT", "ERASPHERE"].includes(roleNormalized)) {
+      return res.status(400).json({ error: "Invalid role. Must be ADMIN, WORKER, CLIENT, or ERASPHERE" });
     }
 
     let inviteToken = null;
     let inviteExpires = null;
     
-    if (roleNormalized === "CLIENT") {
+    if (roleNormalized === "CLIENT" || roleNormalized === "ERASPHERE") {
       inviteToken = crypto.randomBytes(32).toString('hex');
       inviteExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     }
@@ -235,6 +440,16 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
       userData.logo = logo || null;
       userData.colorHex = colorHex || "#5B4FFF";
       userData.postalAddress = postalAddress || null;
+      userData.profileStatus = "INCOMPLETE";
+      userData.inviteToken = inviteToken;
+      userData.inviteExpires = inviteExpires;
+      if (reqRole === "ERASPHERE") {
+        userData.referredById = req.user.userId;
+      }
+    }
+
+    if (roleNormalized === "ERASPHERE") {
+      userData.company = company || null;
       userData.profileStatus = "INCOMPLETE";
       userData.inviteToken = inviteToken;
       userData.inviteExpires = inviteExpires;
@@ -256,6 +471,23 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
       },
     });
 
+    if (reqRole === "ERASPHERE" && roleNormalized === "CLIENT") {
+      try {
+        const partner = await prisma.user.findUnique({
+          where: { id: req.user.userId },
+          select: { name: true },
+        });
+        await notifyAdmins(
+          "ERASPHERE_NEW_CLIENT",
+          "EraSphere added a client",
+          `${partner?.name ?? "EraSphere partner"} added client: ${newUser.name} (${newUser.email})`,
+          "/admin/clients"
+        );
+      } catch (err) {
+        console.error("Failed to notify admins of new EraSphere client:", err);
+      }
+    }
+
     if (roleNormalized === "CLIENT" && domainName) {
       try {
         await prisma.domain.create({
@@ -271,17 +503,23 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
       }
     }
 
-    if (roleNormalized === "CLIENT" && inviteToken) {
+    if ((roleNormalized === "CLIENT" || roleNormalized === "ERASPHERE") && inviteToken) {
       const inviteLink = `${process.env.CLIENT_URL || 'http://localhost:3000'}/complete-profile?token=${inviteToken}`;
+      const isEraSphere = roleNormalized === "ERASPHERE";
+      const emailSubject = isEraSphere ? 'Welcome to EraSphere – Complete Your Profile' : 'Complete Your Company Profile';
+      const emailHeading = isEraSphere ? 'Welcome to EraSphere!' : `Welcome ${name}!`;
+      const emailBody = isEraSphere
+        ? 'You have been invited as an EraSphere Partner. Please complete your company profile by clicking the link below:'
+        : 'Please complete your company profile by clicking the link below:';
       
       try {
         await transporter.sendMail({
           from: process.env.SMTP_USER,
           to: email,
-          subject: 'Complete Your Company Profile',
+          subject: emailSubject,
           html: `
-            <h2>Welcome ${name}!</h2>
-            <p>Please complete your company profile by clicking the link below:</p>
+            <h2>${emailHeading}</h2>
+            <p>${emailBody}</p>
             <a href="${inviteLink}" style="display: inline-block; padding: 10px 20px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 5px;">Complete Profile</a>
             <p>This link will expire in 7 days.</p>
           `,
@@ -290,6 +528,10 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
       } catch (emailError) {
         console.error("❌ Error sending invite email:", emailError);
       }
+
+      const responsePayload: Record<string, unknown> = { ...newUser };
+      responsePayload.inviteLink = inviteLink;
+      return res.status(201).json(responsePayload);
     }
 
     res.status(201).json(newUser);
@@ -423,7 +665,7 @@ router.delete("/:id", verifyJWT, verifyAdmin, async (req, res) => {
 router.get("/clients/list", verifyJWT, async (req: any, res) => {
   try {
     const { role } = req.user;
-    if (role !== "ADMIN" && role !== "WORKER") {
+    if (role !== "ADMIN" && role !== "WORKER" && role !== "ERASPHERE") {
       return res.status(403).json({ error: "Not authorized" });
     }
 

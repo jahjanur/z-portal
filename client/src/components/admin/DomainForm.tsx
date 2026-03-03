@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import toast from "react-hot-toast";
 import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT } from "../ui/controls";
 
 interface User {
@@ -81,7 +82,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
     e.preventDefault();
 
     if (!formData.domainName) {
-      alert("Domain name is required.");
+      toast.error("Domain name is required.");
       return;
     }
 
@@ -93,7 +94,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
       onCancelEdit();
     } else {
       if (!formData.clientId) {
-        alert("Client is required.");
+        toast.error("Client is required.");
         return;
       }
       await onSubmit(formData);

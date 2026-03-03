@@ -2,11 +2,12 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 
 interface WorkerFormProps {
-  onSubmit: (data: { email: string; password: string; name: string }) => Promise<void>;
+  onSubmit: (data: { email: string; password: string; name: string; role?: string }) => Promise<void>;
+  allowEraSphereRole?: boolean;
 }
 
-const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit }) => {
-  const [formData, setFormData] = useState({ email: "", password: "", name: "" });
+const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, allowEraSphereRole = false }) => {
+  const [formData, setFormData] = useState({ email: "", password: "", name: "", role: "WORKER" as string });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -36,9 +37,18 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit }) => {
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
-      setFormData({ email: "", password: "", name: "" });
-      toast.success("Worker created successfully!");
+      const result = await onSubmit({ ...formData, role: formData.role });
+      setFormData({ email: "", password: "", name: "", role: "WORKER" });
+      toast.success(formData.role === "ERASPHERE" ? "EraSphere partner created successfully!" : "Worker created successfully!");
+      const inviteLink = result && typeof result === "object" && "inviteLink" in result && result.inviteLink;
+      if (inviteLink && typeof inviteLink === "string") {
+        try {
+          await navigator.clipboard.writeText(inviteLink);
+          toast.success("Invite link copied to clipboard (use it to complete profile)", { duration: 6000 });
+        } catch {
+          toast.success(`Invite link: ${inviteLink}`, { duration: 12000 });
+        }
+      }
     } catch (error: any) {
       const errorMessage = error?.response?.data?.error || error?.response?.data?.message || "Failed to create worker";
       toast.error(errorMessage);
@@ -56,7 +66,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit }) => {
 
   return (
     <div className="mb-6 rounded-xl card-panel p-5 backdrop-blur-sm">
-      <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-primary)]">Add New Worker</h3>
+      <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-primary)]">
+        {allowEraSphereRole ? "Add Worker or EraSphere Partner" : "Add New Worker"}
+      </h3>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div>
@@ -98,13 +110,27 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit }) => {
               className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
-          <div className="flex items-end sm:col-span-2 lg:col-span-1">
+          {allowEraSphereRole && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Role</label>
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                disabled={isSubmitting}
+                className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="WORKER">Worker</option>
+                <option value="ERASPHERE">EraSphere Partner</option>
+              </select>
+            </div>
+          )}
+          <div className={`flex items-end ${allowEraSphereRole ? "sm:col-span-2" : "sm:col-span-2 lg:col-span-1"}`}>
             <button
               type="submit"
               disabled={isSubmitting}
               className="btn-primary h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting ? "Adding..." : "Add Worker"}
+              {isSubmitting ? "Adding..." : formData.role === "ERASPHERE" ? "Add EraSphere Partner" : "Add Worker"}
             </button>
           </div>
         </div>

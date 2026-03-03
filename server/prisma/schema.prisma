@@ -26,6 +26,9 @@ model User {
   profileStatus  String?            @default("INCOMPLETE")
   inviteToken    String?            @unique
   inviteExpires  DateTime?
+  referredById   Int?
+  referredBy     User?              @relation("ReferredClients", fields: [referredById], references: [id])
+  referredClients User[]            @relation("ReferredClients")
   domains        Domain[]           @relation("ClientDomains")
   fileComments   FileComment[]
   invoices       Invoice[]          @relation("ClientInvoices")
@@ -34,6 +37,7 @@ model User {
   taskAssignments TaskWorker[]      @relation("TaskWorkers")
   taskComments   TaskComment[]
   projects       TimesheetProject[] @relation("UserProjects")
+  notifications  Notification[]
 }
 
 model Project {
@@ -181,4 +185,19 @@ model TimesheetEntry {
 
   @@index([projectId])
   @@index([date])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([read])
 }

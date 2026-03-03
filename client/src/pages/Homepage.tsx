@@ -27,6 +27,7 @@ interface User {
   email: string;
   createdAt: string;
   profileStatus?: string;
+  referredById?: number | null;
 }
 
 interface Invoice {
@@ -46,7 +47,7 @@ interface Task {
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED" | "PENDING_APPROVAL";
   createdAt: string;
   dueDate?: string;
-  client?: { name: string; id: number };
+  client?: { name: string; id: number; referredById?: number | null };
   workers?: { user: { name: string; id: number } }[];
 }
 
@@ -97,9 +98,12 @@ export default function HomePage() {
       setInvoices(invoicesRes.data);
       setTasks(tasksRes.data);
 
-      const clientUsers = usersRes.data.filter(u => u.role === "CLIENT");
+      // Domains: fetch only for admin's own clients (not EraSphere-referred)
+      const adminOwnClients = usersRes.data.filter(
+        (u) => u.role === "CLIENT" && (u as User).referredById == null
+      );
       const allDomains: Domain[] = [];
-      for (const client of clientUsers) {
+      for (const client of adminOwnClients) {
         try {
           const domainRes = await API.get(`/domains/client/${client.id}`);
           allDomains.push(...domainRes.data);
@@ -114,6 +118,17 @@ export default function HomePage() {
       setLoading(false);
     }
   };
+
+  // Admin's own section: only clients he has reached (not referred by EraSphere)
+  const adminOwnClientIds = users
+    .filter((u) => u.role === "CLIENT" && (u.referredById == null))
+    .map((u) => u.id);
+  const adminOwnInvoices = invoices.filter(
+    (i) => i.client && adminOwnClientIds.includes(i.client.id)
+  );
+  const adminOwnTasks = tasks.filter(
+    (t) => t.client && (t.client as { referredById?: number | null }).referredById == null
+  );
 
   const getFilteredData = () => {
     const now = new Date();
@@ -132,32 +147,34 @@ export default function HomePage() {
     }
 
     return {
-      invoices: invoices.filter(i => new Date(i.createdAt) >= startDate),
-      tasks: tasks.filter(t => new Date(t.createdAt) >= startDate),
+      invoices: adminOwnInvoices.filter((i) => new Date(i.createdAt) >= startDate),
+      tasks: adminOwnTasks.filter((t) => new Date(t.createdAt) >= startDate),
     };
   };
 
   const { invoices: filteredInvoices, tasks: filteredTasks } = getFilteredData();
 
-  const totalClients = users.filter(u => u.role === "CLIENT").length;
+  const totalClients = adminOwnClientIds.length;
   const totalWorkers = users.filter(u => u.role === "WORKER").length;
-  const incompleteProfiles = users.filter(u => u.role === "CLIENT" && u.profileStatus === "INCOMPLETE").length;
+  const incompleteProfiles = users.filter(
+    (u) => u.role === "CLIENT" && u.referredById == null && u.profileStatus === "INCOMPLETE"
+  ).length;
   
-  const totalPaid = filteredInvoices.filter(i => i.status === "PAID").reduce((sum, i) => sum + i.amount, 0);
-  const totalPending = filteredInvoices.filter(i => i.status === "PENDING").reduce((sum, i) => sum + i.amount, 0);
+  const totalPaid = filteredInvoices.filter((i) => i.status === "PAID").reduce((sum, i) => sum + i.amount, 0);
+  const totalPending = filteredInvoices.filter((i) => i.status === "PENDING").reduce((sum, i) => sum + i.amount, 0);
   const totalRevenue = totalPaid + totalPending;
   
-  const completedTasks = filteredTasks.filter(t => t.status === "COMPLETED").length;
-  const activeTasks = filteredTasks.filter(t => t.status === "IN_PROGRESS").length;
-  const pendingTasks = filteredTasks.filter(t => t.status === "PENDING").length;
-  const pendingApproval = tasks.filter(t => t.status === "PENDING_APPROVAL").length;
+  const completedTasks = filteredTasks.filter((t) => t.status === "COMPLETED").length;
+  const activeTasks = filteredTasks.filter((t) => t.status === "IN_PROGRESS").length;
+  const pendingTasks = filteredTasks.filter((t) => t.status === "PENDING").length;
+  const pendingApproval = adminOwnTasks.filter((t) => t.status === "PENDING_APPROVAL").length;
 
-  const overdueInvoices = invoices.filter(i => 
-    i.status === "PENDING" && i.dueDate && new Date(i.dueDate) < new Date()
+  const overdueInvoices = adminOwnInvoices.filter(
+    (i) => i.status === "PENDING" && i.dueDate && new Date(i.dueDate) < new Date()
   );
 
-  const overdueTasks = tasks.filter(t => 
-    t.status !== "COMPLETED" && t.dueDate && new Date(t.dueDate) < new Date()
+  const overdueTasks = adminOwnTasks.filter(
+    (t) => t.status !== "COMPLETED" && t.dueDate && new Date(t.dueDate) < new Date()
   );
 
   const thirtyDaysFromNow = new Date();
@@ -346,7 +363,7 @@ export default function HomePage() {
               Admin <span className="text-[var(--color-text-muted)]">Analytics</span>
             </h1>
             <p className="mt-2 text-[var(--color-text-muted)]">
-              Real-time insights and company-wide analytics
+              Your own clients, revenue, and tasks (direct — not from EraSphere)
             </p>
           </div>
           <div className="flex gap-2">
@@ -656,7 +673,7 @@ export default function HomePage() {
           <div className={`p-6 ${cardClass}`}>
             <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Recent Activity</h3>
             <div className="space-y-3">
-              {invoices
+              {adminOwnInvoices
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 5)
                 .map((invoice) => (
@@ -681,7 +698,7 @@ export default function HomePage() {
                     </div>
                   </div>
                 ))}
-              {invoices.length === 0 && (
+              {adminOwnInvoices.length === 0 && (
                 <p className="py-8 text-sm text-center text-[var(--color-text-muted)]">No recent activity</p>
               )}
             </div>
@@ -726,13 +743,13 @@ export default function HomePage() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-[var(--color-text-muted)]">Invoice Collection</span>
                   <span className="text-sm font-bold text-amber-400">
-                    {invoices.filter((i) => i.status === "PAID").length}/{invoices.length}
+                    {adminOwnInvoices.filter((i) => i.status === "PAID").length}/{adminOwnInvoices.length}
                   </span>
                 </div>
                 <div className="w-full h-2 overflow-hidden rounded-full bg-[var(--color-surface-3)]">
                   <div
                     className="h-full transition-all duration-500 rounded-full bg-amber-500"
-                    style={{ width: `${invoices.length > 0 ? (invoices.filter((i) => i.status === "PAID").length / invoices.length) * 100 : 0}%` }}
+                    style={{ width: `${adminOwnInvoices.length > 0 ? (adminOwnInvoices.filter((i) => i.status === "PAID").length / adminOwnInvoices.length) * 100 : 0}%` }}
                   />
                 </div>
               </div>

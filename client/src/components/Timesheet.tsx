@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import API from "../api";
 import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT, CONTROL_TEXTAREA } from "./ui/controls";
 import { jsPDF } from "jspdf";
@@ -134,7 +135,7 @@ const Timesheets = () => {
 
   const createProject = async () => {
     if (!projectName.trim()) {
-      alert("Project name is required");
+      toast.error("Project name is required");
       return;
     }
 
@@ -152,13 +153,13 @@ const Timesheets = () => {
       fetchProjects();
     } catch (error) {
       console.error("Error creating project:", error);
-      alert("Failed to create project");
+      toast.error("Failed to create project");
     }
   };
 
   const addEntry = async (projectId: number) => {
     if (!entryDate || entryHours <= 0 || entryRate <= 0) {
-      alert("Please fill in all fields with valid values");
+      toast.error("Please fill in all fields with valid values");
       return;
     }
 
@@ -178,7 +179,7 @@ const Timesheets = () => {
       fetchProjects();
     } catch (error) {
       console.error("Error adding entry:", error);
-      alert("Failed to add entry");
+      toast.error("Failed to add entry");
     }
   };
 
@@ -284,7 +285,7 @@ const Timesheets = () => {
     const projectsToExport = projects.filter((p) => p.isPaid === isPaid);
 
     if (projectsToExport.length === 0) {
-      alert(`No ${isPaid ? "paid" : "pending"} projects to export`);
+      toast(`No ${isPaid ? "paid" : "pending"} projects to export`);
       return;
     }
 

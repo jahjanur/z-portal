@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 interface ClientFormProps {
   onSubmit: (data: {
@@ -15,9 +16,11 @@ interface ClientFormProps {
     sslExpiry?: string;
   }) => void;
   colors: { primary: string };
+  /** When true, domain & hosting section is hidden (e.g. for EraSphere) */
+  hideDomainAndHosting?: boolean;
 }
 
-const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
+const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAndHosting = false }) => {
   const [formData, setFormData] = useState({
     name: "",
     company: "",
@@ -36,7 +39,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
 
   const handleSubmit = () => {
     if (!formData.name || !formData.company || !formData.email || !formData.password || !formData.postalAddress) {
-      alert("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
     onSubmit(formData);
@@ -156,7 +159,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
           />
         </div>
 
-        {/* Toggle Hosting Button */}
+        {/* Toggle Hosting Button - hidden for EraSphere */}
+        {!hideDomainAndHosting && (
         <div className="pt-2">
           <button
             type="button"
@@ -184,10 +188,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors }) => {
             )}
           </button>
         </div>
+        )}
       </div>
 
-      {/* Domain & Hosting Fields (Optional) */}
-      {showHostingFields && (
+      {/* Domain & Hosting Fields (Optional) - hidden for EraSphere */}
+      {!hideDomainAndHosting && showHostingFields && (
         <div className="mt-4 rounded-xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)] p-5">
           <div className="mb-4 flex items-center justify-between">
             <h4 className="text-sm font-bold text-[var(--color-text-primary)]">Domain & Hosting Information</h4>

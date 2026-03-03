@@ -1,3 +1,6 @@
+import { useState } from "react";
+import Pagination from "../ui/Pagination";
+
 interface Invoice {
   id: number;
   invoiceNumber: string;
@@ -28,6 +31,11 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
   onRequestPayment,
   colors: _colors,
 }) => {
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  const totalPages = Math.ceil(invoices.length / PAGE_SIZE);
+  const paginatedInvoices = invoices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
       case "PAID":
@@ -67,7 +75,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
 
   return (
     <div className="space-y-3">
-      {invoices.map((inv) => {
+      {paginatedInvoices.map((inv) => {
         const overdue = isOverdue(inv.dueDate, inv.status);
         
         return (
@@ -226,6 +234,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
           </div>
         );
       })}
+      <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
     </div>
   );
 };

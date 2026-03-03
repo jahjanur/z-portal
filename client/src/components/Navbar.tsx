@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import { ThemeToggle } from "./ThemeToggle";
+import NotificationDropdown from "./NotificationDropdown";
 import logoLight from "../assets/Artboard 2.svg";
 import logoDark from "../assets/Artboard 2_1.svg";
 
@@ -23,13 +24,29 @@ const ADMIN_TABS = [
   { path: "timesheets", label: "Timesheets" },
 ];
 
+const ERASPHERE_TABS = [
+  { path: "erasphere-dashboard", label: "Dashboard" },
+  { path: "clients", label: "Clients" },
+  { path: "tasks", label: "Tasks" },
+];
+
+// Admin's EraSphere section: separate sub-tabs (not mixed with Workers/Clients/etc.)
+const ADMIN_ERASPHERE_TABS = [
+  { path: "analytics", label: "Analytics" },
+  { path: "partners", label: "Partners" },
+  { path: "clients", label: "Clients" },
+  { path: "tasks", label: "Tasks" },
+];
+
 export default function Navbar() {
   const { theme } = useTheme();
   const role = localStorage.getItem("role");
   const token = localStorage.getItem("token");
   const isAdmin = role === "ADMIN";
+  const isEraSphere = role === "ERASPHERE";
   const location = useLocation();
   const isAnalytics = location.pathname === "/";
+  const isOnEraSphereSection = role === "ADMIN" && (location.pathname === "/admin/erasphere" || location.pathname.startsWith("/admin/erasphere/"));
   const isDashboard = location.pathname === "/dashboard" || location.pathname.startsWith("/admin");
   const logoSrc = theme === "dark" ? logoDark : logoLight;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -67,7 +84,7 @@ export default function Navbar() {
                 />
               </Link>
 
-            {/* Desktop: Analytics + Dashboard */}
+            {/* Desktop: Analytics + Dashboard + EraSphere (admin only) */}
             <div className="items-center gap-1 shrink-0 hidden md:flex">
               {token && isAdmin && (
                 <Link
@@ -79,16 +96,24 @@ export default function Navbar() {
               )}
               {token && (
                 <Link
-                  to={isAdmin ? "/admin/workers" : "/dashboard"}
-                  className={`${navLinkBase} ${isDashboard ? navLinkActive : navLinkInactive}`}
+                  to={isAdmin ? "/admin/workers" : isEraSphere ? "/admin/erasphere-dashboard" : "/dashboard"}
+                  className={`${navLinkBase} ${isDashboard && !isOnEraSphereSection ? navLinkActive : navLinkInactive}`}
                 >
                   Dashboard
                 </Link>
               )}
+              {token && isAdmin && (
+                <Link
+                  to="/admin/erasphere"
+                  className={`${navLinkBase} ${isOnEraSphereSection ? navLinkActive : navLinkInactive}`}
+                >
+                  EraSphere
+                </Link>
+              )}
             </div>
 
-            {/* Desktop: Admin tabs */}
-            {token && isAdmin && (
+            {/* Desktop: Admin tabs (only when on Dashboard section, not EraSphere) */}
+            {token && isAdmin && !isOnEraSphereSection && (
               <div className="hidden md:flex items-center gap-1 min-w-0 overflow-x-auto overflow-y-hidden py-1" style={{ scrollbarWidth: "thin" }}>
                 {ADMIN_TABS.map(({ path, label }) => (
                   <NavLink
@@ -108,10 +133,55 @@ export default function Navbar() {
                 ))}
               </div>
             )}
+            {token && isAdmin && isOnEraSphereSection && (
+              <div className="hidden md:flex items-center gap-1 min-w-0 overflow-x-auto overflow-y-hidden py-1" style={{ scrollbarWidth: "thin" }}>
+                {ADMIN_ERASPHERE_TABS.map(({ path, label }) => (
+                  <NavLink
+                    key={path}
+                    to={`/admin/erasphere/${path}`}
+                    end={path === "analytics"}
+                    className={({ isActive }) =>
+                      `shrink-0 snap-start rounded-lg border px-3 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] ${
+                        isActive
+                          ? "border-[var(--color-border-hover)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)]"
+                          : "border-transparent text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
+                      }`
+                    }
+                  >
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
+            {token && isEraSphere && (
+              <div className="hidden md:flex items-center gap-1 min-w-0 overflow-x-auto overflow-y-hidden py-1" style={{ scrollbarWidth: "thin" }}>
+                {ERASPHERE_TABS.map(({ path, label }) => (
+                  <NavLink
+                    key={path}
+                    to={`/admin/${path}`}
+                    end={path === "erasphere-dashboard"}
+                    className={({ isActive }) =>
+                      `shrink-0 snap-start rounded-lg border px-3 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] ${
+                        isActive
+                          ? "border-[var(--color-border-hover)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)]"
+                          : "border-transparent text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
+                      }`
+                    }
+                  >
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Desktop: right side (theme + user + logout; on mobile only hamburger) */}
           <div className="flex items-center gap-3 shrink-0">
+            {token && (
+              <div className="hidden md:block">
+                <NotificationDropdown />
+              </div>
+            )}
             <div className="hidden md:block">
               <ThemeToggle />
             </div>
@@ -204,20 +274,22 @@ export default function Navbar() {
               )}
               {token && (
                 <Link
-                  to={isAdmin ? "/admin/workers" : "/dashboard"}
+                  to={isAdmin ? "/admin/workers" : isEraSphere ? "/admin/erasphere-dashboard" : "/dashboard"}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`${mobileLinkClass} ${isDashboard ? mobileLinkActive : mobileLinkInactive}`}
+                  className={`${mobileLinkClass} ${isDashboard && !isOnEraSphereSection ? mobileLinkActive : mobileLinkInactive}`}
                 >
                   Dashboard
                 </Link>
               )}
-              {token && isAdmin && (
+              {token && (isAdmin || isEraSphere) && (
                 <>
                   <div className="mx-4 mt-3 mb-1 border-t border-[var(--color-border)]" />
-                  <p className="px-4 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">Admin</p>
-                  {ADMIN_TABS.map(({ path, label }) => {
+                  <p className="px-4 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
+                    {isAdmin ? "Admin" : "EraSphere"}
+                  </p>
+                  {(isAdmin ? ADMIN_TABS : ERASPHERE_TABS).map(({ path, label }) => {
                     const to = `/admin/${path}`;
-                    const isActive = location.pathname === to || (path === "workers" && location.pathname === "/admin");
+                    const isActive = location.pathname === to || (path === "workers" && location.pathname === "/admin") || (path === "erasphere-dashboard" && location.pathname === "/admin");
                     return (
                       <Link
                         key={path}
@@ -229,9 +301,38 @@ export default function Navbar() {
                       </Link>
                     );
                   })}
+                  {token && isAdmin && (
+                    <Link
+                      to="/admin/erasphere"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`${mobileLinkClass} ${isOnEraSphereSection ? mobileLinkActive : mobileLinkInactive}`}
+                    >
+                      EraSphere
+                    </Link>
+                  )}
+                  {token && isAdmin && isOnEraSphereSection && ADMIN_ERASPHERE_TABS.map(({ path, label }) => {
+                    const to = `/admin/erasphere/${path}`;
+                    const isActive = location.pathname === to || (path === "analytics" && location.pathname === "/admin/erasphere");
+                    return (
+                      <Link
+                        key={path}
+                        to={to}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`${mobileLinkClass} ${isActive ? mobileLinkActive : mobileLinkInactive} pl-8`}
+                      >
+                        {label}
+                      </Link>
+                    );
+                  })}
                 </>
               )}
               <div className="mx-4 mt-3 mb-1 border-t border-[var(--color-border)]" />
+              {token && (
+                <div className="flex items-center justify-between px-4 py-2">
+                  <span className="text-sm text-[var(--color-text-muted)]">Notifications</span>
+                  <NotificationDropdown />
+                </div>
+              )}
               <div className="flex items-center justify-between px-4 py-2">
                 <span className="text-sm text-[var(--color-text-muted)]">Theme</span>
                 <ThemeToggle />

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { HexColorPicker } from "react-colorful";
 import API from "../api";
 
@@ -248,7 +249,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       },
     });
 
-    alert("Profile completed successfully! You can now log in.");
+    toast.success("Profile completed successfully! You can now log in.");
     navigate("/");
   } catch (err) {
     console.error("Error completing profile:", err);

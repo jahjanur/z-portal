@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT } from "../ui/controls";
 
 interface User {
@@ -28,7 +29,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients, colors }) 
     if (file) {
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
-        alert("File size must be less than 10MB");
+        toast.error("File size must be less than 10MB");
         return;
       }
       setSelectedFile(file);
@@ -41,7 +42,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients, colors }) 
 
   const handleSubmit = async (sendEmail: boolean) => {
     if (!formData.clientId || !formData.amount || !formData.dueDate) {
-      alert("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
