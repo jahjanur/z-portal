@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { CONTROL_INPUT } from "./controls";
 
 interface User {
@@ -15,6 +16,8 @@ interface WorkerMultiSelectProps {
   className?: string;
   /** If true, applying selection closes dropdown and no explicit Apply needed (e.g. for TaskForm). */
   autoApply?: boolean;
+  /** If true, dropdown is rendered in a portal with fixed position so it stays on top (use on task detail page). */
+  usePortal?: boolean;
 }
 
 const WorkerMultiSelect: React.FC<WorkerMultiSelectProps> = ({
@@ -24,24 +27,37 @@ const WorkerMultiSelect: React.FC<WorkerMultiSelectProps> = ({
   placeholder = "Assign workers (optional)",
   className = "",
   autoApply = true,
+  usePortal = false,
 }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [pending, setPending] = useState<number[]>(value);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [dropdownRect, setDropdownRect] = useState({ top: 0, left: 0, width: 0 });
 
   useEffect(() => {
     setPending(value);
   }, [value]);
 
+  useLayoutEffect(() => {
+    if (!open || !usePortal || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setDropdownRect({
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: Math.max(rect.width, 240),
+    });
+  }, [open, usePortal]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        if (!autoApply) {
-          setPending(value);
-        }
-        setOpen(false);
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      if ((e.target as Element)?.closest?.('[data-dropdown="worker-multiselect"]')) return;
+      if (!autoApply) {
+        setPending(value);
       }
+      setOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -75,6 +91,96 @@ const WorkerMultiSelect: React.FC<WorkerMultiSelectProps> = ({
 
   const selectedUsers = workers.filter((w) => value.includes(w.id));
 
+  const dropdownContent = (
+    <div
+      role="listbox"
+      data-dropdown="worker-multiselect"
+      className="min-w-[240px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-xl shadow-black/20"
+      style={
+        usePortal
+          ? {
+              position: "fixed",
+              top: dropdownRect.top,
+              left: dropdownRect.left,
+              width: dropdownRect.width,
+              zIndex: 9999,
+            }
+          : undefined
+      }
+    >
+      <div className="border-b border-[var(--color-border)] p-2">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search workers..."
+          className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-input-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)]"
+          autoFocus
+        />
+      </div>
+      <div className="max-h-48 overflow-y-auto p-1">
+        {filtered.length === 0 ? (
+          <p className="px-3 py-2 text-sm text-[var(--color-text-muted)]">No workers match</p>
+        ) : (
+          filtered.map((w) => {
+            const checked = pending.includes(w.id);
+            return (
+              <button
+                key={w.id}
+                type="button"
+                role="option"
+                aria-selected={checked}
+                onClick={() => toggle(w.id)}
+                className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--color-surface-3)]"
+              >
+                <span
+                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[var(--color-border)] ${
+                    checked ? "bg-[var(--color-text-primary)]" : "bg-transparent"
+                  }`}
+                >
+                  {checked && (
+                    <svg className="h-3 w-3 text-[var(--color-bg)]" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </span>
+                <span className="truncate text-[var(--color-text-primary)]">{w.name}</span>
+                {w.email && (
+                  <span className="truncate text-xs text-[var(--color-text-muted)]">{w.email}</span>
+                )}
+              </button>
+            );
+          })
+        )}
+      </div>
+      <div className="flex flex-col gap-2 border-t border-[var(--color-border)] p-2">
+        {!autoApply && (
+          <p className="text-center text-xs text-[var(--color-text-muted)]">
+            Click &quot;Assign selected&quot; to save
+          </p>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={handleClear}
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+          >
+            Clear
+          </button>
+          {!autoApply && (
+            <button
+              type="button"
+              onClick={handleApply}
+              className="btn-primary rounded-lg px-3 py-2 text-sm font-semibold"
+            >
+              Assign selected
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       <button
@@ -99,74 +205,10 @@ const WorkerMultiSelect: React.FC<WorkerMultiSelectProps> = ({
         </svg>
       </button>
 
-      {open && (
-        <div
-          className="absolute top-full left-0 z-50 mt-1 min-w-[240px] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-[var(--color-card-shadow)]"
-          role="listbox"
-        >
-          <div className="border-b border-[var(--color-border)] p-2">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search workers..."
-              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-input-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)]"
-              autoFocus
-            />
-          </div>
-          <div className="max-h-48 overflow-y-auto p-1">
-            {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-[var(--color-text-muted)]">No workers match</p>
-            ) : (
-              filtered.map((w) => {
-                const checked = pending.includes(w.id);
-                return (
-                  <button
-                    key={w.id}
-                    type="button"
-                    role="option"
-                    aria-selected={checked}
-                    onClick={() => toggle(w.id)}
-                    className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--color-surface-3)]"
-                  >
-                    <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[var(--color-border)] ${
-                        checked ? "bg-[var(--color-text-primary)]" : "bg-transparent"
-                      }`}
-                    >
-                      {checked && (
-                        <svg className="h-3 w-3 text-[var(--color-bg)]" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </span>
-                    <span className="truncate text-[var(--color-text-primary)]">{w.name}</span>
-                    {w.email && (
-                      <span className="truncate text-xs text-[var(--color-text-muted)]">{w.email}</span>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-          <div className="flex items-center justify-between gap-2 border-t border-[var(--color-border)] p-2">
-            <button
-              type="button"
-              onClick={handleClear}
-              className="rounded-lg px-3 py-1.5 text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
-            >
-              Clear
-            </button>
-            {!autoApply && (
-              <button
-                type="button"
-                onClick={handleApply}
-                className="btn-primary rounded-lg px-3 py-1.5 text-sm font-semibold"
-              >
-                Apply
-              </button>
-            )}
-          </div>
+      {open && usePortal && typeof document !== "undefined" && createPortal(dropdownContent, document.body)}
+      {open && !usePortal && (
+        <div className="absolute top-full left-0 z-[100] mt-1">
+          {dropdownContent}
         </div>
       )}
 

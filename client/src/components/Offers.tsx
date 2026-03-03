@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 import axios from "axios";
 import { generateOfferProposalPdf } from "../utils/pdf/generateOfferProposalPdf";
 import { TechStackSelector } from "./TechStackSelector";
@@ -57,7 +58,7 @@ const Offers: React.FC = () => {
 
   const sendOfferByEmail = async () => {
     if (!recipientEmail || !clientName || !pageTitle || !description) {
-      alert("Please fill in all required fields including email!");
+      toast.error("Please fill in all required fields including email!");
       return;
     }
     setLoading(true);
@@ -76,7 +77,7 @@ const Offers: React.FC = () => {
         })),
         totalPrice,
       });
-      alert("Offer PDF sent successfully!");
+      toast.success("Offer PDF sent successfully!");
       setClientName("");
       setRecipientEmail("");
       setPageTitle("");
@@ -85,7 +86,7 @@ const Offers: React.FC = () => {
       setProducts([{ id: "1", name: "", price: undefined, timeline: "", techStack: "" }]);
     } catch (err) {
       console.error("Error sending offer PDF:", err);
-      alert("Failed to send offer. Check console for details.");
+      toast.error("Failed to send offer. Check console for details.");
     } finally {
       setLoading(false);
     }
@@ -93,7 +94,7 @@ const Offers: React.FC = () => {
 
   const downloadPDF = async () => {
     if (!clientName || !pageTitle || !description) {
-      alert("Please fill in all required fields!");
+      toast.error("Please fill in all required fields!");
       return;
     }
     setLoading(true);
@@ -120,7 +121,7 @@ const Offers: React.FC = () => {
       });
     } catch (err) {
       console.error("Error downloading PDF:", err);
-      alert("Failed to download PDF. Check console for details.");
+      toast.error("Failed to download PDF. Check console for details.");
     } finally {
       setLoading(false);
     }

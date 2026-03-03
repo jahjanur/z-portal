@@ -92,6 +92,7 @@ const ClientDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "tasks" | "invoices" | "hosting">("overview");
+  const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
   
   // Files modal state
   const [showFilesModal, setShowFilesModal] = useState(false);
@@ -109,18 +110,17 @@ const ClientDetailPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await API.get(`/users/${id}`);
-      
       const [tasksRes, invoicesRes, domainsRes] = await Promise.all([
         API.get(`/tasks?clientId=${id}`),
         API.get(`/invoices?clientId=${id}`),
-        API.get(`/domains/client/${id}`)
+        ...(isEraSphere ? [Promise.resolve({ data: [] as Domain[] })] : [API.get(`/domains/client/${id}`)]),
       ]);
-      
+
       setClient({
         ...response.data,
         clientTasks: tasksRes.data,
         invoices: invoicesRes.data,
-        domains: domainsRes.data
+        domains: domainsRes?.data ?? [],
       });
       setError(null);
     } catch (err) {
@@ -440,7 +440,7 @@ const fetchAllFiles = async () => {
         {/* Tabs */}
         <div className="mb-6">
           <div className="flex w-fit gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
-            {(["overview", "tasks", "invoices", "hosting"] as const).map((tab) => (
+            {(["overview", "tasks", "invoices", ...(isEraSphere ? [] : ["hosting"])] as const).map((tab) => (
               <button
                 key={tab}
                 type="button"

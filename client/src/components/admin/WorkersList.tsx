@@ -7,6 +7,7 @@ interface User {
 interface WorkersListProps {
   workers: User[];
   onDelete: (id: number) => void;
+  canDelete?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -19,7 +20,7 @@ function getInitials(name: string): string {
     .slice(0, 2) || "?";
 }
 
-const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete }) => {
+const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete, canDelete = true }) => {
   return (
     <div className="space-y-2">
       {workers.map((w) => (
@@ -36,6 +37,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete }) => {
               <p className="text-sm text-[var(--color-text-muted)] break-all">{w.email}</p>
             </div>
           </div>
+          {canDelete && (
           <div className="flex flex-wrap gap-2 justify-start shrink-0 sm:justify-end">
             <button
               onClick={() => onDelete(w.id)}
@@ -44,6 +46,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete }) => {
               Delete
             </button>
           </div>
+          )}
         </div>
       ))}
     </div>

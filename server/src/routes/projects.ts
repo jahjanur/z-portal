@@ -1,11 +1,11 @@
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import prisma from "../lib/prisma";
+import { verifyJWT, verifyAdminOrEraSphere } from "../middleware/auth";
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET /api/projects - Get all projects (for tasks)
-router.get("/", async (req, res) => {
+router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
   try {
     const projects = await prisma.project.findMany({
       include: {
@@ -38,7 +38,7 @@ router.get("/", async (req, res) => {
 });
 
 // GET /api/projects/:id - Get single project
-router.get("/:id", async (req, res) => {
+router.get("/:id", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -55,10 +55,14 @@ router.get("/:id", async (req, res) => {
         },
         tasks: {
           include: {
-            worker: {
-              select: {
-                id: true,
-                name: true,
+            workers: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -79,7 +83,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /api/projects - Create new project
-router.post("/", async (req, res) => {
+router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
   try {
     const { name, description, clientId, startDate, endDate } = req.body;
 
@@ -114,7 +118,7 @@ router.post("/", async (req, res) => {
 });
 
 // PATCH /api/projects/:id - Update project
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, status, clientId, startDate, endDate } = req.body;
@@ -150,7 +154,7 @@ router.patch("/:id", async (req, res) => {
 });
 
 // DELETE /api/projects/:id - Delete project
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -177,7 +181,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 // PATCH /api/projects/:id/status - Update project status
-router.patch("/:id/status", async (req, res) => {
+router.patch("/:id/status", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;

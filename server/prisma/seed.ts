@@ -45,6 +45,7 @@ async function main() {
     { email: 'admin@test.com', password: 'admin123', role: 'ADMIN', name: 'Admin User' },
     { email: 'worker1@test.com', password: 'worker123', role: 'WORKER', name: 'John Worker' },
     { email: 'worker2@test.com', password: 'worker456', role: 'WORKER', name: 'Jane Developer' },
+    { email: 'erasphere@test.com', password: 'erasphere123', role: 'ERASPHERE', name: 'EraSphere Partner', company: 'EraSphere Demo Co', profileStatus: 'COMPLETE' },
     { email: 'client1@test.com', password: 'client123', role: 'CLIENT', name: 'Sarah Johnson', company: 'TechCorp Inc', logo: 'https://via.placeholder.com/150', colorHex: '#FF6B6B', postalAddress: '123 Business St, Suite 100', profileStatus: 'INCOMPLETE' },
     { email: 'client2@test.com', password: 'client456', role: 'CLIENT', name: 'Michael Brown', company: 'StartupXYZ', logo: 'https://via.placeholder.com/150', colorHex: '#4ECDC4', postalAddress: '456 Innovation Ave', address: '456 Innovation Ave, Floor 3', phoneNumber: '+1-555-0123', extraEmails: 'support@startupxyz.com, info@startupxyz.com', brandPattern: '#4ECDC4, #44A08D', shortInfo: 'A cutting-edge startup focused on AI solutions', profileStatus: 'COMPLETE' },
     { email: 'client3@test.com', password: 'client789', role: 'CLIENT', name: 'Emily Davis', company: 'DesignHub', logo: 'https://via.placeholder.com/150', colorHex: '#95E1D3', postalAddress: '789 Creative Blvd', profileStatus: 'INCOMPLETE' },
@@ -90,8 +91,10 @@ async function main() {
         description: t.description,
         status: t.status,
         clientId: t.client.id,
-        workerId: t.worker.id,
         dueDate: t.dueDate,
+        workers: {
+          create: { userId: t.worker.id },
+        },
       },
     });
     tasks.push(task);

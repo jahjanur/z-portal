@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import API from "../api";
 
 interface Client {
@@ -43,10 +44,10 @@ export default function ClientsList() {
     setSendingInviteId(clientId);
     try {
       await API.post(`/users/${clientId}/resend-invite`);
-      alert("Invite sent successfully!");
+      toast.success("Invite sent successfully!");
     } catch (err) {
       console.error("Error resending invite:", err);
-      alert("Failed to send invite.");
+      toast.error("Failed to send invite.");
     } finally {
       setSendingInviteId(null);
     }

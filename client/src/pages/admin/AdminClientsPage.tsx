@@ -16,13 +16,18 @@ export default function AdminClientsPage() {
     resendInvite,
   } = useAdmin();
   const [showCompletedProfiles, setShowCompletedProfiles] = useState(false);
+  const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
 
   return (
     <div className="mx-auto max-w-[1200px]">
-      <ClientSearch clients={clients} onDelete={deleteUser} colors={colors} />
       <div className="mt-6 rounded-2xl card-panel p-6 shadow-xl backdrop-blur-xl">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Clients Management</h2>
-        <ClientForm onSubmit={createClient} colors={colors} />
+        <ClientForm onSubmit={createClient} colors={colors} hideDomainAndHosting={isEraSphere} />
+
+        <div className="mt-8">
+          <h3 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">Search clients</h3>
+          <ClientSearch clients={clients} onDelete={deleteUser} colors={colors} />
+        </div>
 
         <div className="mt-8">
           <h3 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import API from "../api";
 
 export interface User {
@@ -13,6 +14,7 @@ export interface User {
   postalAddress?: string;
   address?: string;
   phoneNumber?: string;
+  referredById?: number;
 }
 
 export interface Project {
@@ -88,7 +90,7 @@ interface AdminContextValue {
   paidInvoices: Invoice[];
   fetchAll: () => Promise<void>;
   fetchProjects: () => Promise<void>;
-  createWorker: (data: { email: string; password: string; name: string }) => Promise<unknown>;
+  createWorker: (data: { email: string; password: string; name: string; role?: string; company?: string }) => Promise<unknown>;
   deleteUser: (id: number) => Promise<void>;
   createClient: (data: { name: string; company: string; email: string; password: string; colorHex: string }) => void;
   resendInvite: (clientId: number) => Promise<void>;
@@ -120,28 +122,37 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const fetchAll = async () => {
     setLoading(true);
     setError(null);
+    const role = localStorage.getItem("role");
+    const isAdmin = role === "ADMIN";
+    const isEraSphere = role === "ERASPHERE";
     try {
-      const [usersRes, tasksRes, invoicesRes] = await Promise.all([
+      const [usersRes, tasksRes] = await Promise.all([
         API.get("/users"),
         API.get("/tasks"),
-        API.get("/invoices"),
       ]);
       const allUsers = usersRes.data;
       const clientUsers = allUsers.filter((u: User) => u.role === "CLIENT");
       setClients(clientUsers);
-      setWorkers(allUsers.filter((u: User) => u.role === "WORKER"));
+      setWorkers(isEraSphere ? [] : allUsers.filter((u: User) => u.role === "WORKER"));
       setTasks(tasksRes.data);
-      setInvoices(invoicesRes.data);
-      const allDomains: Domain[] = [];
-      for (const client of clientUsers) {
-        try {
-          const domainRes = await API.get(`/domains/client/${client.id}`);
-          allDomains.push(...domainRes.data);
-        } catch {
-          // skip
+
+      if (isAdmin) {
+        const invoicesRes = await API.get("/invoices");
+        setInvoices(invoicesRes.data);
+        const allDomains: Domain[] = [];
+        for (const client of clientUsers) {
+          try {
+            const domainRes = await API.get(`/domains/client/${client.id}`);
+            allDomains.push(...domainRes.data);
+          } catch {
+            // skip
+          }
         }
+        setDomains(allDomains);
+      } else {
+        setInvoices([]);
+        setDomains([]);
       }
-      setDomains(allDomains);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch data");
     } finally {
@@ -173,8 +184,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const pendingInvoices = invoices.filter((i) => i.status === "PENDING");
   const paidInvoices = invoices.filter((i) => i.status === "PAID");
 
-  const createWorker = async (data: { email: string; password: string; name: string }) => {
-    const res = await API.post("/users", { ...data, role: "WORKER" });
+  const createWorker = async (data: { email: string; password: string; name: string; role?: string; company?: string }) => {
+    const res = await API.post("/users", { ...data, role: data.role || "WORKER" });
     await fetchAll();
     return res.data;
   };
@@ -191,7 +202,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const resendInvite = async (clientId: number) => {
     await API.post(`/users/${clientId}/resend-invite`);
-    alert("Invite sent successfully!");
+    toast.success("Invite sent successfully!");
   };
 
   const createTask = async (data: { title: string; description: string; clientId: string; workerIds: number[]; dueDate: string; projectId: string }) => {
@@ -239,7 +250,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       hostingExpiry: data.hostingExpiry || null,
     });
     await fetchAll();
-    alert("Domain added successfully!");
+    toast.success("Domain added successfully!");
   };
 
   const updateDomain = async (domainId: number, data: { domainName: string; domainExpiry?: string; hostingPlan?: string; hostingExpiry?: string; notes?: string }) => {
@@ -251,14 +262,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     });
     setEditingDomain(null);
     await fetchAll();
-    alert("Domain updated successfully!");
+    toast.success("Domain updated successfully!");
   };
 
   const deleteDomain = async (id: number) => {
     if (!confirm("Are you sure you want to delete this domain?")) return;
     await API.delete(`/domains/${id}`);
     await fetchAll();
-    alert("Domain deleted successfully!");
+    toast.success("Domain deleted successfully!");
   };
 
   const handleEditDomain = (domain: Domain) => {

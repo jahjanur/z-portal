@@ -9,6 +9,8 @@ import ProjectCard from "./user/ProjectCard";
 import InvoiceCard from "./user/InvoiceCard";
 import FileCard from "./user/FileCard";
 import FilesBySection from "./user/FilesSection";
+import Pagination from "./ui/Pagination";
+import { useNotifications } from "../hooks/useNotifications";
 import { getStatusColor, formatDate, formatCurrency, getDaysUntilDue } from "../utils";
 
 interface Worker {
@@ -65,8 +67,11 @@ const colors = {
   dark: "#1A1A2E",
 };
 
+const PAGE_SIZE = 10;
+
 const RoleUser: React.FC = () => {
   const navigate = useNavigate();
+  const { notifications, unreadCount, markRead, fetchNotifications } = useNotifications();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
@@ -75,9 +80,12 @@ const RoleUser: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"overview" | "tasks" | "invoices" | "files" | "domains">("overview");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [taskPage, setTaskPage] = useState(1);
+  const [invoicePage, setInvoicePage] = useState(1);
 
   useEffect(() => {
     fetchAll();
+    fetchNotifications();
   }, []);
 
 const fetchAll = async () => {
@@ -90,18 +98,12 @@ const fetchAll = async () => {
       throw new Error("User ID not found. Please login again.");
     }
 
-    console.log("🔍 Fetching data for userId:", userId);
-
     const [tasksRes, invoicesRes, domainsRes] = await Promise.all([
       API.get<Task[]>("/tasks"),
       API.get<Invoice[]>("/invoices"),
       API.get<Domain[]>(`/domains/client/${userId}`),
     ]);
-    
-    console.log("✅ Tasks:", tasksRes.data.length);
-    console.log("✅ Invoices:", invoicesRes.data.length);
-    console.log("✅ Domains:", domainsRes.data.length, domainsRes.data);
-    
+
     setTasks(Array.isArray(tasksRes.data) ? tasksRes.data : []);
     setInvoices(Array.isArray(invoicesRes.data) ? invoicesRes.data : []);
     setDomains(Array.isArray(domainsRes.data) ? domainsRes.data : []);
@@ -123,6 +125,12 @@ const fetchAll = async () => {
   const totalPaid = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
   const totalPending = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
   const totalInvoiced = invoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const overdueInvoices = invoices.filter(i => {
+    if (i.status?.toUpperCase() === "PAID") return false;
+    if (!i.dueDate) return false;
+    return new Date(i.dueDate) < new Date();
+  });
+  const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0);
 
   const activeDomains = domains.filter(d => d.isActive);
   const primaryDomain = domains.find(d => d.isPrimary);
@@ -138,11 +146,24 @@ const fetchAll = async () => {
     return matchesStatus && matchesSearch;
   });
 
+  const taskTotalPages = Math.ceil(filteredTasks.length / PAGE_SIZE);
+  const paginatedTasks = filteredTasks.slice((taskPage - 1) * PAGE_SIZE, taskPage * PAGE_SIZE);
+
   const filteredInvoices = invoices.filter(invoice => {
-    const matchesStatus = statusFilter === "ALL" || invoice.status?.toUpperCase() === statusFilter;
+    let matchesStatus = false;
+    if (statusFilter === "ALL") {
+      matchesStatus = true;
+    } else if (statusFilter === "OVERDUE") {
+      matchesStatus = invoice.status?.toUpperCase() !== "PAID" && !!invoice.dueDate && new Date(invoice.dueDate) < new Date();
+    } else {
+      matchesStatus = invoice.status?.toUpperCase() === statusFilter;
+    }
     const matchesSearch = invoice.invoiceNumber?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
+
+  const invoiceTotalPages = Math.ceil(filteredInvoices.length / PAGE_SIZE);
+  const paginatedInvoices = filteredInvoices.slice((invoicePage - 1) * PAGE_SIZE, invoicePage * PAGE_SIZE);
 
   const filteredDomains = domains.filter(domain => {
     const matchesSearch = domain.domainName?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -217,6 +238,8 @@ const fetchAll = async () => {
                   setActiveTab(tab);
                   setStatusFilter("ALL");
                   setSearchQuery("");
+                  setTaskPage(1);
+                  setInvoicePage(1);
                 }}
                 className={`px-6 py-3 text-sm font-semibold rounded-full transition-all ${
                   activeTab === tab
@@ -282,6 +305,75 @@ const fetchAll = async () => {
                 iconBgColor="rgba(255,255,255,0.1)"
                 valueColor="rgba(255,255,255,0.9)"
               />
+            </div>
+
+            {/* Invoice Summary + Notifications Row */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {/* Invoice Summary */}
+              <div className={cardClass}>
+                <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Invoice Summary</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between rounded-lg bg-[var(--color-surface-3)] px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
+                      <span className="text-sm text-[var(--color-text-secondary)]">Paid</span>
+                    </div>
+                    <span className="text-sm font-bold text-green-500">{formatCurrency(totalPaid)}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg bg-[var(--color-surface-3)] px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                      <span className="text-sm text-[var(--color-text-secondary)]">Pending</span>
+                    </div>
+                    <span className="text-sm font-bold text-amber-500">{formatCurrency(totalPending)}</span>
+                  </div>
+                  {overdueInvoices.length > 0 && (
+                    <div className="flex items-center justify-between rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                        <span className="text-sm font-medium text-red-400">Overdue ({overdueInvoices.length})</span>
+                      </div>
+                      <span className="text-sm font-bold text-red-400">{formatCurrency(totalOverdue)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Recent Notifications */}
+              <div className={cardClass}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Recent Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-red-500 px-2 text-xs font-bold text-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  {notifications.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-[var(--color-text-muted)]">No notifications yet</p>
+                  ) : (
+                    notifications.slice(0, 5).map((n) => (
+                      <button
+                        key={n.id}
+                        type="button"
+                        onClick={() => { if (!n.read) markRead(n.id); }}
+                        className={`flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-surface-3)] ${
+                          !n.read ? "bg-[var(--color-surface-3)]/50" : ""
+                        }`}
+                      >
+                        {!n.read && <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm ${!n.read ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
+                            {n.title}
+                          </p>
+                          <p className="mt-0.5 text-xs text-[var(--color-text-muted)] truncate">{n.message}</p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Progress Chart */}
@@ -374,7 +466,7 @@ const fetchAll = async () => {
                 {["ALL", "PENDING", "IN_PROGRESS", "COMPLETED"].map((status) => (
                   <button
                     key={status}
-                    onClick={() => setStatusFilter(status)}
+                    onClick={() => { setStatusFilter(status); setTaskPage(1); }}
                     className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
                       statusFilter === status
                         ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
@@ -389,7 +481,7 @@ const fetchAll = async () => {
                 type="text"
                 placeholder="Search projects..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setTaskPage(1); }}
                 className="rounded-lg input-dark rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
               />
             </div>
@@ -409,7 +501,7 @@ const fetchAll = async () => {
                   <p className="text-sm text-[var(--color-text-muted)]">Try adjusting your filters</p>
                 </div>
               ) : (
-                filteredTasks.map((task) => (
+                paginatedTasks.map((task) => (
                   <ProjectCard
                     key={task.id}
                     task={task}
@@ -422,6 +514,7 @@ const fetchAll = async () => {
                 ))
               )}
             </div>
+            <Pagination currentPage={taskPage} totalPages={taskTotalPages} onPageChange={setTaskPage} />
           </div>
         )}
 
@@ -431,10 +524,10 @@ const fetchAll = async () => {
             {/* Filters */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex flex-wrap gap-2">
-                {["ALL", "PENDING", "PAID"].map((status) => (
+                {["ALL", "PENDING", "PAID", "OVERDUE"].map((status) => (
                   <button
                     key={status}
-                    onClick={() => setStatusFilter(status)}
+                    onClick={() => { setStatusFilter(status); setInvoicePage(1); }}
                     className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
                       statusFilter === status
                         ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
@@ -449,7 +542,7 @@ const fetchAll = async () => {
                 type="text"
                 placeholder="Search invoices..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => { setSearchQuery(e.target.value); setInvoicePage(1); }}
                 className="rounded-lg input-dark rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
               />
             </div>
@@ -469,7 +562,7 @@ const fetchAll = async () => {
                   <p className="text-sm text-[var(--color-text-muted)]">Try adjusting your filters</p>
                 </div>
               ) : (
-                filteredInvoices.map((invoice) => (
+                paginatedInvoices.map((invoice) => (
                   <InvoiceCard
                     key={invoice.id}
                     invoice={invoice}
@@ -482,6 +575,7 @@ const fetchAll = async () => {
                 ))
               )}
             </div>
+            <Pagination currentPage={invoicePage} totalPages={invoiceTotalPages} onPageChange={setInvoicePage} />
 
             {/* Invoice Summary */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

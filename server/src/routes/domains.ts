@@ -1,12 +1,11 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { verifyJWT, verifyAdmin } from "../middleware/auth";
+import prisma from "../lib/prisma";
 
 const router = Router();
-const prisma = new PrismaClient();
 
-// get all domains
-router.get("/client/:clientId", verifyJWT, async (req, res) => {
+// get all domains for a client (admin only; EraSphere cannot access domain/hosting)
+router.get("/client/:clientId", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const { clientId } = req.params;
     
@@ -34,8 +33,8 @@ router.get("/client/:clientId", verifyJWT, async (req, res) => {
   }
 });
 
-// get one domain
-router.get("/:id", verifyJWT, async (req, res) => {
+// get one domain (admin only)
+router.get("/:id", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const domain = await prisma.domain.findUnique({
       where: { id: Number(req.params.id) },

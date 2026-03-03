@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Pagination from "../ui/Pagination";
 
 interface User {
   name: string;
@@ -29,11 +30,14 @@ interface TasksListProps {
   colors: { primary: string };
 }
 
+const PAGE_SIZE = 10;
+
 const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"all" | "grouped">("all");
   const [filter, setFilter] = useState<"all" | "withProject" | "standalone">("all");
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
   const effectiveViewMode = filter === "withProject" ? "grouped" : viewMode;
 
   const getStatusColor = (status: string) => {
@@ -69,8 +73,15 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
     return true;
   });
 
+  const totalPages = Math.ceil(filteredTasks.length / PAGE_SIZE);
+  const paginatedTasks = filteredTasks.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
   const groupedTasks = effectiveViewMode === "grouped"
-    ? filteredTasks.reduce((acc, task) => {
+    ? paginatedTasks.reduce((acc, task) => {
         const key = task.projectId ? `project-${task.projectId}` : 'standalone';
         if (!acc[key]) {
           acc[key] = {
@@ -332,11 +343,12 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
           </div>
         ) : (
           <ul className="space-y-2" aria-label="All tasks">
-            {filteredTasks.map((task) => (
+            {paginatedTasks.map((task) => (
               <TaskCard key={task.id} task={task} />
             ))}
           </ul>
         )}
+        <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
     </section>
   );

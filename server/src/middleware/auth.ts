@@ -24,3 +24,10 @@ export function verifyAdmin(req: AuthRequest, res: Response, next: NextFunction)
   if (req.user?.role !== "ADMIN") return res.status(403).json({ message: "Forbidden" });
   next();
 }
+
+export function verifyAdminOrEraSphere(req: AuthRequest, res: Response, next: NextFunction) {
+  if (req.user?.role !== "ADMIN" && req.user?.role !== "ERASPHERE") {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+  next();
+}

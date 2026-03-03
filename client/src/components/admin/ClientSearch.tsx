@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import API from "../../api";
 
 interface User {
@@ -32,10 +33,10 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
     setResendingId(clientId);
     try {
       await API.post(`/users/${clientId}/resend-invite`);
-      alert(`Invite email sent successfully to ${email}`);
+      toast.success(`Invite email sent successfully to ${email}`);
     } catch (error) {
       console.error("Error resending invite:", error);
-      alert("Failed to resend invite. Please try again.");
+      toast.error("Failed to resend invite. Please try again.");
     } finally {
       setResendingId(null);
     }

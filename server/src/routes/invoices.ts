@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { verifyJWT } from "../middleware/auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import nodemailer from "nodemailer";
 import { notifyNewInvoice, notifyInvoicePaid } from "../services/notifications";
+import { createNotification } from "../services/notificationStore";
+import prisma from "../lib/prisma";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 const invoicesDir = "uploads/invoices";
 if (!fs.existsSync(invoicesDir)) {
@@ -80,7 +80,7 @@ router.get("/", verifyJWT, async (req: any, res) => {
       });
     } else if (role === "WORKER") {
       const tasks = await prisma.task.findMany({
-        where: { workerId: userId },
+        where: { workers: { some: { userId } } },
         select: { clientId: true }
       });
       const clientIds = [...new Set(tasks.map(t => t.clientId))];
@@ -155,7 +155,7 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
     if (role === "WORKER") {
       const hasTask = await prisma.task.findFirst({
         where: {
-          workerId: userId,
+          workers: { some: { userId } },
           clientId: invoice.clientId
         }
       });
@@ -218,6 +218,15 @@ router.post("/", verifyJWT, uploadInvoice.single("file"), async (req: any, res) 
         }
       }
     });
+
+    // In-app notification for the client
+    await createNotification(
+      Number(clientId),
+      "INVOICE_CREATED",
+      "New Invoice",
+      `Invoice ${invoiceNumber} for $${parseFloat(amount).toFixed(2)} has been created`,
+      "/dashboard"
+    );
 
     if (sendEmail === 'true') {
       try {
@@ -420,6 +429,25 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
         email: updatedInvoice.client.email,
         name: updatedInvoice.client.name
       });
+      // Notify client that invoice is paid
+      await createNotification(
+        updatedInvoice.clientId,
+        "INVOICE_PAID",
+        "Invoice Paid",
+        `Invoice ${updatedInvoice.invoiceNumber} has been marked as paid`,
+        "/dashboard"
+      );
+      // Notify admins
+      const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
+      for (const admin of admins) {
+        await createNotification(
+          admin.id,
+          "INVOICE_PAID",
+          "Invoice Paid",
+          `Invoice ${updatedInvoice.invoiceNumber} ($${updatedInvoice.amount.toFixed(2)}) has been paid`,
+          "/admin/invoices"
+        );
+      }
     }
 
     res.json(updatedInvoice);

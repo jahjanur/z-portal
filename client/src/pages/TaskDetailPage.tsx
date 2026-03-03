@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import API from "../api";
 import AdminStatusControls from "../components/taskdetail/AdminStatusControls";
 import WorkerStatusControls from "../components/taskdetail/WorkerStatusControls";
@@ -120,7 +121,7 @@ const TaskDetailPage: React.FC = () => {
       fetchTask();
     } catch (err) {
       console.error("Error updating status:", err);
-      alert("Failed to update status");
+      toast.error("Failed to update status");
     }
   };
 
@@ -128,10 +129,11 @@ const TaskDetailPage: React.FC = () => {
     try {
       setSavingWorkers(true);
       await API.put(`/tasks/${id}`, { workerIds });
+      toast.success("Workers assigned successfully");
       fetchTask();
     } catch (err) {
       console.error("Error updating workers:", err);
-      alert("Failed to update assignment");
+      toast.error("Failed to update assignment");
     } finally {
       setSavingWorkers(false);
     }
@@ -151,10 +153,10 @@ const TaskDetailPage: React.FC = () => {
       });
       
       fetchTask();
-      alert("Completion request submitted! Waiting for admin approval.");
+      toast.success("Completion request submitted! Waiting for admin approval.");
     } catch (err) {
       console.error("Error requesting completion:", err);
-      alert("Failed to request completion");
+      toast.error("Failed to request completion");
     }
   };
 
@@ -172,7 +174,7 @@ const TaskDetailPage: React.FC = () => {
       fetchTask();
     } catch (err) {
       console.error("Error approving completion:", err);
-      alert("Failed to approve completion");
+      toast.error("Failed to approve completion");
     }
   };
 
@@ -189,7 +191,7 @@ const TaskDetailPage: React.FC = () => {
       fetchTask();
     } catch (err) {
       console.error("Error adding comment:", err);
-      alert("Failed to add comment");
+      toast.error("Failed to add comment");
     } finally {
       setAddingComment(false);
     }
@@ -209,7 +211,7 @@ const TaskDetailPage: React.FC = () => {
       fetchTask();
     } catch (err) {
       console.error("Error adding file comment:", err);
-      alert("Failed to add comment");
+      toast.error("Failed to add comment");
     } finally {
       setAddingFileComment({ ...addingFileComment, [fileId]: false });
     }
@@ -217,7 +219,7 @@ const TaskDetailPage: React.FC = () => {
 
   const uploadFile = async () => {
     if (!selectedFile) {
-      alert("Please select a file");
+      toast.error("Please select a file");
       return;
     }
 
@@ -239,10 +241,10 @@ const TaskDetailPage: React.FC = () => {
       setFileCaption("");
       setFileType("screenshot");
       fetchTask();
-      alert("File uploaded successfully!");
+      toast.success("File uploaded successfully!");
     } catch (err) {
       console.error("Error uploading file:", err);
-      alert("Failed to upload file");
+      toast.error("Failed to upload file");
     } finally {
       setUploadingFile(false);
     }
@@ -353,6 +355,7 @@ const TaskDetailPage: React.FC = () => {
                     onChange={(ids) => updateWorkers(ids)}
                     placeholder="Select workers..."
                     autoApply={false}
+                    usePortal
                   />
                   {savingWorkers && (
                     <p className="mt-1 text-xs text-[var(--color-text-muted)]">Saving...</p>

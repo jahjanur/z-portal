@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
 import { verifyJWT } from "../middleware/auth";
 import multer from "multer";
 import path from "path";
 import { notifyNewTask, notifyTaskPendingApproval, notifyTaskCompleted } from "../services/notifications";
+import { createNotification, notifyAdmins } from "../services/notificationStore";
+import prisma from "../lib/prisma";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -41,17 +41,18 @@ router.get("/", verifyJWT, async (req: any, res) => {
           }
         };
     if (role === "ADMIN") {
-      tasks = await prisma.task.findMany({ 
-        include: { 
+      tasks = await prisma.task.findMany({
+        include: {
           client: {
             select: {
               id: true,
               email: true,
               name: true,
               company: true,
-              role: true
+              role: true,
+              referredById: true,
             }
-          }, 
+          },
           ...workersInclude,
           project: {
             select: {
@@ -62,7 +63,36 @@ router.get("/", verifyJWT, async (req: any, res) => {
           },
           files: true,
           comments: true
-        } 
+        }
+      });
+    } else if (role === "ERASPHERE") {
+      const referredClientIds = await prisma.user.findMany({
+        where: { role: "CLIENT", referredById: userId },
+        select: { id: true },
+      }).then((rows) => rows.map((r) => r.id));
+      tasks = await prisma.task.findMany({
+        where: { clientId: { in: referredClientIds } },
+        include: {
+          client: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              company: true,
+              role: true
+            }
+          },
+          ...workersInclude,
+          project: {
+            select: {
+              id: true,
+              name: true,
+              description: true
+            }
+          },
+          files: true,
+          comments: true
+        }
       });
     } else if (role === "WORKER") {
       tasks = await prisma.task.findMany({ 
@@ -131,7 +161,8 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
             email: true,
             name: true,
             company: true,
-            role: true
+            role: true,
+            referredById: true,
           }
         },
         workers: {
@@ -210,12 +241,12 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
 router.post("/", verifyJWT, async (req: any, res) => {
   try {
     const { role } = req.user;
-    if (role !== "ADMIN") {
-      return res.status(403).json({ error: "Only admins can create tasks" });
+    if (role !== "ADMIN" && role !== "ERASPHERE") {
+      return res.status(403).json({ error: "Only admins or EraSphere can create tasks" });
     }
 
     const { title, description, clientId, workerIds, status, dueDate, projectId } = req.body;
-    const workerIdList = Array.isArray(workerIds) ? workerIds : [];
+    const workerIdList = role === "ADMIN" && Array.isArray(workerIds) ? workerIds : [];
 
     if (!title || !clientId) {
       return res.status(400).json({ error: "Title and clientId are required" });
@@ -292,6 +323,40 @@ router.post("/", verifyJWT, async (req: any, res) => {
 
     for (const tw of task.workers) {
       await notifyNewTask(task, { email: tw.user.email, name: tw.user.name });
+      await createNotification(
+        tw.user.id,
+        "TASK_ASSIGNED",
+        "New Task Assigned",
+        `You have been assigned to task: "${task.title}"`,
+        `/tasks/${task.id}`
+      );
+    }
+
+    // Notify client about the new task
+    await createNotification(
+      clientId,
+      "TASK_CREATED",
+      "New Task Created",
+      `A new task "${task.title}" has been created for you`,
+      `/tasks/${task.id}`
+    );
+
+    if (req.user?.role === "ERASPHERE") {
+      try {
+        const partner = await prisma.user.findUnique({
+          where: { id: req.user.userId },
+          select: { name: true },
+        });
+        const clientName = task.client?.name ?? task.client?.company ?? "client";
+        await notifyAdmins(
+          "ERASPHERE_NEW_TASK",
+          "EraSphere added a task",
+          `${partner?.name ?? "EraSphere partner"} added task "${task.title}" for ${clientName}`,
+          "/admin/tasks"
+        );
+      } catch (err) {
+        console.error("Failed to notify admins of new EraSphere task:", err);
+      }
     }
 
     res.status(201).json(task);
@@ -323,6 +388,9 @@ router.patch("/:id/status", verifyJWT, async (req: any, res) => {
     }
     if (role === "CLIENT") {
       return res.status(403).json({ error: "Clients cannot update task status" });
+    }
+    if (role !== "ADMIN" && role !== "WORKER" && role !== "ERASPHERE") {
+      return res.status(403).json({ error: "Not authorized to update this task" });
     }
 
     const updatedTask = await prisma.task.update({
@@ -365,10 +433,28 @@ router.patch("/:id/status", verifyJWT, async (req: any, res) => {
         for (const tw of existingTask.workers) {
           await notifyTaskPendingApproval(updatedTask, { name: tw.user.name });
         }
+        // Notify admins that task is pending approval
+        const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
+        for (const admin of admins) {
+          await createNotification(
+            admin.id,
+            "TASK_PENDING_APPROVAL",
+            "Task Pending Approval",
+            `Task "${updatedTask.title}" is pending your approval`,
+            `/tasks/${taskId}`
+          );
+        }
       } else if (status === 'COMPLETED') {
         const recipients: { email: string; name: string; role: string }[] = [];
         for (const tw of existingTask.workers) {
           recipients.push({ email: tw.user.email, name: tw.user.name, role: 'WORKER' });
+          await createNotification(
+            tw.userId,
+            "TASK_COMPLETED",
+            "Task Completed",
+            `Task "${updatedTask.title}" has been marked as completed`,
+            `/tasks/${taskId}`
+          );
         }
         if (updatedTask.client) {
           recipients.push({
@@ -376,9 +462,27 @@ router.patch("/:id/status", verifyJWT, async (req: any, res) => {
             name: updatedTask.client.name,
             role: 'CLIENT'
           });
+          await createNotification(
+            updatedTask.client.id,
+            "TASK_COMPLETED",
+            "Task Completed",
+            `Your task "${updatedTask.title}" has been completed`,
+            `/tasks/${taskId}`
+          );
         }
         if (recipients.length > 0) {
           await notifyTaskCompleted(updatedTask, recipients);
+        }
+      } else {
+        // Generic status change notification to client
+        if (updatedTask.clientId) {
+          await createNotification(
+            updatedTask.clientId,
+            "TASK_UPDATED",
+            "Task Status Updated",
+            `Task "${updatedTask.title}" status changed to ${status}`,
+            `/tasks/${taskId}`
+          );
         }
       }
     }
@@ -542,9 +646,9 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
     if (projectId !== undefined) updateData.projectId = projectId;
 
-    if (role === "ADMIN") {
+    if (role === "ADMIN" || role === "ERASPHERE") {
       if (clientId !== undefined) updateData.clientId = clientId;
-      if (workerIds !== undefined && Array.isArray(workerIds)) {
+      if (role === "ADMIN" && workerIds !== undefined && Array.isArray(workerIds)) {
         await prisma.taskWorker.deleteMany({ where: { taskId } });
         if (workerIds.length > 0) {
           await prisma.taskWorker.createMany({
@@ -589,20 +693,66 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
       }
     });
 
+    if (role === "ADMIN" && workerIds !== undefined && Array.isArray(workerIds) && workerIds.length > 0) {
+      for (const tw of updatedTask.workers) {
+        await createNotification(
+          tw.user.id,
+          "TASK_ASSIGNED",
+          "New Task Assigned",
+          `You have been assigned to task: "${updatedTask.title}"`,
+          `/tasks/${taskId}`
+        );
+      }
+    }
+
     if (status && status !== existingTask.status) {
       const workersList = updatedTask.workers.map((tw) => tw.user);
       if (status === 'PENDING_APPROVAL') {
         for (const w of workersList) {
           await notifyTaskPendingApproval(updatedTask, { name: w.name });
         }
+        const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
+        for (const admin of admins) {
+          await createNotification(
+            admin.id,
+            "TASK_PENDING_APPROVAL",
+            "Task Pending Approval",
+            `Task "${updatedTask.title}" is pending your approval`,
+            `/tasks/${taskId}`
+          );
+        }
       } else if (status === 'COMPLETED') {
-        const recipients = workersList.map((w) => ({ email: w.email, name: w.name, role: 'WORKER' as const }));
+        const recipients: { email: string; name: string; role: string }[] = workersList.map((w) => ({ email: w.email, name: w.name, role: 'WORKER' }));
+        for (const tw of updatedTask.workers) {
+          await createNotification(
+            tw.user.id,
+            "TASK_COMPLETED",
+            "Task Completed",
+            `Task "${updatedTask.title}" has been marked as completed`,
+            `/tasks/${taskId}`
+          );
+        }
         if (updatedTask.client) {
           recipients.push({ email: updatedTask.client.email, name: updatedTask.client.name, role: 'CLIENT' });
+          await createNotification(
+            updatedTask.client.id,
+            "TASK_COMPLETED",
+            "Task Completed",
+            `Your task "${updatedTask.title}" has been completed`,
+            `/tasks/${taskId}`
+          );
         }
         if (recipients.length > 0) {
           await notifyTaskCompleted(updatedTask, recipients);
         }
+      } else if (updatedTask.clientId) {
+        await createNotification(
+          updatedTask.clientId,
+          "TASK_UPDATED",
+          "Task Status Updated",
+          `Task "${updatedTask.title}" status changed to ${status}`,
+          `/tasks/${taskId}`
+        );
       }
     }
 
@@ -617,8 +767,8 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
 router.delete("/:id", verifyJWT, async (req: any, res) => {
   try {
     const { role } = req.user;
-    if (role !== "ADMIN") {
-      return res.status(403).json({ error: "Only admins can delete tasks" });
+    if (role !== "ADMIN" && role !== "ERASPHERE") {
+      return res.status(403).json({ error: "Only admins or EraSphere can delete tasks" });
     }
 
     await prisma.task.delete({ where: { id: Number(req.params.id) } });

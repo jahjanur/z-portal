@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { CONTROL_INPUT, CONTROL_SELECT } from "../ui/controls";
 import WorkerMultiSelect from "../ui/WorkerMultiSelect";
 
@@ -28,6 +29,7 @@ interface TaskFormProps {
   workers: User[];
   projects: Project[];
   onCreateProject: (projectData: { name: string; clientId: string; description: string }) => Promise<void>;
+  hideWorkerAssignment?: boolean;
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({ 
@@ -36,6 +38,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   workers, 
   projects,
   onCreateProject,
+  hideWorkerAssignment = false,
 }) => {
   const [formData, setFormData] = useState({
     title: "",
@@ -55,7 +58,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
   const handleSubmit = () => {
     if (!formData.title || !formData.clientId) {
-      alert("Please fill in task title and select a client");
+      toast.error("Please fill in task title and select a client");
       return;
     }
     onSubmit(formData);
@@ -64,7 +67,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
   const handleCreateProject = async () => {
     if (!newProject.name.trim()) {
-      alert("Project name is required");
+      toast.error("Project name is required");
       return;
     }
     await onCreateProject(newProject);
@@ -77,7 +80,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
     : projects;
 
   return (
-    <div className="mb-6 rounded-xl card-panel p-5 backdrop-blur-sm">
+    <div className="relative z-20 mb-6 overflow-visible rounded-xl card-panel p-5 backdrop-blur-sm">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-theme-primary">Add New Task</h3>
         <button
@@ -192,6 +195,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             </option>
           ))}
         </select>
+        {!hideWorkerAssignment && (
         <WorkerMultiSelect
           workers={workers}
           value={formData.workerIds}
@@ -199,6 +203,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
           placeholder="Assign workers (optional)"
           autoApply
         />
+        )}
         <input
           type="date"
           value={formData.dueDate}

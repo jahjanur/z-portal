@@ -1,6 +1,5 @@
 // client/src/pages/Dashboard.tsx
 import React, { useEffect, useState } from "react";
-import RoleAdmin from "../components/Roleadmin";
 import RoleUser from "../components/Roleuser";
 import RoleWorker from "../components/Roleworker";
 
@@ -24,7 +23,6 @@ const Dashboard: React.FC = () => {
       </div>
     </div>
   );
-  if (role === "ADMIN") return <RoleAdmin />;
   if (role === "WORKER") return <RoleWorker />;
   if (role === "CLIENT") return <RoleUser />;
   return (
