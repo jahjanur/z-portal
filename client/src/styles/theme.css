@@ -13,6 +13,8 @@
   --color-surface-1: #0f0f12;
   --color-surface-2: rgba(255, 255, 255, 0.05);
   --color-surface-3: rgba(255, 255, 255, 0.08);
+  /* Solid panel background (no transparency) for cards/tabs so content is easy to read */
+  --color-panel-solid: #161b22;
   --color-modal-surface: rgba(255, 255, 255, 0.06);
   /* Borders */
   --color-border: rgba(255, 255, 255, 0.1);
@@ -89,6 +91,7 @@
   --color-surface-1: #ffffff;
   --color-surface-2: #f3f4f6;
   --color-surface-3: #e5e7eb;
+  --color-panel-solid: #ffffff;
   /* Modal: solid in light so it pops */
   --color-modal-surface: #ffffff;
   /* Borders */
@@ -163,6 +166,7 @@ html:not([data-theme]) {
   --color-surface-1: #0f0f12;
   --color-surface-2: rgba(255, 255, 255, 0.05);
   --color-surface-3: rgba(255, 255, 255, 0.08);
+  --color-panel-solid: #161b22;
   --color-border: rgba(255, 255, 255, 0.1);
   --color-border-hover: rgba(255, 255, 255, 0.2);
   --color-border-focus: rgba(255, 255, 255, 0.25);

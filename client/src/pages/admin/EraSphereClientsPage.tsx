@@ -46,7 +46,7 @@ export default function EraSphereClientsPage() {
         />
       </div>
 
-      <div className="rounded-2xl card-panel p-4 shadow-xl backdrop-blur-xl sm:p-6">
+      <div className="rounded-2xl card-panel p-4 shadow-xl sm:p-6">
         {erasphereClients.length === 0 ? (
           <p className="py-12 text-center text-[var(--color-text-muted)]">
             {clients.some((c) => c.referredById != null) ? "No clients match your search." : "No EraSphere-referred clients yet."}

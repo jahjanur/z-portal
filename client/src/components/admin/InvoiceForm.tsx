@@ -104,7 +104,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients, colors }) 
   const selectedClient = clients.find(c => c.id === parseInt(formData.clientId));
 
   return (
-    <div className="mb-6 rounded-2xl card-panel p-6 shadow-lg shadow-[var(--color-shadow)] backdrop-blur-md">
+    <div className="mb-6 rounded-2xl card-panel p-6 shadow-lg shadow-[var(--color-shadow)]">
       <div className="mb-6 flex items-center gap-3">
         <div className="rounded-lg bg-[var(--color-surface-3)] p-2">
           <svg className="h-6 w-6 text-theme-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">

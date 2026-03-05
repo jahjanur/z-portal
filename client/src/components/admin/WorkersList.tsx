@@ -26,7 +26,7 @@ const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete, canDelete 
       {workers.map((w) => (
         <div
           key={w.id}
-          className="flex flex-col gap-2 rounded-lg card-panel p-4 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover sm:flex-row sm:items-center sm:gap-4"
+          className="flex flex-col gap-2 rounded-lg card-panel p-4 shadow-lg transition hover:-translate-y-[1px] card-panel-hover sm:flex-row sm:items-center sm:gap-4"
         >
           <div className="flex min-w-0 flex-1 items-center gap-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] text-sm font-medium text-[var(--color-text-primary)]">

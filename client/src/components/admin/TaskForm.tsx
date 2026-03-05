@@ -81,7 +81,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
     : projects;
 
   return (
-    <div className="relative z-20 mb-6 overflow-visible rounded-xl card-panel p-5 backdrop-blur-sm">
+    <div className="relative z-20 mb-6 overflow-visible rounded-xl card-panel p-5">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-theme-primary">Add New Task</h3>
         <button

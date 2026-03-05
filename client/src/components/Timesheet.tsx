@@ -333,7 +333,7 @@ const Timesheets = () => {
 
       {/* New Project Form */}
       {showNewProjectForm && (
-        <div className="mb-6 rounded-2xl card-panel p-6 shadow-lg backdrop-blur-md">
+        <div className="mb-6 rounded-2xl card-panel p-6 shadow-lg">
           <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Create New Project</h3>
           
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -585,7 +585,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   const [showEntries, setShowEntries] = useState(false);
 
   return (
-    <div className="rounded-2xl card-panel p-4 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover sm:p-6">
+    <div className="rounded-2xl card-panel p-4 shadow-lg transition hover:-translate-y-[1px] card-panel-hover sm:p-6">
       {/* Project Header */}
       <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">

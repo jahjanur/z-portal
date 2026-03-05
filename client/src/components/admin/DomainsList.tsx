@@ -31,7 +31,7 @@ const DomainsList: React.FC<DomainsListProps> = ({ domains, onEdit, onDelete, co
 
   if (!Array.isArray(domains) || domains.length === 0) {
     return (
-      <div className="rounded-xl card-panel py-8 text-center shadow-lg backdrop-blur-md">
+      <div className="rounded-xl card-panel py-8 text-center shadow-lg">
         <svg className="mx-auto mb-3 h-12 w-12 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
         </svg>
@@ -45,7 +45,7 @@ const DomainsList: React.FC<DomainsListProps> = ({ domains, onEdit, onDelete, co
       {domains.map((domain) => (
         <div
           key={domain.id}
-          className="flex flex-col gap-2 rounded-xl card-panel p-4 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-2 rounded-xl card-panel p-4 shadow-lg transition hover:-translate-y-[1px] card-panel-hover sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex flex-wrap items-center gap-2 sm:gap-3">

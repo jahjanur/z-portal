@@ -359,7 +359,7 @@ export default function HomePage() {
     navigate("/admin/zulbera/invoices");
   };
 
-  const cardClass = "rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] shadow-[var(--color-card-shadow)] backdrop-blur-sm";
+  const cardClass = "rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel-solid)] shadow-[var(--color-card-shadow)]";
 
   if (loading) {
     return (

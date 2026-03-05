@@ -22,6 +22,7 @@ const ERASPHERE_TABS = [
 ];
 
 // Admin's EraSphere sidebar sub-nav
+const ADMIN_ERASPHERE_TABS = [
   { path: "analytics", label: "Analytics" },
   { path: "partners", label: "Partners" },
   { path: "clients", label: "Clients" },
@@ -29,6 +30,7 @@ const ERASPHERE_TABS = [
 ];
 
 const ZULBERA_NAV_LINKS = [
+  { path: "analytics", label: "Analytics" },
   { path: "workers", label: "Workers" },
   { path: "clients", label: "Clients" },
   { path: "tasks", label: "Tasks" },
@@ -260,7 +262,7 @@ export default function Navbar() {
               )}
               {token && isAdmin && isOnZulberaSection && ZULBERA_NAV_LINKS.map(({ path, label }) => {
                 const to = `/admin/zulbera/${path}`;
-                const isActive = location.pathname === to || (path === "workers" && location.pathname === "/admin/zulbera");
+                const isActive = location.pathname === to || (path === "analytics" && location.pathname === "/admin/zulbera");
                 return (
                   <Link
                     key={path}
