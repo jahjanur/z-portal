@@ -6,7 +6,11 @@ import DomainsList from "../../components/admin/DomainsList";
 const colors = { primary: "", secondary: "#374151", accent: "#6B7280", light: "#F8F9FA", dark: "#1A1A2E" };
 
 export default function AdminDomainsPage() {
-  const { clients, domains, editingDomain, createDomain, updateDomain, deleteDomain, handleEditDomain, handleCancelEdit } = useAdmin();
+  const { clients, domains, adminOwnClients, adminOwnDomains, editingDomain, createDomain, updateDomain, deleteDomain, handleEditDomain, handleCancelEdit } = useAdmin();
+  const isAdmin = localStorage.getItem("role") === "ADMIN";
+
+  const displayClients = isAdmin ? adminOwnClients : clients;
+  const displayDomains = isAdmin ? adminOwnDomains : domains;
 
   return (
     <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
@@ -15,12 +19,12 @@ export default function AdminDomainsPage() {
         <DomainForm
           onSubmit={createDomain}
           onUpdate={updateDomain}
-          clients={clients}
+          clients={displayClients}
           colors={colors}
           editingDomain={editingDomain}
           onCancelEdit={handleCancelEdit}
         />
-        <DomainsList domains={domains} onEdit={handleEditDomain} onDelete={deleteDomain} colors={colors} />
+        <DomainsList domains={displayDomains} onEdit={handleEditDomain} onDelete={deleteDomain} colors={colors} />
       </div>
     </div>
   );

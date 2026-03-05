@@ -1,0 +1,114 @@
+import { NavLink, Outlet } from "react-router-dom";
+import { AdminProvider, useAdmin } from "../contexts/AdminContext";
+
+const ERASPHERE_NAV = [
+  { path: "/admin/erasphere/analytics", label: "Analytics", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+  { path: "/admin/erasphere/partners", label: "Partners", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
+  { path: "/admin/erasphere/clients", label: "Clients", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
+  { path: "/admin/erasphere/tasks", label: "Tasks", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
+];
+
+function EraSphereLayoutInner() {
+  const { loading, error } = useAdmin();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex gap-2">
+            <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-80" />
+            <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-60" style={{ animationDelay: "0.1s" }} />
+            <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-40" style={{ animationDelay: "0.2s" }} />
+          </div>
+          <span className="text-[var(--color-text-muted)]">Loading EraSphere...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="max-w-md rounded-2xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] p-6">
+          <p className="mb-2 font-semibold text-[var(--color-destructive-text)]">Error</p>
+          <p className="text-[var(--color-destructive-text)]">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-[calc(100vh-4rem)] pt-16">
+      {/* Sidebar */}
+      <aside className="hidden lg:flex flex-col w-[220px] shrink-0 border-r border-[var(--color-border)] bg-[var(--color-bg)]">
+        <div className="px-5 pt-6 pb-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)]">EraSphere</p>
+        </div>
+        <nav className="flex-1 px-3 space-y-1">
+          {ERASPHERE_NAV.map(({ path, label, icon }) => (
+            <NavLink
+              key={path}
+              to={path}
+              end={path.endsWith("/analytics")}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-[var(--color-surface-2)] text-[var(--color-text-primary)] shadow-sm border border-[var(--color-border-hover)]"
+                    : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)] border border-transparent"
+                }`
+              }
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
+              </svg>
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="px-5 pb-6 mt-auto">
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+            <p className="text-xs text-[var(--color-text-muted)]">Partner referral program</p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)] opacity-70">Manage partners, track referred clients, and monitor revenue.</p>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile nav for EraSphere (below lg breakpoint) */}
+      <div className="lg:hidden fixed top-16 left-0 right-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-md">
+        <div className="flex items-center gap-1 px-4 py-2 overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
+          {ERASPHERE_NAV.map(({ path, label }) => (
+            <NavLink
+              key={path}
+              to={path}
+              end={path.endsWith("/analytics")}
+              className={({ isActive }) =>
+                `shrink-0 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
+                  isActive
+                    ? "border-[var(--color-border-hover)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)]"
+                    : "border-transparent text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
+                }`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <main className="flex-1 min-w-0 overflow-x-hidden">
+        <div className="px-4 sm:px-6 lg:px-8 py-6 lg:pt-6 pt-14">
+          <Outlet />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function EraSphereLayout() {
+  return (
+    <AdminProvider>
+      <EraSphereLayoutInner />
+    </AdminProvider>
+  );
+}

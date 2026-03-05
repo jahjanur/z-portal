@@ -15,7 +15,20 @@ const navLinkActive = "bg-[var(--color-nav-active-bg)] text-[var(--color-nav-act
 const navLinkInactive =
   "border border-[var(--color-nav-link-border)] text-[var(--color-nav-link-text)] hover:border-[var(--color-nav-link-hover-border)] hover:bg-[var(--color-nav-link-hover-bg)] hover:text-[var(--color-nav-link-hover-text)]";
 
-const ADMIN_TABS = [
+const ERASPHERE_TABS = [
+  { path: "erasphere-dashboard", label: "Dashboard" },
+  { path: "clients", label: "Clients" },
+  { path: "tasks", label: "Tasks" },
+];
+
+// Admin's EraSphere sidebar sub-nav
+  { path: "analytics", label: "Analytics" },
+  { path: "partners", label: "Partners" },
+  { path: "clients", label: "Clients" },
+  { path: "tasks", label: "Tasks" },
+];
+
+const ZULBERA_NAV_LINKS = [
   { path: "workers", label: "Workers" },
   { path: "clients", label: "Clients" },
   { path: "tasks", label: "Tasks" },
@@ -23,20 +36,6 @@ const ADMIN_TABS = [
   { path: "domains", label: "Domains" },
   { path: "send-offer", label: "Send Offer" },
   { path: "timesheets", label: "Timesheets" },
-];
-
-const ERASPHERE_TABS = [
-  { path: "erasphere-dashboard", label: "Dashboard" },
-  { path: "clients", label: "Clients" },
-  { path: "tasks", label: "Tasks" },
-];
-
-// Admin's EraSphere section: separate sub-tabs (not mixed with Workers/Clients/etc.)
-const ADMIN_ERASPHERE_TABS = [
-  { path: "analytics", label: "Analytics" },
-  { path: "partners", label: "Partners" },
-  { path: "clients", label: "Clients" },
-  { path: "tasks", label: "Tasks" },
 ];
 
 export default function Navbar() {
@@ -47,8 +46,9 @@ export default function Navbar() {
   const isEraSphere = role === "ERASPHERE";
   const location = useLocation();
   const isAnalytics = location.pathname === "/";
+  const isOnZulberaSection = role === "ADMIN" && (location.pathname === "/admin/zulbera" || location.pathname.startsWith("/admin/zulbera/"));
   const isOnEraSphereSection = role === "ADMIN" && (location.pathname === "/admin/erasphere" || location.pathname.startsWith("/admin/erasphere/"));
-  const isDashboard = location.pathname === "/dashboard" || location.pathname.startsWith("/admin");
+  const isDashboard = location.pathname === "/dashboard";
   const logoSrc = theme === "dark" ? logoDark : logoLight;
   const { mobileMenuOpen, setMobileMenuOpen } = useMobileMenu();
 
@@ -92,7 +92,7 @@ export default function Navbar() {
                 </div>
               )}
 
-            {/* Desktop: Analytics + Dashboard + EraSphere (admin only) */}
+            {/* Desktop: Analytics + Zulbera + EraSphere (admin only) — 3 main buttons, no top tabs */}
             <div className="items-center gap-1 shrink-0 hidden md:flex">
               {token && isAdmin && (
                 <Link
@@ -102,12 +102,12 @@ export default function Navbar() {
                   Analytics
                 </Link>
               )}
-              {token && (
+              {token && isAdmin && (
                 <Link
-                  to={isAdmin ? "/admin/workers" : isEraSphere ? "/admin/erasphere-dashboard" : "/dashboard"}
-                  className={`${navLinkBase} ${isDashboard && !isOnEraSphereSection ? navLinkActive : navLinkInactive}`}
+                  to="/admin/zulbera"
+                  className={`${navLinkBase} ${isOnZulberaSection ? navLinkActive : navLinkInactive}`}
                 >
-                  Dashboard
+                  Zulbera
                 </Link>
               )}
               {token && isAdmin && (
@@ -118,49 +118,17 @@ export default function Navbar() {
                   EraSphere
                 </Link>
               )}
+              {token && !isAdmin && (
+                <Link
+                  to={isEraSphere ? "/admin/erasphere-dashboard" : "/dashboard"}
+                  className={`${navLinkBase} ${isDashboard ? navLinkActive : navLinkInactive}`}
+                >
+                  Dashboard
+                </Link>
+              )}
             </div>
 
-            {/* Desktop: Admin tabs (only when on Dashboard section, not EraSphere) */}
-            {token && isAdmin && !isOnEraSphereSection && (
-              <div className="hidden md:flex items-center gap-1 min-w-0 overflow-x-auto overflow-y-hidden py-1" style={{ scrollbarWidth: "thin" }}>
-                {ADMIN_TABS.map(({ path, label }) => (
-                  <NavLink
-                    key={path}
-                    to={`/admin/${path}`}
-                    end={path === "workers"}
-                    className={({ isActive }) =>
-                      `shrink-0 snap-start rounded-lg border px-3 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] ${
-                        isActive
-                          ? "border-[var(--color-border-hover)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)]"
-                          : "border-transparent text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
-                      }`
-                    }
-                  >
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
-            )}
-            {token && isAdmin && isOnEraSphereSection && (
-              <div className="hidden md:flex items-center gap-1 min-w-0 overflow-x-auto overflow-y-hidden py-1" style={{ scrollbarWidth: "thin" }}>
-                {ADMIN_ERASPHERE_TABS.map(({ path, label }) => (
-                  <NavLink
-                    key={path}
-                    to={`/admin/erasphere/${path}`}
-                    end={path === "analytics"}
-                    className={({ isActive }) =>
-                      `shrink-0 snap-start rounded-lg border px-3 py-2 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)] ${
-                        isActive
-                          ? "border-[var(--color-border-hover)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)]"
-                          : "border-transparent text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
-                      }`
-                    }
-                  >
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
-            )}
+            {/* Sub-tabs for admin live in ZulberaLayout and EraSphereLayout sidebars — not in navbar */}
             {token && isEraSphere && (
               <div className="hidden md:flex items-center gap-1 min-w-0 overflow-x-auto overflow-y-hidden py-1" style={{ scrollbarWidth: "thin" }}>
                 {ERASPHERE_TABS.map(({ path, label }) => (
@@ -272,68 +240,75 @@ export default function Navbar() {
                   Analytics
                 </Link>
               )}
-              {token && (
+              {token && isAdmin && (
                 <Link
-                  to={isAdmin ? "/admin/workers" : isEraSphere ? "/admin/erasphere-dashboard" : "/dashboard"}
+                  to="/admin/zulbera"
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`${mobileLinkClass} ${isDashboard && !isOnEraSphereSection ? mobileLinkActive : mobileLinkInactive}`}
+                  className={`${mobileLinkClass} ${isOnZulberaSection ? mobileLinkActive : mobileLinkInactive}`}
+                >
+                  Zulbera
+                </Link>
+              )}
+              {token && isAdmin && (
+                <Link
+                  to="/admin/erasphere"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`${mobileLinkClass} ${isOnEraSphereSection ? mobileLinkActive : mobileLinkInactive}`}
+                >
+                  EraSphere
+                </Link>
+              )}
+              {token && isAdmin && isOnZulberaSection && ZULBERA_NAV_LINKS.map(({ path, label }) => {
+                const to = `/admin/zulbera/${path}`;
+                const isActive = location.pathname === to || (path === "workers" && location.pathname === "/admin/zulbera");
+                return (
+                  <Link
+                    key={path}
+                    to={to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`${mobileLinkClass} ${isActive ? mobileLinkActive : mobileLinkInactive} pl-8`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+              {token && isAdmin && isOnEraSphereSection && ADMIN_ERASPHERE_TABS.map(({ path, label }) => {
+                const to = `/admin/erasphere/${path}`;
+                const isActive = location.pathname === to || (path === "analytics" && location.pathname === "/admin/erasphere");
+                return (
+                  <Link
+                    key={path}
+                    to={to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`${mobileLinkClass} ${isActive ? mobileLinkActive : mobileLinkInactive} pl-8`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
+              {token && !isAdmin && (
+                <Link
+                  to={isEraSphere ? "/admin/erasphere-dashboard" : "/dashboard"}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`${mobileLinkClass} ${isDashboard ? mobileLinkActive : mobileLinkInactive}`}
                 >
                   Dashboard
                 </Link>
               )}
-              {token && (isAdmin || isEraSphere) && (
-                <>
-                  {/* Admin / EraSphere tabs (no EraSphere link mixed in here) */}
-                  <div className="mx-4 mt-3 mb-1 border-t border-[var(--color-border)]" />
-                  <p className="px-4 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                    {isAdmin ? "Admin" : "EraSphere"}
-                  </p>
-                  {(isAdmin ? ADMIN_TABS : ERASPHERE_TABS).map(({ path, label }) => {
-                    const to = `/admin/${path}`;
-                    const isActive = location.pathname === to || (path === "workers" && location.pathname === "/admin") || (path === "erasphere-dashboard" && location.pathname === "/admin");
-                    return (
-                      <Link
-                        key={path}
-                        to={to}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`${mobileLinkClass} ${isActive ? mobileLinkActive : mobileLinkInactive}`}
-                      >
-                        {label}
-                      </Link>
-                    );
-                  })}
-                  {/* EraSphere section at bottom, separated by hr (admin only) */}
-                  {token && isAdmin && (
-                    <>
-                      <hr className="mx-4 my-3 border-[var(--color-border)]" />
-                      <p className="px-4 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">
-                        EraSphere
-                      </p>
-                      <Link
-                        to="/admin/erasphere"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`${mobileLinkClass} ${isOnEraSphereSection ? mobileLinkActive : mobileLinkInactive}`}
-                      >
-                        EraSphere
-                      </Link>
-                      {isOnEraSphereSection && ADMIN_ERASPHERE_TABS.map(({ path, label }) => {
-                        const to = `/admin/erasphere/${path}`;
-                        const isActive = location.pathname === to || (path === "analytics" && location.pathname === "/admin/erasphere");
-                        return (
-                          <Link
-                            key={path}
-                            to={to}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className={`${mobileLinkClass} ${isActive ? mobileLinkActive : mobileLinkInactive} pl-8`}
-                          >
-                            {label}
-                          </Link>
-                        );
-                      })}
-                    </>
-                  )}
-                </>
-              )}
+              {token && !isAdmin && isEraSphere && ERASPHERE_TABS.map(({ path, label }) => {
+                const to = `/admin/${path}`;
+                const isActive = location.pathname === to || (path === "erasphere-dashboard" && location.pathname === "/admin");
+                return (
+                  <Link
+                    key={path}
+                    to={to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`${mobileLinkClass} ${isActive ? mobileLinkActive : mobileLinkInactive} pl-8`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
               {/* Notification/theme moved to header next to logo - no longer in menu */}
               {token ? (
                 <>

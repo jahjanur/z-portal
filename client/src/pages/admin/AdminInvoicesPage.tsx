@@ -6,21 +6,35 @@ import InvoicesList from "../../components/admin/InvoicesList";
 const colors = { primary: "" };
 
 export default function AdminInvoicesPage() {
-  const { clients, pendingInvoices, paidInvoices, createInvoice, deleteInvoice } = useAdmin();
+  const {
+    clients,
+    pendingInvoices,
+    paidInvoices,
+    adminOwnClients,
+    adminOwnPendingInvoices,
+    adminOwnPaidInvoices,
+    createInvoice,
+    deleteInvoice,
+  } = useAdmin();
   const [showPaidInvoices, setShowPaidInvoices] = useState(false);
+  const isAdmin = localStorage.getItem("role") === "ADMIN";
+
+  const displayClients = isAdmin ? adminOwnClients : clients;
+  const displayPending = isAdmin ? adminOwnPendingInvoices : pendingInvoices;
+  const displayPaid = isAdmin ? adminOwnPaidInvoices : paidInvoices;
 
   return (
     <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
       <div className="rounded-2xl card-panel p-4 shadow-xl backdrop-blur-xl sm:p-6">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Invoices Management</h2>
-        <InvoiceForm onSubmit={createInvoice} clients={clients} colors={colors} />
+        <InvoiceForm onSubmit={createInvoice} clients={displayClients} colors={colors} />
 
         <div className="mt-8">
           <h3 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">
-            Pending Invoices <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({pendingInvoices.length})</span>
+            Pending Invoices <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({displayPending.length})</span>
           </h3>
-          {pendingInvoices.length > 0 ? (
-            <InvoicesList invoices={pendingInvoices} onDelete={deleteInvoice} colors={colors} />
+          {displayPending.length > 0 ? (
+            <InvoicesList invoices={displayPending} onDelete={deleteInvoice} colors={colors} />
           ) : (
             <div className="card-panel py-8 text-center rounded-xl">
               <svg className="mx-auto mb-3 h-12 w-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -38,7 +52,7 @@ export default function AdminInvoicesPage() {
             className="mb-4 flex w-full items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 text-left transition-colors hover:bg-[var(--color-surface-3)]"
           >
             <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
-              Paid Invoices <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({paidInvoices.length})</span>
+              Paid Invoices <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({displayPaid.length})</span>
             </h3>
             <svg className={`h-5 w-5 text-[var(--color-text-muted)] transition-transform ${showPaidInvoices ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -46,8 +60,8 @@ export default function AdminInvoicesPage() {
           </button>
           {showPaidInvoices && (
             <div>
-              {paidInvoices.length > 0 ? (
-                <InvoicesList invoices={paidInvoices} onDelete={deleteInvoice} colors={colors} />
+              {displayPaid.length > 0 ? (
+                <InvoicesList invoices={displayPaid} onDelete={deleteInvoice} colors={colors} />
               ) : (
                 <p className="rounded-xl bg-[var(--color-surface-2)] py-4 text-center text-sm text-[var(--color-text-muted)]">No paid invoices yet</p>
               )}
