@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useAdmin } from "../../contexts/AdminContext";
 import TaskForm from "../../components/admin/TaskForm";
 import TasksList from "../../components/admin/TasksList";
@@ -9,41 +10,38 @@ const colors = { primary: "" };
 type StatusCategory = "pending" | "in_progress" | "completed";
 
 export default function AdminTasksPage() {
-  const { clients, workers, projects, tasks, createTask, handleCreateProject, deleteTask } = useAdmin();
+  const { clients, workers, projects, tasks, adminOwnClients, adminOwnTasks, createTask, handleCreateProject, deleteTask } = useAdmin();
   const [statusCategory, setStatusCategory] = useState<StatusCategory>("pending");
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<"all" | "erasphere">("all");
   const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
+  const isAdmin = localStorage.getItem("role") === "ADMIN";
+
+  const baseTasks = isAdmin ? adminOwnTasks : tasks;
+  const formClients = isAdmin ? adminOwnClients : clients;
 
   const filterTasks = (taskList: Task[]) => {
-    let out = taskList;
-    if (categoryFilter === "erasphere") {
-      out = out.filter((t) => t.client?.referredById != null);
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      out = out.filter(
-        (t) =>
-          t.title?.toLowerCase().includes(q) ||
-          t.description?.toLowerCase().includes(q) ||
-          t.client?.name?.toLowerCase().includes(q) ||
-          t.client?.company?.toLowerCase().includes(q)
-      );
-    }
-    return out;
+    if (!searchQuery.trim()) return taskList;
+    const q = searchQuery.trim().toLowerCase();
+    return taskList.filter(
+      (t) =>
+        t.title?.toLowerCase().includes(q) ||
+        t.description?.toLowerCase().includes(q) ||
+        t.client?.name?.toLowerCase().includes(q) ||
+        t.client?.company?.toLowerCase().includes(q)
+    );
   };
 
   const pendingTasks = useMemo(
-    () => filterTasks(tasks.filter((t) => t.status === "PENDING")),
-    [tasks, categoryFilter, searchQuery]
+    () => filterTasks(baseTasks.filter((t) => t.status === "PENDING")),
+    [baseTasks, searchQuery]
   );
   const inProgressTasks = useMemo(
-    () => filterTasks(tasks.filter((t) => t.status === "IN_PROGRESS" || t.status === "PENDING_APPROVAL")),
-    [tasks, categoryFilter, searchQuery]
+    () => filterTasks(baseTasks.filter((t) => t.status === "IN_PROGRESS" || t.status === "PENDING_APPROVAL")),
+    [baseTasks, searchQuery]
   );
   const completedTasks = useMemo(
-    () => filterTasks(tasks.filter((t) => t.status === "COMPLETED")),
-    [tasks, categoryFilter, searchQuery]
+    () => filterTasks(baseTasks.filter((t) => t.status === "COMPLETED")),
+    [baseTasks, searchQuery]
   );
 
   const currentTasks =
@@ -59,7 +57,7 @@ export default function AdminTasksPage() {
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Tasks Management</h2>
         <TaskForm
           onSubmit={createTask}
-          clients={clients}
+          clients={formClients}
           workers={workers}
           projects={projects}
           onCreateProject={handleCreateProject}
@@ -76,31 +74,16 @@ export default function AdminTasksPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="input-dark w-full max-w-sm rounded-xl px-4 py-2.5 text-sm"
             />
-            {!isEraSphere && (
-              <div className="flex gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1">
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter("all")}
-                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    categoryFilter === "all"
-                      ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
-                      : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)]"
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCategoryFilter("erasphere")}
-                  className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    categoryFilter === "erasphere"
-                      ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
-                      : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)]"
-                  }`}
-                >
-                  EraSphere only
-                </button>
-              </div>
+            {isAdmin && (
+              <Link
+                to="/admin/erasphere/tasks"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                EraSphere Tasks
+              </Link>
             )}
           </div>
         </div>
@@ -151,8 +134,8 @@ export default function AdminTasksPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               <p className="text-sm font-medium text-[var(--color-text-muted)]">
-                {searchQuery || categoryFilter !== "all"
-                  ? "No tasks match your filters"
+                {searchQuery
+                  ? "No tasks match your search"
                   : statusCategory === "pending"
                     ? "No pending tasks"
                     : statusCategory === "in_progress"

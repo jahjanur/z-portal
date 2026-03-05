@@ -73,12 +73,24 @@ const colors = {
   info: "#3B82F6",
 };
 
+interface EraSphereStats {
+  totalPartners: number;
+  totalClients: number;
+  totalTasks: number;
+  activeTasks: number;
+  completedTasks: number;
+  totalRevenue: number;
+  paidRevenue: number;
+  pendingRevenue: number;
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
+  const [erasphereStats, setEraSphereStats] = useState<EraSphereStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");
 
@@ -89,14 +101,16 @@ export default function HomePage() {
   const fetchOverview = async () => {
     setLoading(true);
     try {
-      const [usersRes, invoicesRes, tasksRes] = await Promise.all([
+      const [usersRes, invoicesRes, tasksRes, erasphereRes] = await Promise.all([
         API.get<User[]>("/users"),
         API.get<Invoice[]>("/invoices"),
         API.get<Task[]>("/tasks"),
+        API.get<{ stats: EraSphereStats }>("/users/erasphere/admin-analytics").catch(() => ({ data: { stats: null } })),
       ]);
       setUsers(usersRes.data);
       setInvoices(invoicesRes.data);
       setTasks(tasksRes.data);
+      setEraSphereStats(erasphereRes.data?.stats ?? null);
 
       // Domains: fetch only for admin's own clients (not EraSphere-referred)
       const adminOwnClients = usersRes.data.filter(
@@ -205,6 +219,15 @@ export default function HomePage() {
   }).length;
 
   const totalDomainAlerts = expiringDomains + expiringHosting + expiringSSL;
+
+  // Merged totals: Zulbera + EraSphere (so e.g. 5k + 5k = 10k)
+  const totalRevenueMerged = totalRevenue + (erasphereStats?.totalRevenue ?? 0);
+  const totalPaidMerged = totalPaid + (erasphereStats?.paidRevenue ?? 0);
+  const totalPendingMerged = totalPending + (erasphereStats?.pendingRevenue ?? 0);
+  const totalClientsMerged = totalClients + (erasphereStats?.totalClients ?? 0);
+  const mergedTotalTasks = adminOwnTasks.length + (erasphereStats?.totalTasks ?? 0);
+  const mergedCompletedTasks = adminOwnTasks.filter((t) => t.status === "COMPLETED").length + (erasphereStats?.completedTasks ?? 0);
+  const taskCompletionRateMerged = mergedTotalTasks > 0 ? Math.round((mergedCompletedTasks / mergedTotalTasks) * 100) : 0;
 
   const getRevenueByPeriod = () => {
     const periodData: Record<string, { paid: number; pending: number }> = {};
@@ -325,15 +348,15 @@ export default function HomePage() {
   };
 
   const handleCreateClient = () => {
-    navigate("/admin/clients");
+    navigate("/admin/zulbera/clients");
   };
 
   const handleCreateTask = () => {
-    navigate("/admin/tasks");
+    navigate("/admin/zulbera/tasks");
   };
 
   const handleCreateInvoice = () => {
-    navigate("/admin/invoices");
+    navigate("/admin/zulbera/invoices");
   };
 
   const cardClass = "rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] shadow-[var(--color-card-shadow)] backdrop-blur-sm";
@@ -360,10 +383,10 @@ export default function HomePage() {
         <div className="flex flex-col gap-4 mb-8 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-4xl font-bold text-[var(--color-text-primary)]">
-              Admin <span className="text-[var(--color-text-muted)]">Analytics</span>
+              <span className="text-[var(--color-text-primary)]">Analytics</span>
             </h1>
             <p className="mt-2 text-[var(--color-text-muted)]">
-              Your own clients, revenue, and tasks (direct — not from EraSphere)
+              Combined Zulbera + EraSphere — all revenue, clients, and tasks in one view
             </p>
           </div>
           <div className="flex gap-2">
@@ -383,12 +406,12 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Key Metrics Grid */}
+        {/* Key Metrics Grid — merged Zulbera + EraSphere totals */}
         <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
-          {/* Total Revenue */}
+          {/* Total Revenue (merged) */}
           <div
             className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-[var(--color-border-hover)] ${cardClass}`}
-            onClick={() => navigate("/revenue")}
+            onClick={() => navigate("/admin/zulbera/invoices")}
           >
             <div className="relative">
               <div className="flex items-center justify-between mb-3">
@@ -399,18 +422,19 @@ export default function HomePage() {
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-[var(--color-text-primary)]">{formatCurrency(totalRevenue)}</p>
+              <p className="text-3xl font-bold text-[var(--color-text-primary)]">{formatCurrency(totalRevenueMerged)}</p>
               <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                <span className="font-semibold text-green-400">{formatCurrency(totalPaid)}</span> paid •
-                <span className="font-semibold text-amber-400"> {formatCurrency(totalPending)}</span> pending
+                <span className="font-semibold text-green-400">{formatCurrency(totalPaidMerged)}</span> paid •
+                <span className="font-semibold text-amber-400"> {formatCurrency(totalPendingMerged)}</span> pending
               </p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)] opacity-80">Zulbera + EraSphere</p>
             </div>
           </div>
 
-          {/* Clients */}
+          {/* Clients (merged) */}
           <div
             className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-[var(--color-border-hover)] ${cardClass}`}
-            onClick={() => navigate("/clients")}
+            onClick={() => navigate("/admin/zulbera/clients")}
           >
             <div className="relative">
               <div className="flex items-center justify-between mb-3">
@@ -421,20 +445,21 @@ export default function HomePage() {
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-[var(--color-text-primary)]">{totalClients}</p>
+              <p className="text-3xl font-bold text-[var(--color-text-primary)]">{totalClientsMerged}</p>
               <p className="mt-2 text-sm text-[var(--color-text-muted)]">
                 {incompleteProfiles > 0 && (
                   <span className="font-semibold text-red-400">{incompleteProfiles} incomplete profiles</span>
                 )}
-                {incompleteProfiles === 0 && <span className="text-green-400">All profiles complete</span>}
+                {incompleteProfiles === 0 && <span className="text-green-400">All Zulbera profiles complete</span>}
               </p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)] opacity-80">Zulbera + EraSphere</p>
             </div>
           </div>
 
-          {/* Tasks */}
+          {/* Tasks (merged) */}
           <div
             className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-[var(--color-border-hover)] ${cardClass}`}
-            onClick={() => navigate("/tasks-overview")}
+            onClick={() => navigate("/admin/zulbera/tasks")}
           >
             <div className="relative">
               <div className="flex items-center justify-between mb-3">
@@ -445,12 +470,11 @@ export default function HomePage() {
                   </svg>
                 </div>
               </div>
-              <p className="text-3xl font-bold text-green-400">
-                {filteredTasks.length > 0 ? Math.round((completedTasks / filteredTasks.length) * 100) : 0}%
-              </p>
+              <p className="text-3xl font-bold text-green-400">{taskCompletionRateMerged}%</p>
               <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-                {completedTasks} of {filteredTasks.length} tasks completed
+                {mergedCompletedTasks} of {mergedTotalTasks} tasks completed
               </p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)] opacity-80">Zulbera + EraSphere</p>
             </div>
           </div>
 
@@ -474,6 +498,7 @@ export default function HomePage() {
               <p className="mt-2 text-sm text-[var(--color-text-muted)]">
                 {overdueTasks.length} tasks • {overdueInvoices.length} invoices • {pendingApproval} approvals • {incompleteProfiles} profiles • {totalDomainAlerts} domains
               </p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)] opacity-80">Zulbera alerts</p>
             </div>
           </div>
         </div>
@@ -680,7 +705,7 @@ export default function HomePage() {
                   <div
                     key={invoice.id}
                     className="flex items-start gap-3 p-3 transition-all border border-[var(--color-border)] rounded-xl cursor-pointer hover:border-[var(--color-border-hover)] bg-[var(--color-surface-2)]"
-                    onClick={() => navigate("/admin/invoices")}
+                    onClick={() => navigate("/admin/zulbera/invoices")}
                   >
                     <div className={`p-2 rounded-lg ${invoice.status === "PAID" ? "bg-green-500/20" : "bg-amber-500/20"}`}>
                       <svg className={`w-4 h-4 ${invoice.status === "PAID" ? "text-green-400" : "text-amber-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -763,7 +788,7 @@ export default function HomePage() {
               {pendingApproval > 0 && (
                 <div
                   className="flex items-start gap-3 p-4 transition-all border-l-4 rounded-r-lg cursor-pointer bg-[var(--color-surface-2)] border-amber-500/50 hover:bg-[var(--color-surface-3)]"
-                  onClick={() => navigate("/admin/tasks")}
+                  onClick={() => navigate("/admin/zulbera/tasks")}
                 >
                   <svg className="w-5 h-5 mt-0.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -781,7 +806,7 @@ export default function HomePage() {
               {overdueTasks.length > 0 && (
                 <div
                   className="flex items-start gap-3 p-4 transition-all border-l-4 border-red-500/70 rounded-r-lg cursor-pointer bg-red-500/10 hover:bg-red-500/15"
-                  onClick={() => navigate("/admin/tasks")}
+                  onClick={() => navigate("/admin/zulbera/tasks")}
                 >
                   <svg className="w-5 h-5 mt-0.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -804,7 +829,7 @@ export default function HomePage() {
               {overdueInvoices.length > 0 && (
                 <div
                   className="flex items-start gap-3 p-4 transition-all border-l-4 border-amber-500/70 rounded-r-lg cursor-pointer bg-amber-500/10 hover:bg-amber-500/15"
-                  onClick={() => navigate("/admin/invoices")}
+                  onClick={() => navigate("/admin/zulbera/invoices")}
                 >
                   <svg className="w-5 h-5 mt-0.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -831,7 +856,7 @@ export default function HomePage() {
               {incompleteProfiles > 0 && (
                 <div
                   className="flex items-start gap-3 p-4 transition-all border-l-4 border-blue-500/70 rounded-r-lg cursor-pointer bg-blue-500/10 hover:bg-blue-500/15"
-                  onClick={() => navigate("/admin/clients")}
+                  onClick={() => navigate("/admin/zulbera/clients")}
                 >
                   <svg className="w-5 h-5 mt-0.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />

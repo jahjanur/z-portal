@@ -88,6 +88,14 @@ interface AdminContextValue {
   completedTasks: Task[];
   pendingInvoices: Invoice[];
   paidInvoices: Invoice[];
+  adminOwnClients: User[];
+  adminOwnIncompleteClients: User[];
+  adminOwnCompleteClients: User[];
+  adminOwnTasks: Task[];
+  adminOwnInvoices: Invoice[];
+  adminOwnPendingInvoices: Invoice[];
+  adminOwnPaidInvoices: Invoice[];
+  adminOwnDomains: Domain[];
   fetchAll: () => Promise<void>;
   fetchProjects: () => Promise<void>;
   createWorker: (data: { email: string; password: string; name: string; role?: string; company?: string }) => Promise<unknown>;
@@ -183,6 +191,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const completedTasks = tasks.filter((t) => t.status === "COMPLETED");
   const pendingInvoices = invoices.filter((i) => i.status === "PENDING");
   const paidInvoices = invoices.filter((i) => i.status === "PAID");
+
+  const adminOwnClients = clients.filter((c) => c.role === "CLIENT" && c.referredById == null);
+  const adminOwnClientIds = new Set(adminOwnClients.map((c) => c.id));
+  const adminOwnIncompleteClients = adminOwnClients.filter((c) => {
+    const s = c.profileStatus?.trim().toUpperCase() || "";
+    return s === "INCOMPLETE" || s === "PENDING" || s === "" || !c.profileStatus;
+  });
+  const adminOwnCompleteClients = adminOwnClients.filter((c) => c.profileStatus?.trim().toUpperCase() === "COMPLETE");
+  const adminOwnTasks = tasks.filter((t) => t.client == null || t.client.referredById == null);
+  const adminOwnInvoices = invoices.filter((i) => !i.client || adminOwnClientIds.has(i.client.id));
+  const adminOwnPendingInvoices = adminOwnInvoices.filter((i) => i.status === "PENDING");
+  const adminOwnPaidInvoices = adminOwnInvoices.filter((i) => i.status === "PAID");
+  const adminOwnDomains = domains.filter((d) => adminOwnClientIds.has(d.client.id));
 
   const createWorker = async (data: { email: string; password: string; name: string; role?: string; company?: string }) => {
     const res = await API.post("/users", { ...data, role: data.role || "WORKER" });
@@ -301,6 +322,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     completedTasks,
     pendingInvoices,
     paidInvoices,
+    adminOwnClients,
+    adminOwnIncompleteClients,
+    adminOwnCompleteClients,
+    adminOwnTasks,
+    adminOwnInvoices,
+    adminOwnPendingInvoices,
+    adminOwnPaidInvoices,
+    adminOwnDomains,
     fetchAll,
     fetchProjects,
     createWorker,

@@ -11,12 +11,20 @@ export default function AdminClientsPage() {
     clients,
     incompleteClients,
     completeClients,
+    adminOwnClients,
+    adminOwnIncompleteClients,
+    adminOwnCompleteClients,
     createClient,
     deleteUser,
     resendInvite,
   } = useAdmin();
   const [showCompletedProfiles, setShowCompletedProfiles] = useState(false);
   const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
+  const isAdmin = localStorage.getItem("role") === "ADMIN";
+
+  const displayClients = isAdmin ? adminOwnClients : clients;
+  const displayIncomplete = isAdmin ? adminOwnIncompleteClients : incompleteClients;
+  const displayComplete = isAdmin ? adminOwnCompleteClients : completeClients;
 
   return (
     <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
@@ -26,16 +34,16 @@ export default function AdminClientsPage() {
 
         <div className="mt-8">
           <h3 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">Search clients</h3>
-          <ClientSearch clients={clients} onDelete={deleteUser} colors={colors} />
+          <ClientSearch clients={displayClients} onDelete={deleteUser} colors={colors} />
         </div>
 
         <div className="mt-8">
           <h3 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">
-            Incomplete Profiles <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({incompleteClients.length})</span>
+            Incomplete Profiles <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({displayIncomplete.length})</span>
           </h3>
-          {incompleteClients.length > 0 ? (
+          {displayIncomplete.length > 0 ? (
             <ListDisplay
-              items={incompleteClients}
+              items={displayIncomplete}
               onDelete={deleteUser}
               onResendInvite={resendInvite}
               showProfileStatus
@@ -65,7 +73,7 @@ export default function AdminClientsPage() {
             className="mb-4 flex w-full items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 text-left transition-colors hover:bg-[var(--color-surface-3)]"
           >
             <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
-              Complete Profiles <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({completeClients.length})</span>
+              Complete Profiles <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({displayComplete.length})</span>
             </h3>
             <svg className={`h-5 w-5 text-[var(--color-text-muted)] transition-transform ${showCompletedProfiles ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -73,9 +81,9 @@ export default function AdminClientsPage() {
           </button>
           {showCompletedProfiles && (
             <div>
-              {completeClients.length > 0 ? (
+              {displayComplete.length > 0 ? (
                 <ListDisplay
-                  items={completeClients}
+                  items={displayComplete}
                   onDelete={deleteUser}
                   showProfileStatus
                   getProfileStatus={(c) => c.profileStatus}
