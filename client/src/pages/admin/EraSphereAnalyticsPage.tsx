@@ -125,20 +125,20 @@ export default function EraSphereAnalyticsPage() {
 
       {/* Stats cards */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl card-panel p-5 shadow-lg backdrop-blur-xl">
+        <div className="rounded-2xl card-panel p-5 shadow-lg">
           <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Total Clients</p>
           <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">{stats.totalClients}</p>
         </div>
-        <div className="rounded-2xl card-panel p-5 shadow-lg backdrop-blur-xl">
+        <div className="rounded-2xl card-panel p-5 shadow-lg">
           <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Active Tasks</p>
           <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">{stats.activeTasks}</p>
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">{stats.completedTasks} completed</p>
         </div>
-        <div className="rounded-2xl card-panel p-5 shadow-lg backdrop-blur-xl">
+        <div className="rounded-2xl card-panel p-5 shadow-lg">
           <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Total Revenue</p>
           <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">{formatCurrency(stats.totalRevenue)}</p>
         </div>
-        <div className="rounded-2xl card-panel p-5 shadow-lg backdrop-blur-xl">
+        <div className="rounded-2xl card-panel p-5 shadow-lg">
           <p className="text-sm font-semibold text-green-600 uppercase tracking-wide">Paid</p>
           <p className="mt-2 text-3xl font-bold text-green-600">{formatCurrency(stats.paidRevenue)}</p>
           <p className="mt-1 text-xs text-amber-600 font-medium">{formatCurrency(stats.pendingRevenue)} pending</p>
@@ -147,7 +147,7 @@ export default function EraSphereAnalyticsPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* My Clients */}
-        <div className="rounded-2xl card-panel p-5 shadow-lg backdrop-blur-xl">
+        <div className="rounded-2xl card-panel p-5 shadow-lg">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-bold text-[var(--color-text-primary)]">My Clients</h3>
             <button
@@ -181,7 +181,7 @@ export default function EraSphereAnalyticsPage() {
         </div>
 
         {/* Recent Tasks */}
-        <div className="rounded-2xl card-panel p-5 shadow-lg backdrop-blur-xl">
+        <div className="rounded-2xl card-panel p-5 shadow-lg">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Recent Tasks</h3>
             <button
@@ -219,7 +219,7 @@ export default function EraSphereAnalyticsPage() {
         </div>
 
         {/* Recent Invoices (read-only view of their clients' invoices) */}
-        <div className="rounded-2xl card-panel p-5 shadow-lg backdrop-blur-xl lg:col-span-2 min-w-0 max-w-full">
+        <div className="rounded-2xl card-panel p-5 shadow-lg lg:col-span-2 min-w-0 max-w-full">
           <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Revenue Breakdown</h3>
           {recentInvoices.length === 0 ? (
             <p className="py-6 text-center text-[var(--color-text-muted)]">No invoices yet.</p>

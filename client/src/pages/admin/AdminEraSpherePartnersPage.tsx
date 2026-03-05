@@ -124,7 +124,7 @@ export default function AdminEraSpherePartnersPage() {
       <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Partners</h2>
 
       {/* Invite EraSphere Partner */}
-      <div className="mb-6 rounded-2xl card-panel p-4 shadow-xl backdrop-blur-xl sm:p-6">
+      <div className="mb-6 rounded-2xl card-panel p-4 shadow-xl sm:p-6">
         <h3 className="mb-4 text-lg font-semibold text-[var(--color-text-primary)]">Invite EraSphere Partner</h3>
         <p className="mb-4 text-sm text-[var(--color-text-muted)]">
           Send an invitation email so they can join as an EraSphere partner. They will get a link to complete their profile.
@@ -191,7 +191,7 @@ export default function AdminEraSpherePartnersPage() {
       </div>
 
       {/* Partners table */}
-      <div className="rounded-2xl card-panel p-4 shadow-xl backdrop-blur-xl sm:p-6 min-w-0 max-w-full">
+      <div className="rounded-2xl card-panel p-4 shadow-xl sm:p-6 min-w-0 max-w-full">
         <p className="mb-4 text-sm text-[var(--color-text-muted)]">
           B2B partners who can manage clients and tasks. They have their own analytics dashboard. They do not have access to workers, invoices, domains, timesheets, or send offer.
         </p>

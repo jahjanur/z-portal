@@ -98,7 +98,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
   const TaskCard = ({ task }: { task: Task }) => (
     <li className="list-none">
       <article
-        className="group cursor-pointer rounded-xl card-panel p-4 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover"
+        className="group cursor-pointer rounded-xl card-panel p-4 shadow-lg transition hover:-translate-y-[1px] card-panel-hover"
         onClick={() => navigate(`/tasks/${task.id}`)}
         role="button"
         tabIndex={0}
@@ -199,7 +199,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
   return (
     <section className="space-y-4 min-w-0 max-w-full" aria-labelledby="tasks-heading">
       {/* Header with Controls */}
-      <header className="flex flex-col gap-4 rounded-xl card-panel p-4 shadow-lg backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-4 rounded-xl card-panel p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <h3 id="tasks-heading" className="text-lg font-bold text-[var(--color-text-primary)]">
             Tasks
@@ -209,7 +209,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
           </h3>
 
           {/* Filter Tabs */}
-          <div className="flex gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1 backdrop-blur-md" role="tablist" aria-label="Task filters">
+          <div className="flex gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1" role="tablist" aria-label="Task filters">
             <button
               onClick={() => setFilter("all")}
               role="tab"
@@ -275,7 +275,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
       {/* Tasks Display */}
       <div id="tasks-list" role="tabpanel">
         {filteredTasks.length === 0 ? (
-          <div className="rounded-2xl card-panel py-12 text-center shadow-lg backdrop-blur-md">
+          <div className="rounded-2xl card-panel py-12 text-center shadow-lg">
             <svg className="mx-auto mb-4 h-16 w-16 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
@@ -291,7 +291,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
               return (
                 <section
                   key={key}
-                  className="overflow-hidden rounded-2xl card-panel shadow-lg backdrop-blur-md"
+                  className="overflow-hidden rounded-2xl card-panel shadow-lg"
                   aria-labelledby={`project-${key}-heading`}
                 >
                   <header className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3">

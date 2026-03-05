@@ -75,7 +75,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAnd
   };
 
   return (
-    <div className="mb-6 rounded-2xl card-panel p-6 backdrop-blur-sm">
+    <div className="mb-6 rounded-2xl card-panel p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h3 className="text-xl font-bold text-[var(--color-text-primary)]">Add New Client</h3>

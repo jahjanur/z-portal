@@ -25,6 +25,7 @@ import EraSphereAnalyticsPage from "./pages/admin/EraSphereAnalyticsPage";
 import EraSphereAnalyticsAdminPage from "./pages/admin/EraSphereAnalyticsAdminPage";
 import EraSphereClientsPage from "./pages/admin/EraSphereClientsPage";
 import EraSphereTasksPage from "./pages/admin/EraSphereTasksPage";
+import ZulberaAnalyticsPage from "./pages/admin/ZulberaAnalyticsPage";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { MobileMenuProvider } from "./contexts/MobileMenuContext";
@@ -84,7 +85,8 @@ function App() {
 
             {/* Zulbera area — admin's own work only, sidebar layout (same structure as EraSphere) */}
             <Route path="/admin/zulbera" element={token && isAdmin ? <ZulberaLayout /> : <Navigate to="/login" />}>
-              <Route index element={<Navigate to="/admin/zulbera/workers" replace />} />
+              <Route index element={<Navigate to="/admin/zulbera/analytics" replace />} />
+              <Route path="analytics" element={<ZulberaAnalyticsPage />} />
               <Route path="workers" element={<AdminWorkersPage />} />
               <Route path="clients" element={<AdminClientsPage />} />
               <Route path="tasks" element={<AdminTasksPage />} />

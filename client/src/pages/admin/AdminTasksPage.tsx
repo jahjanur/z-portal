@@ -53,7 +53,7 @@ export default function AdminTasksPage() {
 
   return (
     <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
-      <div className="rounded-2xl card-panel p-4 shadow-xl backdrop-blur-xl sm:p-6">
+      <div className="rounded-2xl card-panel p-4 shadow-xl sm:p-6">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Tasks Management</h2>
         <TaskForm
           onSubmit={createTask}

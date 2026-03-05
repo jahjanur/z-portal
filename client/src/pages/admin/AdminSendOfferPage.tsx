@@ -4,7 +4,7 @@ import Offers from "../../components/Offers";
 export default function AdminSendOfferPage() {
   return (
     <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
-      <div className="rounded-2xl card-panel p-6 shadow-xl backdrop-blur-xl">
+      <div className="rounded-2xl card-panel p-6 shadow-xl">
         <Offers />
       </div>
     </div>

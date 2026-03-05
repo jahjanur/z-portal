@@ -105,7 +105,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
   return (
     <div
       ref={formRef}
-      className="mb-6 rounded-xl card-panel p-5 shadow-lg shadow-[var(--color-shadow)] backdrop-blur-md transition"
+      className="mb-6 rounded-xl card-panel p-5 shadow-lg shadow-[var(--color-shadow)] transition"
     >
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-theme-primary">

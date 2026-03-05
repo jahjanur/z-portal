@@ -272,9 +272,9 @@ form label {
   cursor: not-allowed;
 }
 
-/* Theme-aware card/panel: visible in both themes */
+/* Theme-aware card/panel: solid background (no transparency) for readability */
 .card-panel {
-  background-color: var(--color-surface-2);
+  background-color: var(--color-panel-solid);
   border: 1px solid var(--color-border);
   border-radius: 1rem;
   box-shadow: var(--color-card-shadow);

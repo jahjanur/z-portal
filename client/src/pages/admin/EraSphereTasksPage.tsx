@@ -54,7 +54,7 @@ export default function EraSphereTasksPage() {
 
   return (
     <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
-      <div className="rounded-2xl card-panel p-4 shadow-xl backdrop-blur-xl sm:p-6">
+      <div className="rounded-2xl card-panel p-4 shadow-xl sm:p-6">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Tasks</h2>
         <p className="mb-6 text-sm text-[var(--color-text-muted)]">
           Tasks for clients referred by EraSphere partners. Create or edit tasks from the main Dashboard → Tasks (filter: EraSphere only).

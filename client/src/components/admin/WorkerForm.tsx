@@ -65,7 +65,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, allowEraSphereRole = 
   };
 
   return (
-    <div className="mb-6 rounded-xl card-panel p-5 backdrop-blur-sm">
+    <div className="mb-6 rounded-xl card-panel p-5">
       <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-primary)]">
         {allowEraSphereRole ? "Add Worker or EraSphere Partner" : "Add New Worker"}
       </h3>
