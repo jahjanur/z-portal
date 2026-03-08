@@ -397,7 +397,10 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
       logo, 
       colorHex, 
       postalAddress,
-      domainName
+      domainName,
+      domainExpiry,
+      hostingPlan,
+      hostingExpiry,
     } = req.body;
 
     if (!email || !password || !role || !name) {
@@ -490,11 +493,14 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
 
     if (roleNormalized === "CLIENT" && domainName) {
       try {
+        const expirationDate = domainExpiry ? new Date(domainExpiry + "T12:00:00") : null;
+        const isValidExpiry = expirationDate && !isNaN(expirationDate.getTime());
         await prisma.domain.create({
           data: {
             clientId: newUser.id,
             domainName,
             isPrimary: true,
+            expirationDate: isValidExpiry ? expirationDate : null,
           }
         });
         console.log(`✅ Domain ${domainName} created for client ${newUser.id}`);
@@ -511,7 +517,26 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
       const emailBody = isEraSphere
         ? 'You have been invited as an EraSphere Partner. Please complete your company profile by clicking the link below:'
         : 'Please complete your company profile by clicking the link below:';
-      
+
+      const hasDomainInfo = domainName || domainExpiry || hostingPlan || hostingExpiry;
+      const formatDateForEmail = (d: string) => {
+        const date = new Date(d);
+        return isNaN(date.getTime()) ? d : date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      };
+      const domainSection = hasDomainInfo
+        ? `
+          <div style="margin-top: 20px; padding: 16px; background: #f5f5f5; border-radius: 8px;">
+            <p style="margin: 0 0 10px 0; font-weight: 600;">Domain & Hosting details (from your client page):</p>
+            <ul style="margin: 0; padding-left: 20px;">
+              ${domainName ? `<li><strong>Domain:</strong> ${domainName}</li>` : ""}
+              ${domainExpiry ? `<li><strong>Domain expiry:</strong> ${formatDateForEmail(domainExpiry)}</li>` : ""}
+              ${hostingPlan ? `<li><strong>Hosting plan:</strong> ${hostingPlan}</li>` : ""}
+              ${hostingExpiry ? `<li><strong>Hosting expiry:</strong> ${formatDateForEmail(hostingExpiry)}</li>` : ""}
+            </ul>
+          </div>
+        `
+        : "";
+
       try {
         await transporter.sendMail({
           from: process.env.SMTP_USER,
@@ -520,6 +545,7 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
           html: `
             <h2>${emailHeading}</h2>
             <p>${emailBody}</p>
+            ${domainSection}
             <a href="${inviteLink}" style="display: inline-block; padding: 10px 20px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 5px;">Complete Profile</a>
             <p>This link will expire in 7 days.</p>
           `,

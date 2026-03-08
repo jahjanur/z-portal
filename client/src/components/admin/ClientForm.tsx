@@ -60,17 +60,15 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAnd
     setShowHostingFields(false);
   };
 
-  const setDefaultDates = () => {
+  const setLifespanExpiry = (years: number) => {
     const today = new Date();
-    const oneYearFromNow = new Date(today);
-    oneYearFromNow.setFullYear(today.getFullYear() + 1);
-    
-    const formattedDate = oneYearFromNow.toISOString().split('T')[0];
-    
+    const future = new Date(today);
+    future.setFullYear(today.getFullYear() + years);
+    const formatted = future.toISOString().split("T")[0];
     setFormData({
       ...formData,
-      domainExpiry: formattedDate,
-      hostingExpiry: formattedDate,
+      domainExpiry: formatted,
+      hostingExpiry: formatted,
     });
   };
 
@@ -195,18 +193,35 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAnd
       {/* Domain & Hosting Fields (Optional) - hidden for EraSphere */}
       {!hideDomainAndHosting && showHostingFields && (
         <div className="mt-4 rounded-xl border-2 border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)] p-5">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h4 className="text-sm font-bold text-[var(--color-text-primary)]">Domain & Hosting Information</h4>
-            <button
-              type="button"
-              onClick={setDefaultDates}
-              className="flex items-center gap-2 btn-primary rounded-lg px-3 py-2 text-xs"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Set 1-Year Expiry
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-[var(--color-text-muted)]">Lifespan:</span>
+              <button
+                type="button"
+                onClick={() => setLifespanExpiry(1)}
+                className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-3)] px-3 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-border-hover)]"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                1 year
+              </button>
+              <button
+                type="button"
+                onClick={() => setLifespanExpiry(2)}
+                className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-3)] px-3 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-border-hover)]"
+              >
+                2 years
+              </button>
+              <button
+                type="button"
+                onClick={() => setLifespanExpiry(3)}
+                className="flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-3)] px-3 py-2 text-xs font-semibold text-[var(--color-text-primary)] transition hover:bg-[var(--color-border-hover)]"
+              >
+                3 years
+              </button>
+            </div>
           </div>
           
           <div className="space-y-4">
@@ -228,7 +243,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAnd
                 </label>
                 <DatePicker
                   value={formData.domainExpiry}
-                  onChange={(domainExpiry) => setFormData({ ...formData, domainExpiry })}
+                  onChange={(domainExpiry) => setFormData({ ...formData, domainExpiry: domainExpiry || "" })}
                   placeholder="yyyy/mm/dd"
                   className="w-full rounded-xl border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)]"
                 />
@@ -253,7 +268,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAnd
                 </label>
                 <DatePicker
                   value={formData.hostingExpiry}
-                  onChange={(hostingExpiry) => setFormData({ ...formData, hostingExpiry })}
+                  onChange={(hostingExpiry) => setFormData({ ...formData, hostingExpiry: hostingExpiry || "" })}
                   placeholder="yyyy/mm/dd"
                   className="w-full rounded-xl border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)]"
                 />
