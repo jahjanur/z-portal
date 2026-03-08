@@ -178,10 +178,11 @@ router.post("/", verifyJWT, uploadInvoice.single("file"), async (req: any, res) 
     let taxRateNum: number | null = null;
 
     if (hasLineItems) {
-      subtotal = lineItems.reduce((sum: number, li: { quantity: number; unitPrice: number }) => sum + Number(li.quantity) * Number(li.unitPrice), 0);
+      const sub = lineItems.reduce((sum: number, li: { quantity: number; unitPrice: number }) => sum + Number(li.quantity) * Number(li.unitPrice), 0);
+      subtotal = sub;
       taxRateNum = taxRate != null && taxRate !== "" ? parseFloat(String(taxRate)) : null;
-      taxAmount = taxRateNum != null ? subtotal * (taxRateNum / 100) : 0;
-      totalAmount = subtotal + (taxAmount || 0);
+      taxAmount = taxRateNum != null ? sub * (taxRateNum / 100) : 0;
+      totalAmount = sub + (taxAmount || 0);
     } else {
       if (amount == null || amount === "") {
         return res.status(400).json({ error: "amount is required when there are no line items" });
