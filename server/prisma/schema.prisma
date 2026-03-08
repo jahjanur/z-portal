@@ -58,17 +58,24 @@ model Project {
 }
 
 model Domain {
-  id         Int      @id @default(autoincrement())
-  clientId   Int
-  domainName String
-  isPrimary  Boolean  @default(false)
-  isActive   Boolean  @default(true)
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
-  client     User     @relation("ClientDomains", fields: [clientId], references: [id], onDelete: Cascade)
+  id                      Int       @id @default(autoincrement())
+  clientId                Int
+  domainName              String
+  isPrimary               Boolean   @default(false)
+  isActive                Boolean   @default(true)
+  notes                   String?
+  activationDate          DateTime?
+  expirationDate          DateTime?
+  lifespanYears           Int?
+  status                  String    @default("PENDING")
+  activationEmailSentAt   DateTime?
+  renewalReminderSentAt   DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @default(now()) @updatedAt
+  client                  User      @relation("ClientDomains", fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
+  @@index([expirationDate])
 }
 
 model Task {
@@ -153,6 +160,26 @@ model Invoice {
   paymentLink   String?
   clientId      Int
   client        User      @relation("ClientInvoices", fields: [clientId], references: [id])
+  issueDate     DateTime?
+  paymentTerms  String?
+  notes         String?
+  subtotal      Float?
+  taxRate       Float?
+  taxAmount     Float?
+  lineItems     InvoiceLineItem[]
+}
+
+model InvoiceLineItem {
+  id          Int     @id @default(autoincrement())
+  invoiceId   Int
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  quantity    Float
+  unitPrice   Float
+  sortOrder   Int      @default(0)
+
+  @@index([invoiceId])
 }
 
 model TimesheetProject {

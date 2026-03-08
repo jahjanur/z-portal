@@ -12,6 +12,9 @@ if (!process.env.DATABASE_URL) {
 }
 
 import app from "./app";
+import { scheduleDomainRenewalReminders } from "./jobs/domainRenewalReminder";
+
+scheduleDomainRenewalReminders();
 
 if (process.env.NODE_ENV === "production") {
   const buildPath = path.join(__dirname, "client");

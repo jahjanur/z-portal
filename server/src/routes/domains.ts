@@ -1,8 +1,26 @@
 import { Router } from "express";
 import { verifyJWT, verifyAdmin } from "../middleware/auth";
 import prisma from "../lib/prisma";
+import {
+  sendDomainActivationEmail,
+  sendDomainRenewalConfirmationEmail,
+} from "../services/notifications";
 
 const router = Router();
+
+const clientSelect = {
+  id: true,
+  name: true,
+  company: true,
+  email: true,
+};
+
+/** Compute expiration date from activation + lifespan years. */
+function addYears(date: Date, years: number): Date {
+  const d = new Date(date);
+  d.setFullYear(d.getFullYear() + years);
+  return d;
+}
 
 // get all domains for a client (admin only; EraSphere cannot access domain/hosting)
 router.get("/client/:clientId", verifyJWT, verifyAdmin, async (req, res) => {
@@ -13,11 +31,7 @@ router.get("/client/:clientId", verifyJWT, verifyAdmin, async (req, res) => {
       where: { clientId: Number(clientId) },
       include: {
         client: {
-          select: {
-            id: true,
-            name: true,
-            company: true,
-          }
+          select: clientSelect,
         }
       },
       orderBy: [
@@ -40,11 +54,7 @@ router.get("/:id", verifyJWT, verifyAdmin, async (req, res) => {
       where: { id: Number(req.params.id) },
       include: {
         client: {
-          select: {
-            id: true,
-            name: true,
-            company: true,
-          }
+          select: clientSelect,
         }
       }
     });
@@ -67,20 +77,33 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
       clientId,
       domainName,
       isPrimary,
-      notes
+      notes,
+      activationDate: activationDateRaw,
+      expirationDate: expirationDateRaw,
+      lifespanYears,
+      status: statusBody,
     } = req.body;
 
     if (!clientId || !domainName) {
       return res.status(400).json({ error: "Client ID and domain name are required" });
     }
 
+    const status = (statusBody && String(statusBody).toUpperCase()) || "PENDING";
+    let activationDate: Date | null = activationDateRaw ? new Date(activationDateRaw) : null;
+    let expirationDate: Date | null = expirationDateRaw ? new Date(expirationDateRaw) : null;
+    const lifespanYearsNum = lifespanYears != null ? Number(lifespanYears) : null;
+
+    if (status === "ACTIVE" && !activationDate) {
+      activationDate = new Date();
+    }
+    if (activationDate && lifespanYearsNum != null && lifespanYearsNum > 0 && !expirationDate) {
+      expirationDate = addYears(activationDate, lifespanYearsNum);
+    }
+
     if (isPrimary) {
       await prisma.domain.updateMany({
-        where: { 
-          clientId: Number(clientId),
-          isPrimary: true 
-        },
-        data: { isPrimary: false }
+        where: { clientId: Number(clientId), isPrimary: true },
+        data: { isPrimary: false },
       });
     }
 
@@ -90,19 +113,37 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
         domainName,
         isPrimary: isPrimary || false,
         notes: notes || null,
+        activationDate,
+        expirationDate,
+        lifespanYears: lifespanYearsNum,
+        status,
+        isActive: status === "ACTIVE" || status === "RENEWED" || status === "RENEWAL_DUE",
       },
       include: {
-        client: {
-          select: {
-            id: true,
-            name: true,
-            company: true,
-          }
-        }
-      }
+        client: { select: clientSelect },
+      },
     });
 
-    res.status(201).json(domain);
+    if (status === "ACTIVE" && domain.client && "email" in domain.client) {
+      try {
+        await sendDomainActivationEmail(domain, {
+          email: (domain.client as { email: string }).email,
+          name: domain.client.name,
+        });
+        await prisma.domain.update({
+          where: { id: domain.id },
+          data: { activationEmailSentAt: new Date() },
+        });
+      } catch (emailErr) {
+        console.error("Failed to send domain activation email:", emailErr);
+      }
+    }
+
+    const updated = await prisma.domain.findUnique({
+      where: { id: domain.id },
+      include: { client: { select: clientSelect } },
+    });
+    res.status(201).json(updated);
   } catch (error) {
     console.error("Error creating domain:", error);
     res.status(500).json({ error: "Failed to create domain" });
@@ -117,48 +158,122 @@ router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
       domainName,
       isPrimary,
       isActive,
-      notes
+      notes,
+      activationDate: activationDateRaw,
+      expirationDate: expirationDateRaw,
+      lifespanYears,
+      status: statusBody,
     } = req.body;
 
     const existingDomain = await prisma.domain.findUnique({
-      where: { id: Number(id) }
+      where: { id: Number(id) },
+      include: { client: { select: clientSelect } },
     });
 
     if (!existingDomain) {
       return res.status(404).json({ error: "Domain not found" });
     }
 
-    if (isPrimary && !existingDomain.isPrimary) {
-      await prisma.domain.updateMany({
-        where: { 
-          clientId: existingDomain.clientId,
-          isPrimary: true,
-          id: { not: Number(id) }
-        },
-        data: { isPrimary: false }
-      });
+    const status = statusBody !== undefined ? String(statusBody).toUpperCase() : existingDomain.status;
+    let activationDate: Date | null =
+      activationDateRaw !== undefined ? new Date(activationDateRaw) : existingDomain.activationDate;
+    let expirationDate: Date | null =
+      expirationDateRaw !== undefined ? new Date(expirationDateRaw) : existingDomain.expirationDate;
+    const lifespanYearsNum =
+      lifespanYears !== undefined ? (lifespanYears == null ? null : Number(lifespanYears)) : existingDomain.lifespanYears;
+
+    const isFirstTimeActivation =
+      status === "ACTIVE" && !existingDomain.activationEmailSentAt && existingDomain.status !== "ACTIVE";
+    if (isFirstTimeActivation && !activationDate) {
+      activationDate = new Date();
+    }
+    if (
+      isFirstTimeActivation &&
+      activationDate &&
+      lifespanYearsNum != null &&
+      lifespanYearsNum > 0 &&
+      !expirationDate
+    ) {
+      expirationDate = addYears(activationDate, lifespanYearsNum);
+    }
+    if (
+      !isFirstTimeActivation &&
+      activationDate &&
+      lifespanYearsNum != null &&
+      lifespanYearsNum > 0 &&
+      expirationDateRaw === undefined &&
+      existingDomain.expirationDate === null
+    ) {
+      expirationDate = addYears(activationDate, lifespanYearsNum);
+    }
+
+    const previousExpiration = existingDomain.expirationDate
+      ? existingDomain.expirationDate.getTime()
+      : null;
+    const newExpiration = expirationDate ? expirationDate.getTime() : null;
+    const isRenewal = newExpiration != null && previousExpiration != null && newExpiration > previousExpiration;
+
+    const updateData: {
+      domainName?: string;
+      isPrimary?: boolean;
+      isActive?: boolean;
+      notes?: string | null;
+      activationDate?: Date | null;
+      expirationDate?: Date | null;
+      lifespanYears?: number | null;
+      status?: string;
+      activationEmailSentAt?: Date | null;
+      renewalReminderSentAt?: Date | null;
+    } = {
+      domainName: domainName !== undefined ? domainName : existingDomain.domainName,
+      isPrimary: isPrimary !== undefined ? isPrimary : existingDomain.isPrimary,
+      isActive: isActive !== undefined ? isActive : existingDomain.isActive,
+      notes: notes !== undefined ? notes : existingDomain.notes,
+      activationDate,
+      expirationDate,
+      lifespanYears: lifespanYearsNum,
+      status,
+    };
+
+    if (isRenewal) {
+      updateData.renewalReminderSentAt = null;
     }
 
     const domain = await prisma.domain.update({
       where: { id: Number(id) },
-      data: {
-        domainName: domainName !== undefined ? domainName : existingDomain.domainName,
-        isPrimary: isPrimary !== undefined ? isPrimary : existingDomain.isPrimary,
-        isActive: isActive !== undefined ? isActive : existingDomain.isActive,
-        notes: notes !== undefined ? notes : existingDomain.notes,
-      },
-      include: {
-        client: {
-          select: {
-            id: true,
-            name: true,
-            company: true,
-          }
-        }
-      }
+      data: updateData,
+      include: { client: { select: clientSelect } },
     });
 
-    res.json(domain);
+    if (isFirstTimeActivation && domain.client && "email" in domain.client) {
+      try {
+        await sendDomainActivationEmail(domain, {
+          email: (domain.client as { email: string }).email,
+          name: domain.client.name,
+        });
+        await prisma.domain.update({
+          where: { id: domain.id },
+          data: { activationEmailSentAt: new Date() },
+        });
+      } catch (emailErr) {
+        console.error("Failed to send domain activation email:", emailErr);
+      }
+    } else if (isRenewal && domain.client && "email" in domain.client) {
+      try {
+        await sendDomainRenewalConfirmationEmail(domain, {
+          email: (domain.client as { email: string }).email,
+          name: domain.client.name,
+        });
+      } catch (emailErr) {
+        console.error("Failed to send domain renewal confirmation:", emailErr);
+      }
+    }
+
+    const updated = await prisma.domain.findUnique({
+      where: { id: Number(id) },
+      include: { client: { select: clientSelect } },
+    });
+    res.json(updated);
   } catch (error) {
     console.error("Error updating domain:", error);
     res.status(500).json({ error: "Failed to update domain" });
