@@ -55,6 +55,7 @@ interface Domain {
   id: number;
   domainName: string;
   domainExpiry?: string;
+  expirationDate?: string | null;
   hostingExpiry?: string;
   sslExpiry?: string;
   client: {
@@ -195,8 +196,9 @@ export default function HomePage() {
   thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
   const expiringDomains = domains.filter(d => {
-    if (d.domainExpiry) {
-      const expiryDate = new Date(d.domainExpiry);
+    const expiry = d.expirationDate || d.domainExpiry;
+    if (expiry) {
+      const expiryDate = new Date(expiry);
       return expiryDate > new Date() && expiryDate <= thirtyDaysFromNow;
     }
     return false;

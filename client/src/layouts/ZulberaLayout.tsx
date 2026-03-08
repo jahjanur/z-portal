@@ -1,15 +1,25 @@
 import { NavLink, Outlet } from "react-router-dom";
+import {
+  BarChart3,
+  Briefcase,
+  Check,
+  Clock,
+  FileText,
+  Globe,
+  Mail,
+  Users,
+} from "lucide-react";
 import { AdminProvider, useAdmin } from "../contexts/AdminContext";
 
 const ZULBERA_NAV = [
-  { path: "/admin/zulbera/analytics", label: "Analytics", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
-  { path: "/admin/zulbera/workers", label: "Workers", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
-  { path: "/admin/zulbera/clients", label: "Clients", icon: "M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
-  { path: "/admin/zulbera/tasks", label: "Tasks", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
-  { path: "/admin/zulbera/invoices", label: "Invoices", icon: "M9 14l6-6m-5.5 0h10.5" },
-  { path: "/admin/zulbera/domains", label: "Domains", icon: "M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9a9 9 0 019-9" },
-  { path: "/admin/zulbera/send-offer", label: "Send Offer", icon: "M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" },
-  { path: "/admin/zulbera/timesheets", label: "Timesheets", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
+  { path: "/admin/zulbera/analytics", label: "Analytics", icon: BarChart3 },
+  { path: "/admin/zulbera/workers", label: "Workers", icon: Users },
+  { path: "/admin/zulbera/clients", label: "Clients", icon: Briefcase },
+  { path: "/admin/zulbera/tasks", label: "Tasks", icon: Check },
+  { path: "/admin/zulbera/invoices", label: "Invoices", icon: FileText },
+  { path: "/admin/zulbera/domains", label: "Domains", icon: Globe },
+  { path: "/admin/zulbera/send-offer", label: "Send Offer", icon: Mail },
+  { path: "/admin/zulbera/timesheets", label: "Timesheets", icon: Clock },
 ];
 
 function ZulberaLayoutInner() {
@@ -49,7 +59,7 @@ function ZulberaLayoutInner() {
           <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Zulbera</p>
         </div>
         <nav className="flex-1 px-3 space-y-1">
-          {ZULBERA_NAV.map(({ path, label, icon }) => (
+          {ZULBERA_NAV.map(({ path, label, icon: Icon }) => (
             <NavLink
               key={path}
               to={path}
@@ -62,9 +72,7 @@ function ZulberaLayoutInner() {
                 }`
               }
             >
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
-              </svg>
+              <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
               {label}
             </NavLink>
           ))}

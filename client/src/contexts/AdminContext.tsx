@@ -38,6 +38,15 @@ export interface Task {
   project?: Project;
 }
 
+export interface InvoiceLineItem {
+  id?: number;
+  name: string;
+  description?: string | null;
+  quantity: number;
+  unitPrice: number;
+  sortOrder?: number;
+}
+
 export interface Invoice {
   id: number;
   clientId: number;
@@ -49,7 +58,15 @@ export interface Invoice {
   paidAt?: string;
   createdAt: string;
   fileUrl?: string;
+  paymentLink?: string | null;
   client?: User;
+  issueDate?: string | null;
+  paymentTerms?: string | null;
+  notes?: string | null;
+  subtotal?: number | null;
+  taxRate?: number | null;
+  taxAmount?: number | null;
+  lineItems?: InvoiceLineItem[];
 }
 
 export interface Domain {
@@ -61,6 +78,12 @@ export interface Domain {
   isPrimary: boolean;
   client: { id: number; name: string; company?: string };
   createdAt: string;
+  activationDate?: string | null;
+  expirationDate?: string | null;
+  lifespanYears?: number | null;
+  status?: string;
+  activationEmailSentAt?: string | null;
+  renewalReminderSentAt?: string | null;
 }
 
 interface EditingDomain {
@@ -70,6 +93,12 @@ interface EditingDomain {
   hostingPlan?: string;
   hostingExpiry?: string;
   clientId: number;
+  activationDate?: string | null;
+  expirationDate?: string | null;
+  lifespanYears?: number | null;
+  status?: string;
+  activationEmailSentAt?: string | null;
+  renewalReminderSentAt?: string | null;
 }
 
 interface AdminContextValue {
@@ -107,8 +136,29 @@ interface AdminContextValue {
   deleteTask: (id: number) => Promise<void>;
   createInvoice: (formData: FormData) => Promise<void>;
   deleteInvoice: (id: number) => Promise<void>;
-  createDomain: (data: { clientId: string; domainName: string; domainExpiry?: string; hostingPlan?: string; hostingExpiry?: string; notes?: string }) => void;
-  updateDomain: (domainId: number, data: { domainName: string; domainExpiry?: string; hostingPlan?: string; hostingExpiry?: string; notes?: string }) => Promise<void>;
+  createDomain: (data: {
+    clientId: string;
+    domainName: string;
+    domainExpiry?: string;
+    hostingPlan?: string;
+    hostingExpiry?: string;
+    notes?: string;
+    activationDate?: string;
+    expirationDate?: string;
+    lifespanYears?: number | null;
+    status?: string;
+  }) => Promise<void>;
+  updateDomain: (domainId: number, data: {
+    domainName: string;
+    domainExpiry?: string;
+    hostingPlan?: string;
+    hostingExpiry?: string;
+    notes?: string;
+    activationDate?: string;
+    expirationDate?: string;
+    lifespanYears?: number | null;
+    status?: string;
+  }) => Promise<void>;
   deleteDomain: (id: number) => void;
   handleEditDomain: (domain: Domain) => void;
   handleCancelEdit: () => void;
@@ -262,24 +312,58 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     await fetchAll();
   };
 
-  const createDomain = async (data: { clientId: string; domainName: string; domainExpiry?: string; hostingPlan?: string; hostingExpiry?: string; notes?: string }) => {
+  const createDomain = async (data: {
+    clientId: string;
+    domainName: string;
+    domainExpiry?: string;
+    hostingPlan?: string;
+    hostingExpiry?: string;
+    notes?: string;
+    activationDate?: string;
+    expirationDate?: string;
+    lifespanYears?: number | null;
+    status?: string;
+  }) => {
     await API.post("/domains", {
       clientId: Number(data.clientId),
       domainName: data.domainName,
       domainExpiry: data.domainExpiry || null,
       hostingPlan: data.hostingPlan || null,
       hostingExpiry: data.hostingExpiry || null,
+      notes: data.notes || null,
+      activationDate: data.activationDate || null,
+      expirationDate: data.expirationDate || null,
+      lifespanYears: data.lifespanYears ?? null,
+      status: data.status || "PENDING",
     });
     await fetchAll();
     toast.success("Domain added successfully!");
   };
 
-  const updateDomain = async (domainId: number, data: { domainName: string; domainExpiry?: string; hostingPlan?: string; hostingExpiry?: string; notes?: string }) => {
+  const updateDomain = async (
+    domainId: number,
+    data: {
+      domainName: string;
+      domainExpiry?: string;
+      hostingPlan?: string;
+      hostingExpiry?: string;
+      notes?: string;
+      activationDate?: string;
+      expirationDate?: string;
+      lifespanYears?: number | null;
+      status?: string;
+    }
+  ) => {
     await API.put(`/domains/${domainId}`, {
       domainName: data.domainName,
       domainExpiry: data.domainExpiry || null,
       hostingPlan: data.hostingPlan || null,
       hostingExpiry: data.hostingExpiry || null,
+      notes: data.notes || null,
+      activationDate: data.activationDate || null,
+      expirationDate: data.expirationDate || null,
+      lifespanYears: data.lifespanYears ?? null,
+      status: data.status,
     });
     setEditingDomain(null);
     await fetchAll();
@@ -301,6 +385,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       hostingPlan: domain.hostingPlan,
       hostingExpiry: domain.hostingExpiry,
       clientId: domain.client.id,
+      activationDate: domain.activationDate,
+      expirationDate: domain.expirationDate,
+      lifespanYears: domain.lifespanYears,
+      status: domain.status,
+      activationEmailSentAt: domain.activationEmailSentAt,
+      renewalReminderSentAt: domain.renewalReminderSentAt,
     });
   };
 

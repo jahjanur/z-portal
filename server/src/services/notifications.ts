@@ -292,6 +292,121 @@ export async function notifyTaskOverdue(task: any, worker: { email: string; name
 
 // ==================== DOMAIN NOTIFICATIONS ====================
 
+/** First-time activation only (when status becomes ACTIVE and activationEmailSentAt was null). */
+export async function sendDomainActivationEmail(domain: any, client: { email: string; name: string }) {
+  try {
+    const activationStr = domain.activationDate ? new Date(domain.activationDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
+    const expirationStr = domain.expirationDate ? new Date(domain.expirationDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: client.email,
+      subject: "Your Domain Has Been Successfully Activated 🎉",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #374151;">Your Domain Has Been Successfully Activated 🎉</h2>
+          <p>Dear ${client.name},</p>
+          <p>Woohoo! We have great news for you.</p>
+          <p>Your domain <strong>${domain.domainName}</strong> has been successfully activated.</p>
+          
+          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Domain Details</h3>
+            <p><strong>Activation Date:</strong> ${activationStr}</p>
+            <p><strong>Expiration Date:</strong> ${expirationStr}</p>
+          </div>
+          
+          <p>Your domain is now active and ready to use. If you need any help, feel free to contact our support team.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${FRONTEND_URL}/dashboard" 
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              View Dashboard
+            </a>
+          </div>
+        </div>
+      `,
+    });
+    console.log(`✅ Domain activation email sent to ${client.email}`);
+  } catch (error) {
+    console.error(`❌ Failed to send domain activation email to ${client.email}:`, error);
+  }
+}
+
+/** Used by scheduled job: 1 month before expiry. */
+export async function sendDomainRenewalReminderEmail(domain: any, client: { email: string; name: string }) {
+  try {
+    const activationStr = domain.activationDate ? new Date(domain.activationDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
+    const expirationStr = domain.expirationDate ? new Date(domain.expirationDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: client.email,
+      subject: "Domain Renewal Reminder",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #374151;">Domain Renewal Reminder</h2>
+          <p>Dear ${client.name},</p>
+          <p>Your domain <strong>${domain.domainName}</strong> is scheduled to expire on <strong>${expirationStr}</strong>.</p>
+          <p>Please renew your domain before this date to avoid interruption of service.</p>
+          
+          <div style="background-color: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
+            <h3 style="margin-top: 0; color: #92400E;">Domain Details</h3>
+            <p><strong>Domain:</strong> ${domain.domainName}</p>
+            <p><strong>Activation Date:</strong> ${activationStr}</p>
+            <p><strong>Expiration Date:</strong> ${expirationStr}</p>
+            <p><strong>Remaining time:</strong> Approximately 1 month until expiry</p>
+          </div>
+          
+          <p>If you have a renewal or payment link, please use it to renew before the expiration date. If you need assistance, contact our support team.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${FRONTEND_URL}/dashboard" 
+               style="display: inline-block; padding: 12px 30px; background-color: #F59E0B; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              View Dashboard
+            </a>
+          </div>
+        </div>
+      `,
+    });
+    console.log(`✅ Domain renewal reminder sent to ${client.email}`);
+  } catch (error) {
+    console.error(`❌ Failed to send domain renewal reminder to ${client.email}:`, error);
+  }
+}
+
+/** When admin extends expiration (renewal) — short confirmation, no first-time wording. */
+export async function sendDomainRenewalConfirmationEmail(domain: any, client: { email: string; name: string }) {
+  try {
+    const expirationStr = domain.expirationDate ? new Date(domain.expirationDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: client.email,
+      subject: `Domain Renewed: ${domain.domainName}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #10B981;">Domain Renewed</h2>
+          <p>Dear ${client.name},</p>
+          <p>Your domain <strong>${domain.domainName}</strong> has been renewed.</p>
+          
+          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>New expiration date:</strong> ${expirationStr}</p>
+          </div>
+          
+          <p>Thank you for renewing. If you have any questions, contact our support team.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${FRONTEND_URL}/dashboard" 
+               style="display: inline-block; padding: 12px 30px; background-color: #374151; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              View Dashboard
+            </a>
+          </div>
+        </div>
+      `,
+    });
+    console.log(`✅ Domain renewal confirmation sent to ${client.email}`);
+  } catch (error) {
+    console.error(`❌ Failed to send domain renewal confirmation to ${client.email}:`, error);
+  }
+}
+
 // Notify client and admin when domain is created
 export async function notifyNewDomain(domain: any, client: { email: string; name: string }) {
   const recipients = [
