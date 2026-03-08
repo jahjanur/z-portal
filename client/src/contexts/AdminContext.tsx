@@ -129,7 +129,19 @@ interface AdminContextValue {
   fetchProjects: () => Promise<void>;
   createWorker: (data: { email: string; password: string; name: string; role?: string; company?: string }) => Promise<unknown>;
   deleteUser: (id: number) => Promise<void>;
-  createClient: (data: { name: string; company: string; email: string; password: string; colorHex: string }) => void;
+  createClient: (data: {
+    name: string;
+    company: string;
+    email: string;
+    password: string;
+    colorHex: string;
+    postalAddress?: string;
+    domainName?: string;
+    domainExpiry?: string;
+    hostingPlan?: string;
+    hostingExpiry?: string;
+    sslExpiry?: string;
+  }) => void;
   resendInvite: (clientId: number) => Promise<void>;
   createTask: (data: { title: string; description: string; clientId: string; workerIds: number[]; dueDate: string; projectId: string }) => void;
   handleCreateProject: (data: { name: string; clientId: string; description: string }) => Promise<void>;
@@ -266,8 +278,29 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     await fetchAll();
   };
 
-  const createClient = async (data: { name: string; company: string; email: string; password: string; colorHex: string }) => {
-    await API.post("/users", { ...data, role: "CLIENT" });
+  const createClient = async (data: {
+    name: string;
+    company: string;
+    email: string;
+    password: string;
+    colorHex: string;
+    postalAddress?: string;
+    domainName?: string;
+    domainExpiry?: string;
+    hostingPlan?: string;
+    hostingExpiry?: string;
+    sslExpiry?: string;
+  }) => {
+    await API.post("/users", {
+      ...data,
+      role: "CLIENT",
+      postalAddress: data.postalAddress ?? undefined,
+      domainName: data.domainName || undefined,
+      domainExpiry: data.domainExpiry || undefined,
+      hostingPlan: data.hostingPlan || undefined,
+      hostingExpiry: data.hostingExpiry || undefined,
+      sslExpiry: data.sslExpiry || undefined,
+    });
     await fetchAll();
   };
 
