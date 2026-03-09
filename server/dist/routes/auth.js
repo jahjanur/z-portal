@@ -6,9 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const client_1 = require("@prisma/client");
+const prisma_1 = __importDefault(require("../lib/prisma"));
 const router = express_1.default.Router();
-const prisma = new client_1.PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
 // login
 router.post("/login", async (req, res) => {
@@ -20,7 +19,7 @@ router.post("/login", async (req, res) => {
         }
         const email = String(rawEmail).trim().toLowerCase();
         const password = String(rawPassword).trim();
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma_1.default.user.findUnique({ where: { email } });
         if (!user) {
             return res.status(401).json({ message: "Invalid credentials" });
         }
@@ -58,7 +57,7 @@ router.get("/verify", async (req, res) => {
             return res.status(401).json({ message: "No token provided" });
         }
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
-        const user = await prisma.user.findUnique({
+        const user = await prisma_1.default.user.findUnique({
             where: { id: decoded.userId },
             select: {
                 id: true,
