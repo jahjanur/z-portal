@@ -4,13 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const notifications_1 = require("../services/notifications");
+const notificationStore_1 = require("../services/notificationStore");
+const prisma_1 = __importDefault(require("../lib/prisma"));
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
         cb(null, "uploads/");
@@ -41,7 +41,38 @@ router.get("/", auth_1.verifyJWT, async (req, res) => {
             }
         };
         if (role === "ADMIN") {
-            tasks = await prisma.task.findMany({
+            tasks = await prisma_1.default.task.findMany({
+                include: {
+                    client: {
+                        select: {
+                            id: true,
+                            email: true,
+                            name: true,
+                            company: true,
+                            role: true,
+                            referredById: true,
+                        }
+                    },
+                    ...workersInclude,
+                    project: {
+                        select: {
+                            id: true,
+                            name: true,
+                            description: true
+                        }
+                    },
+                    files: true,
+                    comments: true
+                }
+            });
+        }
+        else if (role === "ERASPHERE") {
+            const referredClientIds = await prisma_1.default.user.findMany({
+                where: { role: "CLIENT", referredById: userId },
+                select: { id: true },
+            }).then((rows) => rows.map((r) => r.id));
+            tasks = await prisma_1.default.task.findMany({
+                where: { clientId: { in: referredClientIds } },
                 include: {
                     client: {
                         select: {
@@ -66,7 +97,7 @@ router.get("/", auth_1.verifyJWT, async (req, res) => {
             });
         }
         else if (role === "WORKER") {
-            tasks = await prisma.task.findMany({
+            tasks = await prisma_1.default.task.findMany({
                 where: { workers: { some: { userId } } },
                 include: {
                     client: {
@@ -92,7 +123,7 @@ router.get("/", auth_1.verifyJWT, async (req, res) => {
             });
         }
         else if (role === "CLIENT") {
-            tasks = await prisma.task.findMany({
+            tasks = await prisma_1.default.task.findMany({
                 where: { clientId: userId },
                 include: {
                     ...workersInclude,
@@ -123,7 +154,7 @@ router.get("/:id", auth_1.verifyJWT, async (req, res) => {
     try {
         const { role, userId } = req.user;
         const taskId = Number(req.params.id);
-        const task = await prisma.task.findUnique({
+        const task = await prisma_1.default.task.findUnique({
             where: { id: taskId },
             include: {
                 client: {
@@ -132,7 +163,8 @@ router.get("/:id", auth_1.verifyJWT, async (req, res) => {
                         email: true,
                         name: true,
                         company: true,
-                        role: true
+                        role: true,
+                        referredById: true,
                     }
                 },
                 workers: {
@@ -208,22 +240,22 @@ router.get("/:id", auth_1.verifyJWT, async (req, res) => {
 router.post("/", auth_1.verifyJWT, async (req, res) => {
     try {
         const { role } = req.user;
-        if (role !== "ADMIN") {
-            return res.status(403).json({ error: "Only admins can create tasks" });
+        if (role !== "ADMIN" && role !== "ERASPHERE") {
+            return res.status(403).json({ error: "Only admins or EraSphere can create tasks" });
         }
         const { title, description, clientId, workerIds, status, dueDate, projectId } = req.body;
-        const workerIdList = Array.isArray(workerIds) ? workerIds : [];
+        const workerIdList = role === "ADMIN" && Array.isArray(workerIds) ? workerIds : [];
         if (!title || !clientId) {
             return res.status(400).json({ error: "Title and clientId are required" });
         }
-        const client = await prisma.user.findUnique({
+        const client = await prisma_1.default.user.findUnique({
             where: { id: clientId }
         });
         if (!client || client.role !== "CLIENT") {
             return res.status(400).json({ error: "Invalid client ID" });
         }
         for (const wid of workerIdList) {
-            const worker = await prisma.user.findUnique({
+            const worker = await prisma_1.default.user.findUnique({
                 where: { id: Number(wid) }
             });
             if (!worker || worker.role !== "WORKER") {
@@ -231,14 +263,14 @@ router.post("/", auth_1.verifyJWT, async (req, res) => {
             }
         }
         if (projectId) {
-            const project = await prisma.project.findUnique({
+            const project = await prisma_1.default.project.findUnique({
                 where: { id: projectId }
             });
             if (!project) {
                 return res.status(400).json({ error: "Invalid project ID" });
             }
         }
-        const task = await prisma.task.create({
+        const task = await prisma_1.default.task.create({
             data: {
                 title,
                 description: description || null,
@@ -283,6 +315,22 @@ router.post("/", auth_1.verifyJWT, async (req, res) => {
         });
         for (const tw of task.workers) {
             await (0, notifications_1.notifyNewTask)(task, { email: tw.user.email, name: tw.user.name });
+            await (0, notificationStore_1.createNotification)(tw.user.id, "TASK_ASSIGNED", "New Task Assigned", `You have been assigned to task: "${task.title}"`, `/tasks/${task.id}`);
+        }
+        // Notify client about the new task
+        await (0, notificationStore_1.createNotification)(clientId, "TASK_CREATED", "New Task Created", `A new task "${task.title}" has been created for you`, `/tasks/${task.id}`);
+        if (req.user?.role === "ERASPHERE") {
+            try {
+                const partner = await prisma_1.default.user.findUnique({
+                    where: { id: req.user.userId },
+                    select: { name: true },
+                });
+                const clientName = task.client?.name ?? task.client?.company ?? "client";
+                await (0, notificationStore_1.notifyAdmins)("ERASPHERE_NEW_TASK", "EraSphere added a task", `${partner?.name ?? "EraSphere partner"} added task "${task.title}" for ${clientName}`, "/admin/tasks");
+            }
+            catch (err) {
+                console.error("Failed to notify admins of new EraSphere task:", err);
+            }
         }
         res.status(201).json(task);
     }
@@ -297,7 +345,7 @@ router.patch("/:id/status", auth_1.verifyJWT, async (req, res) => {
         const { role, userId } = req.user;
         const taskId = Number(req.params.id);
         const { status } = req.body;
-        const existingTask = await prisma.task.findUnique({
+        const existingTask = await prisma_1.default.task.findUnique({
             where: { id: taskId },
             include: { workers: { include: { user: true } } }
         });
@@ -311,7 +359,10 @@ router.patch("/:id/status", auth_1.verifyJWT, async (req, res) => {
         if (role === "CLIENT") {
             return res.status(403).json({ error: "Clients cannot update task status" });
         }
-        const updatedTask = await prisma.task.update({
+        if (role !== "ADMIN" && role !== "WORKER" && role !== "ERASPHERE") {
+            return res.status(403).json({ error: "Not authorized to update this task" });
+        }
+        const updatedTask = await prisma_1.default.task.update({
             where: { id: taskId },
             data: { status },
             include: {
@@ -350,11 +401,17 @@ router.patch("/:id/status", auth_1.verifyJWT, async (req, res) => {
                 for (const tw of existingTask.workers) {
                     await (0, notifications_1.notifyTaskPendingApproval)(updatedTask, { name: tw.user.name });
                 }
+                // Notify admins that task is pending approval
+                const admins = await prisma_1.default.user.findMany({ where: { role: "ADMIN" } });
+                for (const admin of admins) {
+                    await (0, notificationStore_1.createNotification)(admin.id, "TASK_PENDING_APPROVAL", "Task Pending Approval", `Task "${updatedTask.title}" is pending your approval`, `/tasks/${taskId}`);
+                }
             }
             else if (status === 'COMPLETED') {
                 const recipients = [];
                 for (const tw of existingTask.workers) {
                     recipients.push({ email: tw.user.email, name: tw.user.name, role: 'WORKER' });
+                    await (0, notificationStore_1.createNotification)(tw.userId, "TASK_COMPLETED", "Task Completed", `Task "${updatedTask.title}" has been marked as completed`, `/tasks/${taskId}`);
                 }
                 if (updatedTask.client) {
                     recipients.push({
@@ -362,9 +419,16 @@ router.patch("/:id/status", auth_1.verifyJWT, async (req, res) => {
                         name: updatedTask.client.name,
                         role: 'CLIENT'
                     });
+                    await (0, notificationStore_1.createNotification)(updatedTask.client.id, "TASK_COMPLETED", "Task Completed", `Your task "${updatedTask.title}" has been completed`, `/tasks/${taskId}`);
                 }
                 if (recipients.length > 0) {
                     await (0, notifications_1.notifyTaskCompleted)(updatedTask, recipients);
+                }
+            }
+            else {
+                // Generic status change notification to client
+                if (updatedTask.clientId) {
+                    await (0, notificationStore_1.createNotification)(updatedTask.clientId, "TASK_UPDATED", "Task Status Updated", `Task "${updatedTask.title}" status changed to ${status}`, `/tasks/${taskId}`);
                 }
             }
         }
@@ -383,7 +447,7 @@ router.post("/:id/files", auth_1.verifyJWT, upload.single("file"), async (req, r
         if (!req.file) {
             return res.status(400).json({ error: "No file uploaded" });
         }
-        const file = await prisma.taskFile.create({
+        const file = await prisma_1.default.taskFile.create({
             data: {
                 taskId: parseInt(id),
                 fileName: req.file.originalname,
@@ -406,7 +470,7 @@ router.post("/:taskId/files/:fileId/comments", auth_1.verifyJWT, async (req, res
     try {
         const { taskId, fileId } = req.params;
         const { userId, content } = req.body;
-        const file = await prisma.taskFile.findFirst({
+        const file = await prisma_1.default.taskFile.findFirst({
             where: {
                 id: parseInt(fileId),
                 taskId: parseInt(taskId)
@@ -415,7 +479,7 @@ router.post("/:taskId/files/:fileId/comments", auth_1.verifyJWT, async (req, res
         if (!file) {
             return res.status(404).json({ error: "File not found or doesn't belong to this task" });
         }
-        const task = await prisma.task.findUnique({
+        const task = await prisma_1.default.task.findUnique({
             where: { id: parseInt(taskId) },
             include: { workers: true }
         });
@@ -430,7 +494,7 @@ router.post("/:taskId/files/:fileId/comments", auth_1.verifyJWT, async (req, res
         if (role === "CLIENT" && task.clientId !== authUserId) {
             return res.status(403).json({ error: "Not authorized to comment on this task" });
         }
-        const comment = await prisma.fileComment.create({
+        const comment = await prisma_1.default.fileComment.create({
             data: {
                 fileId: parseInt(fileId),
                 userId: parseInt(userId),
@@ -459,7 +523,7 @@ router.post("/:id/comments", auth_1.verifyJWT, async (req, res) => {
     try {
         const { id } = req.params;
         const { userId, content } = req.body;
-        const comment = await prisma.taskComment.create({
+        const comment = await prisma_1.default.taskComment.create({
             data: {
                 taskId: parseInt(id),
                 userId: parseInt(userId),
@@ -488,7 +552,7 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
     try {
         const { role, userId } = req.user;
         const taskId = Number(req.params.id);
-        const existingTask = await prisma.task.findUnique({
+        const existingTask = await prisma_1.default.task.findUnique({
             where: { id: taskId },
             include: { workers: { include: { user: true } } }
         });
@@ -514,19 +578,19 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
             updateData.dueDate = new Date(dueDate);
         if (projectId !== undefined)
             updateData.projectId = projectId;
-        if (role === "ADMIN") {
+        if (role === "ADMIN" || role === "ERASPHERE") {
             if (clientId !== undefined)
                 updateData.clientId = clientId;
-            if (workerIds !== undefined && Array.isArray(workerIds)) {
-                await prisma.taskWorker.deleteMany({ where: { taskId } });
+            if (role === "ADMIN" && workerIds !== undefined && Array.isArray(workerIds)) {
+                await prisma_1.default.taskWorker.deleteMany({ where: { taskId } });
                 if (workerIds.length > 0) {
-                    await prisma.taskWorker.createMany({
+                    await prisma_1.default.taskWorker.createMany({
                         data: workerIds.map((uid) => ({ taskId, userId: Number(uid) }))
                     });
                 }
             }
         }
-        const updatedTask = await prisma.task.update({
+        const updatedTask = await prisma_1.default.task.update({
             where: { id: taskId },
             data: updateData,
             include: {
@@ -560,21 +624,37 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
                 }
             }
         });
+        if (role === "ADMIN" && workerIds !== undefined && Array.isArray(workerIds) && workerIds.length > 0) {
+            for (const tw of updatedTask.workers) {
+                await (0, notificationStore_1.createNotification)(tw.user.id, "TASK_ASSIGNED", "New Task Assigned", `You have been assigned to task: "${updatedTask.title}"`, `/tasks/${taskId}`);
+            }
+        }
         if (status && status !== existingTask.status) {
             const workersList = updatedTask.workers.map((tw) => tw.user);
             if (status === 'PENDING_APPROVAL') {
                 for (const w of workersList) {
                     await (0, notifications_1.notifyTaskPendingApproval)(updatedTask, { name: w.name });
                 }
+                const admins = await prisma_1.default.user.findMany({ where: { role: "ADMIN" } });
+                for (const admin of admins) {
+                    await (0, notificationStore_1.createNotification)(admin.id, "TASK_PENDING_APPROVAL", "Task Pending Approval", `Task "${updatedTask.title}" is pending your approval`, `/tasks/${taskId}`);
+                }
             }
             else if (status === 'COMPLETED') {
                 const recipients = workersList.map((w) => ({ email: w.email, name: w.name, role: 'WORKER' }));
+                for (const tw of updatedTask.workers) {
+                    await (0, notificationStore_1.createNotification)(tw.user.id, "TASK_COMPLETED", "Task Completed", `Task "${updatedTask.title}" has been marked as completed`, `/tasks/${taskId}`);
+                }
                 if (updatedTask.client) {
                     recipients.push({ email: updatedTask.client.email, name: updatedTask.client.name, role: 'CLIENT' });
+                    await (0, notificationStore_1.createNotification)(updatedTask.client.id, "TASK_COMPLETED", "Task Completed", `Your task "${updatedTask.title}" has been completed`, `/tasks/${taskId}`);
                 }
                 if (recipients.length > 0) {
                     await (0, notifications_1.notifyTaskCompleted)(updatedTask, recipients);
                 }
+            }
+            else if (updatedTask.clientId) {
+                await (0, notificationStore_1.createNotification)(updatedTask.clientId, "TASK_UPDATED", "Task Status Updated", `Task "${updatedTask.title}" status changed to ${status}`, `/tasks/${taskId}`);
             }
         }
         res.json(updatedTask);
@@ -588,10 +668,10 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
 router.delete("/:id", auth_1.verifyJWT, async (req, res) => {
     try {
         const { role } = req.user;
-        if (role !== "ADMIN") {
-            return res.status(403).json({ error: "Only admins can delete tasks" });
+        if (role !== "ADMIN" && role !== "ERASPHERE") {
+            return res.status(403).json({ error: "Only admins or EraSphere can delete tasks" });
         }
-        await prisma.task.delete({ where: { id: Number(req.params.id) } });
+        await prisma_1.default.task.delete({ where: { id: Number(req.params.id) } });
         res.json({ success: true });
     }
     catch (error) {

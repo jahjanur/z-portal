@@ -7,4 +7,5 @@ interface AuthRequest extends Request {
 }
 export declare function verifyJWT(req: AuthRequest, res: Response, next: NextFunction): Response<any, Record<string, any>> | undefined;
 export declare function verifyAdmin(req: AuthRequest, res: Response, next: NextFunction): Response<any, Record<string, any>> | undefined;
+export declare function verifyAdminOrEraSphere(req: AuthRequest, res: Response, next: NextFunction): Response<any, Record<string, any>> | undefined;
 export {};

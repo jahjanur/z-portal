@@ -4,15 +4,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
 const auth_1 = require("../middleware/auth");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const notifications_1 = require("../services/notifications");
+const notificationStore_1 = require("../services/notificationStore");
+const prisma_1 = __importDefault(require("../lib/prisma"));
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 const invoicesDir = "uploads/invoices";
 if (!fs_1.default.existsSync(invoicesDir)) {
     fs_1.default.mkdirSync(invoicesDir, { recursive: true });
@@ -40,7 +40,7 @@ const transporter = nodemailer_1.default.createTransport({
     },
 });
 async function generateInvoiceNumber() {
-    const lastInvoice = await prisma.invoice.findFirst({
+    const lastInvoice = await prisma_1.default.invoice.findFirst({
         orderBy: { createdAt: 'desc' },
         select: { invoiceNumber: true }
     });
@@ -53,62 +53,51 @@ async function generateInvoiceNumber() {
     }
     return `INV-${nextNumber.toString().padStart(4, '0')}`;
 }
+const clientSelectWithContact = {
+    id: true,
+    email: true,
+    name: true,
+    company: true,
+    role: true,
+    phoneNumber: true,
+    postalAddress: true,
+    address: true,
+};
 // get all invoices
 router.get("/", auth_1.verifyJWT, async (req, res) => {
     try {
         const { role, userId } = req.user;
         let invoices;
         if (role === "ADMIN") {
-            invoices = await prisma.invoice.findMany({
+            invoices = await prisma_1.default.invoice.findMany({
                 include: {
-                    client: {
-                        select: {
-                            id: true,
-                            email: true,
-                            name: true,
-                            company: true,
-                            role: true
-                        }
-                    }
+                    client: { select: clientSelectWithContact },
+                    lineItems: { orderBy: { sortOrder: 'asc' } },
                 },
                 orderBy: { createdAt: 'desc' }
             });
         }
         else if (role === "WORKER") {
-            const tasks = await prisma.task.findMany({
-                where: { workerId: userId },
+            const tasks = await prisma_1.default.task.findMany({
+                where: { workers: { some: { userId } } },
                 select: { clientId: true }
             });
             const clientIds = [...new Set(tasks.map(t => t.clientId))];
-            invoices = await prisma.invoice.findMany({
+            invoices = await prisma_1.default.invoice.findMany({
                 where: { clientId: { in: clientIds } },
                 include: {
-                    client: {
-                        select: {
-                            id: true,
-                            email: true,
-                            name: true,
-                            company: true,
-                            role: true
-                        }
-                    }
+                    client: { select: clientSelectWithContact },
+                    lineItems: { orderBy: { sortOrder: 'asc' } },
                 },
                 orderBy: { createdAt: 'desc' }
             });
         }
         else if (role === "CLIENT") {
-            invoices = await prisma.invoice.findMany({
+            invoices = await prisma_1.default.invoice.findMany({
                 where: { clientId: userId },
                 include: {
-                    client: {
-                        select: {
-                            id: true,
-                            email: true,
-                            name: true,
-                            company: true,
-                            role: true
-                        }
-                    }
+                    client: { select: clientSelectWithContact },
+                    lineItems: { orderBy: { sortOrder: 'asc' } },
                 },
                 orderBy: { createdAt: 'desc' }
             });
@@ -128,27 +117,20 @@ router.get("/:id", auth_1.verifyJWT, async (req, res) => {
     try {
         const { role, userId } = req.user;
         const invoiceId = Number(req.params.id);
-        const invoice = await prisma.invoice.findUnique({
+        const invoice = await prisma_1.default.invoice.findUnique({
             where: { id: invoiceId },
             include: {
-                client: {
-                    select: {
-                        id: true,
-                        email: true,
-                        name: true,
-                        company: true,
-                        role: true
-                    }
-                }
+                client: { select: clientSelectWithContact },
+                lineItems: { orderBy: { sortOrder: 'asc' } },
             }
         });
         if (!invoice) {
             return res.status(404).json({ error: "Invoice not found" });
         }
         if (role === "WORKER") {
-            const hasTask = await prisma.task.findFirst({
+            const hasTask = await prisma_1.default.task.findFirst({
                 where: {
-                    workerId: userId,
+                    workers: { some: { userId } },
                     clientId: invoice.clientId
                 }
             });
@@ -172,39 +154,78 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
         if (req.user.role !== "ADMIN") {
             return res.status(403).json({ error: "Only admins can create invoices" });
         }
-        const { clientId, amount, dueDate, sendEmail, paymentLink } = req.body;
-        if (!clientId || !amount || !dueDate) {
-            return res.status(400).json({ error: "clientId, amount, and dueDate are required" });
+        const { clientId, amount, dueDate, sendEmail, paymentLink, issueDate, paymentTerms, notes, taxRate, lineItems: lineItemsRaw } = req.body;
+        if (!clientId || !dueDate) {
+            return res.status(400).json({ error: "clientId and dueDate are required" });
         }
-        const client = await prisma.user.findUnique({
+        const lineItems = typeof lineItemsRaw === "string" ? JSON.parse(lineItemsRaw || "[]") : (lineItemsRaw || []);
+        const hasLineItems = Array.isArray(lineItems) && lineItems.length > 0;
+        let totalAmount;
+        let subtotal = null;
+        let taxAmount = null;
+        let taxRateNum = null;
+        if (hasLineItems) {
+            subtotal = lineItems.reduce((sum, li) => sum + Number(li.quantity) * Number(li.unitPrice), 0);
+            taxRateNum = taxRate != null && taxRate !== "" ? parseFloat(String(taxRate)) : null;
+            taxAmount = taxRateNum != null ? subtotal * (taxRateNum / 100) : 0;
+            totalAmount = subtotal + (taxAmount || 0);
+        }
+        else {
+            if (amount == null || amount === "") {
+                return res.status(400).json({ error: "amount is required when there are no line items" });
+            }
+            totalAmount = parseFloat(amount);
+        }
+        const client = await prisma_1.default.user.findUnique({
             where: { id: Number(clientId) }
         });
         if (!client || client.role !== "CLIENT") {
             return res.status(400).json({ error: "Invalid client ID" });
         }
         const invoiceNumber = await generateInvoiceNumber();
-        const invoice = await prisma.invoice.create({
+        const invoice = await prisma_1.default.invoice.create({
             data: {
                 clientId: Number(clientId),
-                amount: parseFloat(amount),
+                amount: totalAmount,
                 dueDate: new Date(dueDate),
                 invoiceNumber,
                 fileUrl: req.file ? `/uploads/invoices/${req.file.filename}` : null,
                 paymentLink: paymentLink || null,
                 status: "PENDING",
+                issueDate: issueDate ? new Date(issueDate) : null,
+                paymentTerms: paymentTerms || null,
+                notes: notes || null,
+                subtotal: subtotal,
+                taxRate: taxRateNum,
+                taxAmount: taxAmount,
+                ...(hasLineItems ? {} : { description: req.body.description || null }),
             },
             include: {
-                client: {
-                    select: {
-                        id: true,
-                        email: true,
-                        name: true,
-                        company: true,
-                        role: true
-                    }
-                }
+                client: { select: clientSelectWithContact },
+                lineItems: { orderBy: { sortOrder: 'asc' } },
             }
         });
+        if (hasLineItems) {
+            await prisma_1.default.invoiceLineItem.createMany({
+                data: lineItems.map((li, i) => ({
+                    invoiceId: invoice.id,
+                    name: String(li.name || "Item"),
+                    description: li.description != null ? String(li.description) : null,
+                    quantity: Number(li.quantity) || 0,
+                    unitPrice: Number(li.unitPrice) || 0,
+                    sortOrder: i,
+                })),
+            });
+        }
+        const invoiceWithLines = await prisma_1.default.invoice.findUnique({
+            where: { id: invoice.id },
+            include: {
+                client: { select: clientSelectWithContact },
+                lineItems: { orderBy: { sortOrder: 'asc' } },
+            }
+        });
+        // In-app notification for the client
+        await (0, notificationStore_1.createNotification)(Number(clientId), "INVOICE_CREATED", "New Invoice", `Invoice ${invoiceNumber} for $${totalAmount.toFixed(2)} has been created`, "/dashboard");
         if (sendEmail === 'true') {
             try {
                 const attachments = [];
@@ -228,7 +249,7 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
               <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <h3 style="margin-top: 0;">Invoice Details</h3>
                 <p><strong>Invoice Number:</strong> ${invoiceNumber}</p>
-                <p><strong>Amount:</strong> $${parseFloat(amount).toFixed(2)}</p>
+                <p><strong>Amount:</strong> $${totalAmount.toFixed(2)}</p>
                 <p><strong>Due Date:</strong> ${new Date(dueDate).toLocaleDateString()}</p>
               </div>
               
@@ -253,9 +274,9 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
             }
         }
         else {
-            await (0, notifications_1.notifyNewInvoice)(invoice, { email: client.email, name: client.name });
+            await (0, notifications_1.notifyNewInvoice)(invoiceWithLines ?? invoice, { email: client.email, name: client.name });
         }
-        res.status(201).json(invoice);
+        res.status(201).json(invoiceWithLines ?? invoice);
     }
     catch (err) {
         console.error("Invoice creation failed:", err);
@@ -269,18 +290,11 @@ router.post("/:id/request-payment", auth_1.verifyJWT, async (req, res) => {
             return res.status(403).json({ error: "Only admins can send payment requests" });
         }
         const invoiceId = Number(req.params.id);
-        const invoice = await prisma.invoice.findUnique({
+        const invoice = await prisma_1.default.invoice.findUnique({
             where: { id: invoiceId },
             include: {
-                client: {
-                    select: {
-                        id: true,
-                        email: true,
-                        name: true,
-                        company: true,
-                        role: true
-                    }
-                }
+                client: { select: clientSelectWithContact },
+                lineItems: { orderBy: { sortOrder: 'asc' } },
             }
         });
         if (!invoice) {
@@ -353,16 +367,17 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
             return res.status(403).json({ error: "Only admins can update invoices" });
         }
         const invoiceId = Number(req.params.id);
-        const { amount, dueDate, status, description, paidAt, paymentLink } = req.body;
-        const existingInvoice = await prisma.invoice.findUnique({
-            where: { id: invoiceId }
+        const { amount, dueDate, status, description, paidAt, paymentLink, issueDate, paymentTerms, notes, taxRate, lineItems: lineItemsRaw } = req.body;
+        const existingInvoice = await prisma_1.default.invoice.findUnique({
+            where: { id: invoiceId },
+            include: { lineItems: true },
         });
         if (!existingInvoice) {
             return res.status(404).json({ error: "Invoice not found" });
         }
+        const lineItems = typeof lineItemsRaw === "string" ? JSON.parse(lineItemsRaw || "[]") : (lineItemsRaw || []);
+        const hasLineItems = Array.isArray(lineItems) && lineItems.length > 0;
         const updateData = {};
-        if (amount !== undefined)
-            updateData.amount = parseFloat(amount);
         if (dueDate !== undefined)
             updateData.dueDate = new Date(dueDate);
         if (status !== undefined)
@@ -373,31 +388,75 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
             updateData.paidAt = paidAt ? new Date(paidAt) : null;
         if (paymentLink !== undefined)
             updateData.paymentLink = paymentLink || null;
+        if (issueDate !== undefined)
+            updateData.issueDate = issueDate ? new Date(issueDate) : null;
+        if (paymentTerms !== undefined)
+            updateData.paymentTerms = paymentTerms || null;
+        if (notes !== undefined)
+            updateData.notes = notes || null;
+        if (hasLineItems) {
+            const subtotal = lineItems.reduce((sum, li) => sum + Number(li.quantity) * Number(li.unitPrice), 0);
+            const taxRateNum = taxRate != null && taxRate !== "" ? parseFloat(String(taxRate)) : null;
+            const taxAmount = taxRateNum != null ? subtotal * (taxRateNum / 100) : 0;
+            updateData.subtotal = subtotal;
+            updateData.taxRate = taxRateNum;
+            updateData.taxAmount = taxAmount;
+            updateData.amount = subtotal + (taxAmount || 0);
+        }
+        else {
+            if (amount !== undefined)
+                updateData.amount = parseFloat(amount);
+            if (lineItemsRaw && Array.isArray(lineItems) && lineItems.length === 0) {
+                updateData.subtotal = null;
+                updateData.taxRate = null;
+                updateData.taxAmount = null;
+            }
+        }
         if (status === "PAID" && !paidAt && !existingInvoice.paidAt) {
             updateData.paidAt = new Date();
         }
-        const updatedInvoice = await prisma.invoice.update({
+        const updatedInvoice = await prisma_1.default.invoice.update({
             where: { id: invoiceId },
             data: updateData,
             include: {
-                client: {
-                    select: {
-                        id: true,
-                        email: true,
-                        name: true,
-                        company: true,
-                        role: true
-                    }
-                }
+                client: { select: clientSelectWithContact },
+                lineItems: { orderBy: { sortOrder: 'asc' } },
+            }
+        });
+        if (hasLineItems) {
+            await prisma_1.default.invoiceLineItem.deleteMany({ where: { invoiceId } });
+            await prisma_1.default.invoiceLineItem.createMany({
+                data: lineItems.map((li, i) => ({
+                    invoiceId,
+                    name: String(li.name || "Item"),
+                    description: li.description != null ? String(li.description) : null,
+                    quantity: Number(li.quantity) || 0,
+                    unitPrice: Number(li.unitPrice) || 0,
+                    sortOrder: i,
+                })),
+            });
+        }
+        const result = await prisma_1.default.invoice.findUnique({
+            where: { id: invoiceId },
+            include: {
+                client: { select: clientSelectWithContact },
+                lineItems: { orderBy: { sortOrder: 'asc' } },
             }
         });
         if (status === 'PAID' && existingInvoice.status !== 'PAID') {
-            await (0, notifications_1.notifyInvoicePaid)(updatedInvoice, {
-                email: updatedInvoice.client.email,
-                name: updatedInvoice.client.name
+            await (0, notifications_1.notifyInvoicePaid)(result, {
+                email: result.client.email,
+                name: result.client.name
             });
+            // Notify client that invoice is paid
+            await (0, notificationStore_1.createNotification)(result.clientId, "INVOICE_PAID", "Invoice Paid", `Invoice ${result.invoiceNumber} has been marked as paid`, "/dashboard");
+            // Notify admins
+            const admins = await prisma_1.default.user.findMany({ where: { role: "ADMIN" } });
+            for (const admin of admins) {
+                await (0, notificationStore_1.createNotification)(admin.id, "INVOICE_PAID", "Invoice Paid", `Invoice ${result.invoiceNumber} ($${result.amount.toFixed(2)}) has been paid`, "/admin/invoices");
+            }
         }
-        res.json(updatedInvoice);
+        res.json(result ?? updatedInvoice);
     }
     catch (err) {
         console.error("Invoice update failed:", err);
@@ -411,7 +470,7 @@ router.delete("/:id", auth_1.verifyJWT, async (req, res) => {
             return res.status(403).json({ error: "Only admins can delete invoices" });
         }
         const invoiceId = Number(req.params.id);
-        const invoice = await prisma.invoice.findUnique({
+        const invoice = await prisma_1.default.invoice.findUnique({
             where: { id: invoiceId }
         });
         if (!invoice) {
@@ -424,7 +483,7 @@ router.delete("/:id", auth_1.verifyJWT, async (req, res) => {
                 fs_1.default.unlinkSync(filePath);
             }
         }
-        await prisma.invoice.delete({ where: { id: invoiceId } });
+        await prisma_1.default.invoice.delete({ where: { id: invoiceId } });
         res.json({ success: true });
     }
     catch (err) {

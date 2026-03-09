@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyJWT = verifyJWT;
 exports.verifyAdmin = verifyAdmin;
+exports.verifyAdminOrEraSphere = verifyAdminOrEraSphere;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
 function verifyJWT(req, res, next) {
@@ -22,6 +23,12 @@ function verifyJWT(req, res, next) {
 function verifyAdmin(req, res, next) {
     if (req.user?.role !== "ADMIN")
         return res.status(403).json({ message: "Forbidden" });
+    next();
+}
+function verifyAdminOrEraSphere(req, res, next) {
+    if (req.user?.role !== "ADMIN" && req.user?.role !== "ERASPHERE") {
+        return res.status(403).json({ message: "Forbidden" });
+    }
     next();
 }
 //# sourceMappingURL=auth.js.map
