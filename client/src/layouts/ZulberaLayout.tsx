@@ -184,31 +184,9 @@ function ZulberaLayoutInner() {
         <WorkspaceOverviewCard />
       </aside>
 
-      {/* Mobile nav for Zulbera (below lg breakpoint) */}
-      <div className="lg:hidden fixed top-16 left-0 right-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-md">
-        <div className="flex items-center gap-1 px-4 py-2 overflow-x-auto" style={{ scrollbarWidth: "thin" }}>
-          {ZULBERA_NAV.map(({ path, label }) => (
-            <NavLink
-              key={path}
-              to={path}
-              end={path.endsWith("/analytics")}
-              className={({ isActive }) =>
-                `shrink-0 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-                  isActive
-                    ? "border-[var(--color-border-hover)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)]"
-                    : "border-transparent text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
-                }`
-              }
-            >
-              {label}
-            </NavLink>
-          ))}
-        </div>
-      </div>
-
       {/* Main content */}
       <main className="flex-1 min-w-0 overflow-x-hidden">
-        <div className="px-4 sm:px-6 lg:px-8 py-6 lg:pt-6 pt-14">
+        <div className="px-4 sm:px-6 lg:px-8 py-6">
           <Outlet />
         </div>
       </main>
