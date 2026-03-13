@@ -4,7 +4,9 @@ import path from "path";
 // .env is also preloaded by "npm run dev" via node -r dotenv/config so it's set before Prisma is used
 dotenv.config();
 if (process.env.NODE_ENV === "production") {
-  dotenv.config({ path: ".env.production", override: true });
+  // Load from server/.env.production so it works regardless of cwd (e.g. in Docker)
+  const productionEnv = path.join(__dirname, "..", ".env.production");
+  dotenv.config({ path: productionEnv, override: true });
 }
 if (!process.env.DATABASE_URL) {
   console.error("DATABASE_URL is not set. Create server/.env from server/.env.example and set DATABASE_URL.");

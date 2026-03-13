@@ -140,6 +140,66 @@ npm run db:seed
 # Seed will upsert that ADMIN (bcrypt). Safe to run again to reset password.
 ```
 
+### 3.4 Clean database: only your admin (no demo data)
+
+Use this when you want a **brand new database** with **no demo users or data**, and only **one admin** with **your real email and password** (no admin@test.com).
+
+#### Step 1: Set your admin credentials
+
+Edit **server/.env.production** (on the server: **app/server/.env.production** or **apps/server/.env.production** depending on your folder name). Add or set:
+
+```env
+SEED_ADMIN_EMAIL=your-real-email@example.com
+SEED_ADMIN_PASSWORD=your_secure_password
+SEED_ADMIN_NAME=Admin
+```
+
+Use the email and password you want to use to log in. Save the file.
+
+#### Step 2: Make sure the container gets that file (Docker only)
+
+The `portal_app` container must receive these env vars. In the compose file that starts `portal_app` (e.g. **docker-compose-app.yml**), add **env_file** so the container loads **server/.env.production**:
+
+```yaml
+services:
+  portal_app:
+    # ... build, image, etc.
+    env_file:
+      - app/server/.env.production   # or apps/server/.env.production if your folder is "apps"
+```
+
+Path is relative to where you run `docker compose` (e.g. `/opt/zulbera/portal`). If your app lives in **apps/** not **app/**, use `apps/server/.env.production`. See **docker-compose-app.example.yml** in the repo.
+
+#### Step 3: Restart the app
+
+```bash
+cd /opt/zulbera/portal
+docker compose -f docker-compose-app.yml up -d --force-recreate portal_app
+# or: docker restart portal_app   (if you only added env_file and saved)
+```
+
+#### Step 4: Wipe the database and create only your admin
+
+This removes **all** demo data (domains, clients, tasks, invoices) and creates **only** the one admin from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`:
+
+```bash
+docker exec -it portal_app sh -c 'cd server && NODE_ENV=production npx prisma migrate reset --force'
+```
+
+You should see: **"Bootstrap: creating/updating ADMIN from SEED_ADMIN_EMAIL..."** and **"Admin bootstrap done: your-real-email@example.com"**. You must **not** see "Starting full demo seed..." or "Created user: admin@test.com".
+
+#### Step 5: Log in
+
+Open the portal and sign in with the email and password you set in Step 1. Domains, clients, tasks, and invoices lists will be empty.
+
+**Changing admin password later:** Edit `SEED_ADMIN_PASSWORD` in `server/.env.production`, restart the app, then run the seed again (no need to reset):
+
+```bash
+docker exec -it portal_app sh -c 'cd server && NODE_ENV=production npx prisma db seed'
+```
+
+The seed upserts the admin by email, so the password is updated.
+
 ---
 
 ## 4. Commands reference

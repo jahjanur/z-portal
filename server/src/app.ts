@@ -10,6 +10,7 @@ import offersRoutes from "./routes/offers";
 import timesheetRoutes from "./routes/timesheet";
 import projectRoutes from "./routes/projects";
 import notificationRoutes from "./routes/notifications";
+import workspaceRoutes from "./routes/workspace";
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use("/api/offers", offersRoutes);
 app.use("/timesheets", timesheetRoutes);
 app.use("/projects", projectRoutes);
 app.use("/notifications", notificationRoutes);
+app.use("/workspace", workspaceRoutes);
 
 app.get("/api", (req, res) => res.send("API is running"));
 

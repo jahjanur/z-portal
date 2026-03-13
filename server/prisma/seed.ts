@@ -1,5 +1,20 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// In production, load server/.env.production so SEED_ADMIN_* are set when running seed in Docker
+if (process.env.NODE_ENV === 'production') {
+  const pathsToTry = [
+    path.join(process.cwd(), '.env.production'),
+    path.resolve(process.cwd(), 'server', '.env.production'),
+    path.resolve(__dirname, '..', '.env.production'),
+  ];
+  for (const p of pathsToTry) {
+    const result = dotenv.config({ path: p, override: true });
+    if (!result.error) break;
+  }
+}
 
 const prisma = new PrismaClient();
 
@@ -8,11 +23,17 @@ async function main() {
   const adminEmail = process.env.SEED_ADMIN_EMAIL;
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
 
-  if (adminEmail && adminPassword) {
+  if (process.env.NODE_ENV === 'production') {
+    console.log('SEED_ADMIN_EMAIL set:', adminEmail ? 'yes' : 'no', '| SEED_ADMIN_PASSWORD set:', adminPassword ? 'yes' : 'no');
+  }
+
+  const emailTrimmed = adminEmail?.trim();
+  const passwordTrimmed = adminPassword?.trim();
+  if (emailTrimmed && passwordTrimmed) {
     console.log('🌱 Bootstrap: creating/updating ADMIN from SEED_ADMIN_EMAIL...');
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
-    const name = process.env.SEED_ADMIN_NAME || 'Admin';
-    const emailLower = adminEmail.trim().toLowerCase();
+    const hashedPassword = await bcrypt.hash(passwordTrimmed, 10);
+    const name = (process.env.SEED_ADMIN_NAME || 'Admin').trim();
+    const emailLower = emailTrimmed.toLowerCase();
     await prisma.user.upsert({
       where: { email: emailLower },
       create: {
