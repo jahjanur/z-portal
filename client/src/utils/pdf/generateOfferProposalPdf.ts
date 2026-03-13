@@ -8,8 +8,13 @@
  */
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import logoUrl from "../../assets/Artboard 2.svg";
 import { registerInterFont } from "./registerInterFont";
+
+/** Main platform logo from public folder (used in offer PDF cover and footer). */
+function getLogoUrl(): string {
+  if (typeof window !== "undefined") return `${window.location.origin}/Zulbera-Text-Logo.svg`;
+  return "/Zulbera-Text-Logo.svg";
+}
 
 /** Font for this PDF: "Inter" if TTF files are in public/fonts/, else "helvetica". Set at generation time. */
 let OFFER_PDF_FONT: "Inter" | "helvetica" = "helvetica";
@@ -989,7 +994,7 @@ function addFootersToAllPages(
 export async function generateOfferProposalPdf(data: OfferProposalData): Promise<void> {
   let logoDataUrl: string | null = null;
   try {
-    logoDataUrl = await imageUrlToPngDataUrl(logoUrl, 600, 120);
+    logoDataUrl = await imageUrlToPngDataUrl(getLogoUrl(), 600, 120);
   } catch {
     // fallback: no logo, use text on cover
   }

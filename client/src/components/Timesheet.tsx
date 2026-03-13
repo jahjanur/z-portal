@@ -12,7 +12,10 @@ import {
   addPageNumbersAndFooter,
   type CompanyInfo,
 } from "../utils/pdfHelpers";
-import logoPdf from "../assets/Artboard 2.svg";
+
+/** Main platform logo from public folder for timesheet PDF header. */
+const LOGO_PDF_URL =
+  typeof window !== "undefined" ? `${window.location.origin}/Zulbera-Text-Logo.svg` : "";
 
 declare module "jspdf" {
   interface jsPDF {
@@ -221,7 +224,7 @@ const Timesheets = () => {
   const exportProjectToPDF = async (project: TimesheetProject) => {
     let logoDataUrl: string | null = null;
     try {
-      logoDataUrl = await imageUrlToPngDataUrl(logoPdf);
+      logoDataUrl = LOGO_PDF_URL ? await imageUrlToPngDataUrl(LOGO_PDF_URL) : null;
     } catch {
       // fallback: no logo, header will show "Zulbera" text
     }
