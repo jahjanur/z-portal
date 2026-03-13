@@ -1,14 +1,18 @@
 import nodemailer from "nodemailer";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const SMTP_CONFIGURED = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+
+const transporter = SMTP_CONFIGURED
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    })
+  : null;
 
 const CLIENT_URL = process.env.CLIENT_URL || process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -108,6 +112,12 @@ export async function sendInviteEmail(opts: InviteEmailOpts): Promise<void> {
     footer,
   });
 
+  if (!transporter) {
+    console.log(`[INVITE LINK - NO SMTP]: ${inviteLink}`);
+    console.log(`  Recipient: ${to} (${role})`);
+    return;
+  }
+
   await transporter.sendMail({
     from: process.env.SMTP_USER,
     to,
@@ -159,6 +169,11 @@ export async function sendWelcomeEmailForRole(
     ctaText: "Go to Dashboard",
     ctaUrl: `${CLIENT_URL}/login`,
   });
+
+  if (!transporter) {
+    console.log(`[WELCOME EMAIL - NO SMTP]: ${user.email} (${role})`);
+    return;
+  }
 
   await transporter.sendMail({
     from: process.env.SMTP_USER,
