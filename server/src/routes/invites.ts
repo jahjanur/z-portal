@@ -139,9 +139,27 @@ router.get("/", verifyJWT, verifyAdmin, async (_req, res) => {
   try {
     const invites = await prisma.invite.findMany({
       orderBy: { createdAt: "desc" },
-      include: { invitedBy: { select: { id: true, name: true, email: true } } },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        company: true,
+        used: true,
+        cancelled: true,
+        createdAt: true,
+        expiresAt: true,
+        invitedBy: { select: { id: true, name: true, email: true } },
+      },
     });
-    return res.json(invites);
+    const now = new Date();
+    const mapped = invites.map((inv) => ({
+      ...inv,
+      createdAt: inv.createdAt.toISOString(),
+      expiresAt: inv.expiresAt.toISOString(),
+      status: inv.used ? "ACCEPTED" : inv.cancelled ? "CANCELLED" : inv.expiresAt < now ? "EXPIRED" : "PENDING",
+    }));
+    return res.json(mapped);
   } catch (error) {
     console.error("Error listing invites:", error);
     return res.status(500).json({ error: "Failed to list invites" });
