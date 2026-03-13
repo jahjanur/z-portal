@@ -109,7 +109,7 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
       });
     } catch (emailErr) {
       console.error("Failed to send invite email:", emailErr);
-      // Do not fail the request; invite was created
+      console.log(`[INVITE LINK - EMAIL FAILED]: ${inviteLink}`);
     }
 
     return res.status(201).json({
@@ -160,8 +160,8 @@ router.get("/", verifyJWT, verifyAdmin, async (_req, res) => {
       status: inv.used ? "ACCEPTED" : inv.cancelled ? "CANCELLED" : inv.expiresAt < now ? "EXPIRED" : "PENDING",
     }));
     return res.json(mapped);
-  } catch (error) {
-    console.error("Error listing invites:", error);
+  } catch (error: any) {
+    console.error("Error listing invites:", error?.message, "code:", error?.code, "meta:", error?.meta);
     return res.status(500).json({ error: "Failed to list invites" });
   }
 });
@@ -177,8 +177,8 @@ router.get("/validate", async (req, res) => {
 
     if (!invite) return res.status(404).json({ error: "Invalid invite link" });
     if (invite.cancelled) return res.status(400).json({ error: "This invitation has been cancelled" });
-    if (invite.used) return res.status(400).json({ error: "This invitation has already been used" });
-    if (invite.expiresAt < new Date()) return res.status(400).json({ error: "This invitation has expired" });
+    if (invite.used) return res.status(410).json({ error: "This invite has already been used." });
+    if (invite.expiresAt < new Date()) return res.status(410).json({ error: "This invite has expired." });
 
     return res.json({
       role: invite.role,
@@ -186,8 +186,8 @@ router.get("/validate", async (req, res) => {
       name: invite.name,
       company: invite.company,
     });
-  } catch (error) {
-    console.error("Error validating invite:", error);
+  } catch (error: any) {
+    console.error("Error validating invite:", error?.message, "code:", error?.code, "meta:", error?.meta);
     return res.status(500).json({ error: "Failed to validate invite" });
   }
 });
@@ -208,8 +208,8 @@ router.post("/accept", acceptLimiter, async (req, res) => {
 
     if (!invite) return res.status(404).json({ error: "Invalid invite link" });
     if (invite.cancelled) return res.status(400).json({ error: "This invitation has been cancelled" });
-    if (invite.used) return res.status(400).json({ error: "This invitation has already been used" });
-    if (invite.expiresAt < new Date()) return res.status(400).json({ error: "This invitation has expired" });
+    if (invite.used) return res.status(410).json({ error: "This invite has already been used." });
+    if (invite.expiresAt < new Date()) return res.status(410).json({ error: "This invite has expired." });
 
     const existingUser = await prisma.user.findUnique({ where: { email: invite.email } });
     if (existingUser) {
@@ -318,8 +318,8 @@ router.post("/accept", acceptLimiter, async (req, res) => {
         company: newUser.company,
       },
     });
-  } catch (error) {
-    console.error("Error accepting invite:", error);
+  } catch (error: any) {
+    console.error("Error accepting invite:", error?.message, "code:", error?.code, "meta:", error?.meta);
     return res.status(500).json({ error: "Failed to accept invite" });
   }
 });
@@ -373,6 +373,7 @@ router.post("/:id/resend", verifyJWT, verifyAdminOrEraSphere, async (req: any, r
       });
     } catch (emailErr) {
       console.error("Failed to send resend invite email:", emailErr);
+      console.log(`[INVITE LINK - EMAIL FAILED]: ${inviteLink}`);
     }
 
     return res.json({
@@ -380,11 +381,11 @@ router.post("/:id/resend", verifyJWT, verifyAdminOrEraSphere, async (req: any, r
       email: newInvite.email,
       name: newInvite.name,
       role: newInvite.role,
-      expiresAt: newInvite.expiresAt,
+      expiresAt: newInvite.expiresAt.toISOString(),
       inviteLink,
     });
-  } catch (error) {
-    console.error("Error resending invite:", error);
+  } catch (error: any) {
+    console.error("Error resending invite:", error?.message, "code:", error?.code, "meta:", error?.meta);
     return res.status(500).json({ error: "Failed to resend invite" });
   }
 });
@@ -402,8 +403,8 @@ router.post("/:id/cancel", verifyJWT, verifyAdminOrEraSphere, async (req: any, r
 
     await prisma.invite.update({ where: { id: inviteId }, data: { cancelled: true } });
     return res.json({ success: true });
-  } catch (error) {
-    console.error("Error cancelling invite:", error);
+  } catch (error: any) {
+    console.error("Error cancelling invite:", error?.message, "code:", error?.code, "meta:", error?.meta);
     return res.status(500).json({ error: "Failed to cancel invite" });
   }
 });
@@ -458,8 +459,8 @@ router.get("/for-role/:role", verifyJWT, verifyAdminOrEraSphere, async (req: any
     }));
 
     return res.json(mapped);
-  } catch (error) {
-    console.error("Error fetching invites by role:", error);
+  } catch (error: any) {
+    console.error("Error fetching invites by role:", error?.message, "code:", error?.code, "meta:", error?.meta);
     return res.status(500).json({ error: "Failed to fetch invites" });
   }
 });
