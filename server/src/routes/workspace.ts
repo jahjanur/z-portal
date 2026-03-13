@@ -8,6 +8,10 @@ const router = Router();
 router.get("/overview", verifyJWT, verifyAdmin, async (_req, res) => {
   try {
     const now = new Date();
+    const in7Days = new Date(now);
+    in7Days.setDate(in7Days.getDate() + 7);
+    const in14Days = new Date(now);
+    in14Days.setDate(in14Days.getDate() + 14);
     const in30Days = new Date(now);
     in30Days.setDate(in30Days.getDate() + 30);
 
@@ -16,7 +20,9 @@ router.get("/overview", verifyJWT, verifyAdmin, async (_req, res) => {
       clientsCount,
       activeTasksCount,
       unpaidInvoicesCount,
-      domainsExpiringSoonCount,
+      domainsExpiringInOneWeek,
+      domainsExpiringInTwoWeeks,
+      domainsExpiringIn30Days,
       workersWithIncompleteTasksCount,
     ] = await Promise.all([
       prisma.user.count({ where: { role: "WORKER" } }),
@@ -25,7 +31,17 @@ router.get("/overview", verifyJWT, verifyAdmin, async (_req, res) => {
       prisma.invoice.count({ where: { status: { not: "PAID" } } }),
       prisma.domain.count({
         where: {
-          expirationDate: { gte: now, lte: in30Days },
+          expirationDate: { gte: now, lte: in7Days },
+        },
+      }),
+      prisma.domain.count({
+        where: {
+          expirationDate: { gt: in7Days, lte: in14Days },
+        },
+      }),
+      prisma.domain.count({
+        where: {
+          expirationDate: { gt: in14Days, lte: in30Days },
         },
       }),
       prisma.user.count({
@@ -40,12 +56,18 @@ router.get("/overview", verifyJWT, verifyAdmin, async (_req, res) => {
       }),
     ]);
 
+    const domainsExpiringSoon =
+      domainsExpiringInOneWeek + domainsExpiringInTwoWeeks + domainsExpiringIn30Days;
+
     return res.json({
       workers: workersCount,
       clients: clientsCount,
       activeTasks: activeTasksCount,
       unpaidInvoices: unpaidInvoicesCount,
-      domainsExpiringSoon: domainsExpiringSoonCount,
+      domainsExpiringSoon,
+      domainsExpiringInOneWeek,
+      domainsExpiringInTwoWeeks,
+      domainsExpiringIn30Days,
       workersWithIncompleteTasks: workersWithIncompleteTasksCount,
     });
   } catch (err) {
