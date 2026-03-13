@@ -4,8 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import nodemailer from "nodemailer";
-import { notifyNewInvoice, notifyInvoicePaid } from "../services/notifications";
-import { createNotification } from "../services/notificationStore";
+import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
 
 const router = Router();
@@ -98,14 +97,29 @@ router.get("/", verifyJWT, async (req: any, res) => {
         orderBy: { createdAt: 'desc' }
       });
     } else if (role === "CLIENT") {
-      invoices = await prisma.invoice.findMany({ 
-        where: { clientId: userId }, 
-        include: { 
+      invoices = await prisma.invoice.findMany({
+        where: { clientId: userId },
+        include: {
           client: { select: clientSelectWithContact },
           lineItems: { orderBy: { sortOrder: 'asc' } },
         },
         orderBy: { createdAt: 'desc' }
       });
+    } else if (role === "ERASPHERE") {
+      const referredClientIds = await prisma.user.findMany({
+        where: { referredById: userId, role: "CLIENT" },
+        select: { id: true },
+      }).then((users) => users.map((u) => u.id));
+      invoices = referredClientIds.length
+        ? await prisma.invoice.findMany({
+            where: { clientId: { in: referredClientIds } },
+            include: {
+              client: { select: clientSelectWithContact },
+              lineItems: { orderBy: { sortOrder: 'asc' } },
+            },
+            orderBy: { createdAt: 'desc' },
+          })
+        : [];
     } else {
       return res.status(403).json({ error: "Invalid role" });
     }
@@ -244,14 +258,13 @@ router.post("/", verifyJWT, uploadInvoice.single("file"), async (req: any, res) 
       }
     });
 
-    // In-app notification for the client
-    await createNotification(
-      Number(clientId),
-      "INVOICE_CREATED",
-      "New Invoice",
-      `Invoice ${invoiceNumber} for $${totalAmount.toFixed(2)} has been created`,
-      "/dashboard"
-    );
+    await emit(EventType.INVOICE_CREATED, {
+      title: "New Invoice",
+      message: `Invoice ${invoiceNumber} for ${totalAmount.toFixed(2)} € has been created`,
+      link: "/dashboard",
+      invoiceId: invoice.id,
+      clientId: Number(clientId),
+    });
 
     if (sendEmail === 'true') {
       try {
@@ -300,8 +313,6 @@ router.post("/", verifyJWT, uploadInvoice.single("file"), async (req: any, res) 
       } catch (emailError) {
         console.error("❌ Error sending payment request email:", emailError);
       }
-    } else {
-      await notifyNewInvoice(invoiceWithLines ?? invoice, { email: client.email, name: client.name });
     }
 
     res.status(201).json(invoiceWithLines ?? invoice);
@@ -480,30 +491,14 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
       }
     });
 
-    if (status === 'PAID' && existingInvoice.status !== 'PAID') {
-      await notifyInvoicePaid(result!, {
-        email: result!.client.email,
-        name: result!.client.name
+    if (status === "PAID" && existingInvoice.status !== "PAID") {
+      await emit(EventType.INVOICE_PAID, {
+        title: "Invoice Paid",
+        message: `Invoice ${result!.invoiceNumber} (${result!.amount.toFixed(2)} €) has been marked as paid`,
+        link: "/dashboard",
+        invoiceId: result!.id,
+        clientId: result!.clientId,
       });
-      // Notify client that invoice is paid
-      await createNotification(
-        result!.clientId,
-        "INVOICE_PAID",
-        "Invoice Paid",
-        `Invoice ${result!.invoiceNumber} has been marked as paid`,
-        "/dashboard"
-      );
-      // Notify admins
-      const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
-      for (const admin of admins) {
-        await createNotification(
-          admin.id,
-          "INVOICE_PAID",
-          "Invoice Paid",
-          `Invoice ${result!.invoiceNumber} ($${result!.amount.toFixed(2)}) has been paid`,
-          "/admin/invoices"
-        );
-      }
     }
 
     res.json(result ?? updatedInvoice);

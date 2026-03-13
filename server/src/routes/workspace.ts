@@ -76,4 +76,52 @@ router.get("/overview", verifyJWT, verifyAdmin, async (_req, res) => {
   }
 });
 
+/** EraSphere overview for admin: partners, referred clients, tasks, revenue (sidebar). */
+router.get("/erasphere-overview", verifyJWT, verifyAdmin, async (_req, res) => {
+  try {
+    const partners = await prisma.user.findMany({
+      where: { role: "ERASPHERE" },
+      select: { id: true },
+    });
+    const partnerIds = partners.map((p) => p.id);
+
+    const referredClients = await prisma.user.findMany({
+      where: { role: "CLIENT", referredById: { in: partnerIds } },
+      select: { id: true },
+    });
+    const clientIds = referredClients.map((c) => c.id);
+
+    const [activeTasks, completedTasks, invoices] = await Promise.all([
+      prisma.task.count({
+        where: { clientId: { in: clientIds }, status: { not: "COMPLETED" } },
+      }),
+      prisma.task.count({
+        where: { clientId: { in: clientIds }, status: "COMPLETED" },
+      }),
+      prisma.invoice.findMany({
+        where: { clientId: { in: clientIds } },
+        select: { amount: true, status: true },
+      }),
+    ]);
+
+    const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
+    const pendingRevenue = invoices
+      .filter((inv) => inv.status !== "PAID")
+      .reduce((sum, inv) => sum + inv.amount, 0);
+
+    return res.json({
+      partners: partnerIds.length,
+      referredClients: referredClients.length,
+      activeTasks,
+      completedTasks,
+      totalTasks: activeTasks + completedTasks,
+      totalRevenue,
+      pendingRevenue,
+    });
+  } catch (err) {
+    console.error("EraSphere overview error:", err);
+    return res.status(500).json({ message: "Failed to load EraSphere overview" });
+  }
+});
+
 export default router;

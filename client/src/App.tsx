@@ -4,6 +4,9 @@ import AuthPage from "./pages/Authpage";
 import Dashboard from "./pages/Dashboard";
 import HomePage from "./pages/Homepage";
 import CompleteProfile from "./pages/CompleteProfile";
+import InviteAcceptPage from "./pages/InviteAcceptPage";
+import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import TaskDetailPage from "./pages/TaskDetailPage";
 import ClientDetailPage from "./pages/ClientDetailPage";
 import RevenueList from "./pages/RevenueList";
@@ -100,8 +103,8 @@ function App() {
             <Route path="/admin" element={token && isAdminOrEraSphere ? <AdminLayout /> : <Navigate to="/login" />}>
               <Route index element={isEraSphere ? <Navigate to="/admin/erasphere-dashboard" replace /> : <Navigate to="/admin/zulbera/workers" replace />} />
               <Route path="workers" element={isAdmin ? <Navigate to="/admin/zulbera/workers" replace /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
-              <Route path="clients" element={isAdmin ? <Navigate to="/admin/zulbera/clients" replace /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
-              <Route path="tasks" element={isAdmin ? <Navigate to="/admin/zulbera/tasks" replace /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
+              <Route path="clients" element={isAdmin ? <Navigate to="/admin/zulbera/clients" replace /> : <EraSphereClientsPage />} />
+              <Route path="tasks" element={isAdmin ? <Navigate to="/admin/zulbera/tasks" replace /> : <EraSphereTasksPage />} />
               <Route path="invoices" element={isAdmin ? <Navigate to="/admin/zulbera/invoices" replace /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
               <Route path="domains" element={isAdmin ? <Navigate to="/admin/zulbera/domains" replace /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
               <Route path="send-offer" element={isAdmin ? <Navigate to="/admin/zulbera/send-offer" replace /> : <Navigate to="/admin/erasphere-dashboard" replace />} />
@@ -118,6 +121,16 @@ function App() {
               <Route path="clients" element={<EraSphereClientsPage />} />
               <Route path="tasks" element={<EraSphereTasksPage />} />
             </Route>
+
+            {/* Notifications & Preferences - All authenticated users */}
+            <Route
+              path="/notifications"
+              element={token ? <NotificationsPage /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/settings/notifications"
+              element={token ? <NotificationPreferencesPage /> : <Navigate to="/login" />}
+            />
 
             {/* Task Detail Page - All authenticated users */}
             <Route
@@ -187,8 +200,9 @@ function App() {
               }
             />
             
-            {/* Public route - no authentication required */}
+            {/* Public routes - no authentication required */}
             <Route path="/complete-profile" element={<CompleteProfile />} />
+            <Route path="/invite/accept" element={<InviteAcceptPage />} />
             
             {/* Redirect based on auth status — Admin lands on Analytics (main page) */}
             <Route

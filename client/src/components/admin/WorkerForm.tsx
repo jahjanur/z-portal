@@ -1,83 +1,70 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import API from "../../api";
 
 interface WorkerFormProps {
-  onSubmit: (data: { email: string; password: string; name: string; role?: string }) => Promise<void>;
-  allowEraSphereRole?: boolean;
+  onInviteSent?: () => void;
 }
 
-const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, allowEraSphereRole = false }) => {
-  const [formData, setFormData] = useState({ email: "", password: "", name: "", role: "WORKER" as string });
+const WorkerForm: React.FC<WorkerFormProps> = ({ onInviteSent }) => {
+  const [formData, setFormData] = useState({ email: "", name: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    
-    // Validation
+
     if (!formData.name.trim()) {
       toast.error("Please enter a name");
       return;
     }
-    if (!formData.email.trim()) {
-      toast.error("Please enter an email");
-      return;
-    }
-    if (!formData.email.includes("@")) {
+    if (!formData.email.trim() || !formData.email.includes("@")) {
       toast.error("Please enter a valid email address");
-      return;
-    }
-    if (!formData.password.trim()) {
-      toast.error("Please enter a password");
-      return;
-    }
-    if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const result = await onSubmit({ ...formData, role: formData.role });
-      setFormData({ email: "", password: "", name: "", role: "WORKER" });
-      toast.success(formData.role === "ERASPHERE" ? "EraSphere partner created successfully!" : "Worker created successfully!");
-      const inviteLink = result && typeof result === "object" && "inviteLink" in result && result.inviteLink;
-      if (inviteLink && typeof inviteLink === "string") {
+      const { data } = await API.post("/invites", {
+        email: formData.email.trim(),
+        name: formData.name.trim(),
+        role: "WORKER",
+      });
+      setFormData({ email: "", name: "" });
+      toast.success("Invite sent successfully!");
+      if (data.inviteLink) {
         try {
-          await navigator.clipboard.writeText(inviteLink);
-          toast.success("Invite link copied to clipboard (use it to complete profile)", { duration: 6000 });
+          await navigator.clipboard.writeText(data.inviteLink);
+          toast.success("Invite link copied to clipboard", { duration: 5000 });
         } catch {
-          toast.success(`Invite link: ${inviteLink}`, { duration: 12000 });
+          // clipboard not available
         }
       }
+      onInviteSent?.();
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.error || error?.response?.data?.message || "Failed to create worker";
-      toast.error(errorMessage);
-      console.error("Error creating worker:", error);
+      const data = error?.response?.data;
+      const message = data?.hint
+        ? `${data.error} ${data.hint} Or use a different email to test.`
+        : data?.error || "Failed to send invite";
+      toast.error(message, { duration: 6000 });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSubmit();
-    }
-  };
-
   return (
     <div className="mb-6 rounded-xl card-panel p-5">
-      <h3 className="mb-4 text-sm font-semibold text-[var(--color-text-primary)]">
-        {allowEraSphereRole ? "Add Worker or EraSphere Partner" : "Add New Worker"}
-      </h3>
+      <h3 className="mb-1 text-sm font-semibold text-[var(--color-text-primary)]">Invite Worker</h3>
+      <p className="mb-4 text-xs text-[var(--color-text-muted)]">
+        Send an invite email so the worker can set their own password and join the team.
+      </p>
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Full Name *</label>
             <input
               placeholder="e.g., John Doe"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              onKeyPress={handleKeyPress}
               disabled={isSubmitting}
               required
               className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
@@ -90,47 +77,18 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onSubmit, allowEraSphereRole = 
               placeholder="e.g., john@example.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              onKeyPress={handleKeyPress}
               disabled={isSubmitting}
               required
               className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Password *</label>
-            <input
-              type="password"
-              placeholder="Minimum 6 characters"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              onKeyPress={handleKeyPress}
-              disabled={isSubmitting}
-              required
-              minLength={6}
-              className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </div>
-          {allowEraSphereRole && (
-            <div>
-              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Role</label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                disabled={isSubmitting}
-                className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="WORKER">Worker</option>
-                <option value="ERASPHERE">EraSphere Partner</option>
-              </select>
-            </div>
-          )}
-          <div className={`flex items-end ${allowEraSphereRole ? "sm:col-span-2" : "sm:col-span-2 lg:col-span-1"}`}>
+          <div className="flex items-end">
             <button
               type="submit"
               disabled={isSubmitting}
               className="btn-primary h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting ? "Adding..." : formData.role === "ERASPHERE" ? "Add EraSphere Partner" : "Add Worker"}
+              {isSubmitting ? "Sending..." : "Send Invite"}
             </button>
           </div>
         </div>

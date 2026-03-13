@@ -1,5 +1,6 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import { AdminProvider, useAdmin } from "../contexts/AdminContext";
+import { useEraSphereOverview } from "../hooks/useEraSphereOverview";
 
 const ERASPHERE_NAV = [
   { path: "/admin/erasphere/analytics", label: "Analytics", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
@@ -7,6 +8,61 @@ const ERASPHERE_NAV = [
   { path: "/admin/erasphere/clients", label: "Clients", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
   { path: "/admin/erasphere/tasks", label: "Tasks", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
 ];
+
+function formatEuro(amount: number): string {
+  return `${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+}
+
+function EraSphereOverviewCard() {
+  const { data, loading } = useEraSphereOverview();
+
+  if (loading || !data) {
+    return (
+      <div className="px-5 pb-6 mt-auto">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+          <p className="text-xs text-[var(--color-text-muted)]">Partner referral program</p>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)] opacity-70">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-5 pb-6 mt-auto">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3 space-y-3">
+        <p className="text-xs font-semibold text-[var(--color-text-primary)]">Partner referral program</p>
+        <p className="text-xs text-[var(--color-text-muted)] opacity-70">Manage partners, track referred clients, and monitor revenue.</p>
+        <div className="space-y-1.5 text-xs">
+          <p className="flex justify-between text-[var(--color-text-secondary)]">
+            <span>Partners</span>
+            <span className="font-medium text-[var(--color-text-primary)]">{data.partners}</span>
+          </p>
+          <p className="flex justify-between text-[var(--color-text-secondary)]">
+            <span>Referred clients</span>
+            <span className="font-medium text-[var(--color-text-primary)]">{data.referredClients}</span>
+          </p>
+          <p className="flex justify-between text-[var(--color-text-secondary)]">
+            <span>Active tasks</span>
+            <span className="font-medium text-[var(--color-text-primary)]">{data.activeTasks}</span>
+          </p>
+          <p className="flex justify-between text-[var(--color-text-secondary)]">
+            <span>Total revenue</span>
+            <span className="font-medium text-[var(--color-text-primary)]">{formatEuro(data.totalRevenue)}</span>
+          </p>
+          {data.pendingRevenue > 0 && (
+            <Link
+              to="/admin/erasphere/analytics"
+              className="flex justify-between text-[var(--color-primary)] hover:underline"
+            >
+              <span>Pending revenue</span>
+              <span className="font-medium">{formatEuro(data.pendingRevenue)}</span>
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function EraSphereLayoutInner() {
   const { loading, error } = useAdmin();
@@ -65,12 +121,7 @@ function EraSphereLayoutInner() {
             </NavLink>
           ))}
         </nav>
-        <div className="px-5 pb-6 mt-auto">
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
-            <p className="text-xs text-[var(--color-text-muted)]">Partner referral program</p>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)] opacity-70">Manage partners, track referred clients, and monitor revenue.</p>
-          </div>
-        </div>
+        <EraSphereOverviewCard />
       </aside>
 
       {/* Mobile nav for EraSphere (below lg breakpoint) */}

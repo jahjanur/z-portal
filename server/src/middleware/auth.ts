@@ -15,7 +15,8 @@ export function verifyJWT(req: AuthRequest, res: Response, next: NextFunction) {
 
   jwt.verify(token, JWT_SECRET, (err, decoded: any) => {
     if (err) return res.status(403).json({ message: "Forbidden" });
-    req.user = { userId: decoded.userId, role: decoded.role };
+    const role = typeof decoded?.role === "string" ? decoded.role.toUpperCase() : decoded?.role;
+    req.user = { userId: decoded.userId, role };
     next();
   });
 }
