@@ -289,18 +289,23 @@ export async function generateInvoicePdf(
   invoice: InvoicePdfData,
   options?: { companyInfo?: CompanyInfo; filename?: string }
 ): Promise<void> {
-  // Load logo from public folder; fallback to text "Zulbera" if it fails or times out
+  // Load logo from public folder (main platform logo); fallback to text "Zulbera" if it fails or times out
+  const logoPath = "/Zulbera-Text-Logo.svg";
   let logoUrl: string | null = null;
   try {
     logoUrl = await Promise.race([
-      loadImageToPngDataUrl("/ZPortalLogo.svg", 400, 80),
+      loadImageToPngDataUrl(logoPath, 400, 80),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 2000)),
     ]);
   } catch {
     try {
-      logoUrl = await loadImageToPngDataUrl("/ZPortalFavIcon.svg", 400, 80);
+      logoUrl = await loadImageToPngDataUrl("/ZPortalLogo.svg", 400, 80);
     } catch {
-      // keep null, renderHeader will use "Zulbera" text
+      try {
+        logoUrl = await loadImageToPngDataUrl("/ZPortalFavIcon.svg", 400, 80);
+      } catch {
+        // keep null, renderHeader will use "Zulbera" text
+      }
     }
   }
 

@@ -30,11 +30,13 @@ export const sendOfferPDF = async (client: Client, offer: Offer): Promise<void> 
 
     await transporter.verify();
 
-    let logoPath = path.join(process.cwd(), "public", "ZPortalLogo.svg");
     let logoBuffer: Buffer | null = null;
     let logoBase64 = "";
 
     const possiblePaths = [
+      path.join(process.cwd(), "client", "Zulbera-Text-Logo.svg"),
+      path.join(__dirname, "..", "client", "Zulbera-Text-Logo.svg"),
+      path.join(process.cwd(), "public", "Zulbera-Text-Logo.svg"),
       path.join(process.cwd(), "public", "ZPortalLogo.svg"),
       path.join(process.cwd(), "public", "zportallogo.svg"),
       path.join(process.cwd(), "ZPortalLogo.svg"),
@@ -263,7 +265,7 @@ Made with ❤ ePage Digital.
 
     if (logoBuffer) {
       mailOptions.attachments.push({
-        filename: "ZPortalLogo.svg",
+        filename: "Zulbera-Text-Logo.svg",
         content: logoBuffer,
         cid: "logo@zportal",
       });

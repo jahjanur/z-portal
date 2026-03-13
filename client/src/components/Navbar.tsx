@@ -4,8 +4,6 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useMobileMenu } from "../contexts/MobileMenuContext";
 import { ThemeToggle } from "./ThemeToggle";
 import NotificationDropdown from "./NotificationDropdown";
-import logoLight from "../assets/Artboard 2.svg";
-import logoDark from "../assets/Artboard 2_1.svg";
 
 const name = localStorage.getItem("name");
 
@@ -51,7 +49,7 @@ export default function Navbar() {
   const isOnZulberaSection = role === "ADMIN" && (location.pathname === "/admin/zulbera" || location.pathname.startsWith("/admin/zulbera/"));
   const isOnEraSphereSection = role === "ADMIN" && (location.pathname === "/admin/erasphere" || location.pathname.startsWith("/admin/erasphere/"));
   const isDashboard = location.pathname === "/dashboard";
-  const logoSrc = theme === "dark" ? logoDark : logoLight;
+  const logoSrc = "/Zulbera-Text-Logo.svg";
   const { mobileMenuOpen, setMobileMenuOpen } = useMobileMenu();
 
   const logout = () => {
@@ -82,8 +80,8 @@ export default function Navbar() {
               <Link to="/" className="flex items-center gap-2 group shrink-0" onClick={() => setMobileMenuOpen(false)}>
                 <img
                   src={logoSrc}
-                  alt="Z-Portal Logo"
-                  className="h-7 transition-transform group-hover:scale-105"
+                  alt="Zulbera"
+                  className="h-7 max-w-[140px] w-auto object-contain transition-transform group-hover:scale-105"
                 />
               </Link>
               {/* Notification and theme next to logo (all screen sizes) */}
