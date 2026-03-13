@@ -1,0 +1,46 @@
+# Example: run the Z-Portal app (and optional DB) for production.
+# Copy to docker-compose-app.yml and adjust. Ensure app/server/.env.production exists.
+#
+# From server (e.g. /opt/zulbera/portal):
+#   - Put this file as docker-compose-app.yml
+#   - App code in ./app/ (or ./apps/), so server env is at app/server/.env.production
+#   - env_file loads vars at container start; volume mount lets the seed read the file when you run prisma db seed.
+
+services:
+  portal_app:
+    build: ./app
+    image: portal-app
+    container_name: portal_app
+    restart: unless-stopped
+    env_file:
+      - app/server/.env.production
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    volumes:
+      # Mount so seed (and app) can read SEED_ADMIN_* when running inside container
+      - app/server/.env.production:/app/server/.env.production:ro
+    depends_on:
+      - portal_db
+    networks:
+      - aem_net
+
+  portal_db:
+    image: postgres:16
+    container_name: portal_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-portal_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-portal_db}
+    volumes:
+      - portal_pgdata:/var/lib/postgresql/data
+    networks:
+      - aem_net
+
+volumes:
+  portal_pgdata:
+
+networks:
+  aem_net:
+    external: true

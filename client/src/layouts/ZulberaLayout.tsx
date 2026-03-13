@@ -1,5 +1,6 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import {
+  AlertTriangle,
   BarChart3,
   Briefcase,
   Check,
@@ -10,6 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { AdminProvider, useAdmin } from "../contexts/AdminContext";
+import { useWorkspaceOverview } from "../hooks/useWorkspaceOverview";
 
 const ZULBERA_NAV = [
   { path: "/admin/zulbera/analytics", label: "Analytics", icon: BarChart3 },
@@ -21,6 +23,77 @@ const ZULBERA_NAV = [
   { path: "/admin/zulbera/send-offer", label: "Send Offer", icon: Mail },
   { path: "/admin/zulbera/timesheets", label: "Timesheets", icon: Clock },
 ];
+
+function WorkspaceOverviewCard() {
+  const { data, loading } = useWorkspaceOverview();
+
+  if (loading || !data) {
+    return (
+      <div className="px-5 pb-6 mt-auto">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+          <p className="text-xs text-[var(--color-text-muted)]">Your workspace</p>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)] opacity-70">Loading…</p>
+        </div>
+      </div>
+    );
+  }
+
+  const alerts: { text: string; href: string }[] = [];
+  if (data.workersWithIncompleteTasks > 0) {
+    alerts.push({ text: `${data.workersWithIncompleteTasks} worker(s) with tasks not done`, href: "/admin/zulbera/workers" });
+  }
+  if (data.unpaidInvoices > 0) {
+    alerts.push({ text: `${data.unpaidInvoices} unpaid invoice(s)`, href: "/admin/zulbera/invoices" });
+  }
+  if (data.domainsExpiringSoon > 0) {
+    alerts.push({ text: `${data.domainsExpiringSoon} domain(s) expiring soon`, href: "/admin/zulbera/domains" });
+  }
+
+  return (
+    <div className="px-5 pb-6 mt-auto">
+      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3 space-y-3">
+        <p className="text-xs font-semibold text-[var(--color-text-primary)]">Workspace Overview</p>
+        <div className="space-y-1.5 text-xs">
+          <p className="flex justify-between text-[var(--color-text-secondary)]">
+            <span>👥 Workers</span>
+            <span className="font-medium text-[var(--color-text-primary)]">{data.workers}</span>
+          </p>
+          <p className="flex justify-between text-[var(--color-text-secondary)]">
+            <span>🏢 Clients</span>
+            <span className="font-medium text-[var(--color-text-primary)]">{data.clients}</span>
+          </p>
+          <p className="flex justify-between text-[var(--color-text-secondary)]">
+            <span>📋 Active tasks</span>
+            <span className="font-medium text-[var(--color-text-primary)]">{data.activeTasks}</span>
+          </p>
+          <p className="flex justify-between text-[var(--color-text-secondary)]">
+            <span>💰 Unpaid invoices</span>
+            <span className="font-medium text-[var(--color-text-primary)]">{data.unpaidInvoices}</span>
+          </p>
+        </div>
+        {data.domainsExpiringSoon > 0 && (
+          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            {data.domainsExpiringSoon} domain{data.domainsExpiringSoon !== 1 ? "s" : ""} expiring soon
+          </p>
+        )}
+        {alerts.length > 0 && (
+          <div className="pt-1 border-t border-[var(--color-border)] space-y-1">
+            {alerts.slice(0, 3).map((a, i) => (
+              <Link
+                key={i}
+                to={a.href}
+                className="block text-xs text-[var(--color-primary)] hover:underline truncate"
+              >
+                {a.text}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function ZulberaLayoutInner() {
   const { loading, error } = useAdmin();
@@ -77,12 +150,7 @@ function ZulberaLayoutInner() {
             </NavLink>
           ))}
         </nav>
-        <div className="px-5 pb-6 mt-auto">
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
-            <p className="text-xs text-[var(--color-text-muted)]">Your workspace</p>
-            <p className="mt-1 text-xs text-[var(--color-text-muted)] opacity-70">Workers, clients, tasks, invoices, and domains you manage.</p>
-          </div>
-        </div>
+        <WorkspaceOverviewCard />
       </aside>
 
       {/* Mobile nav for Zulbera (below lg breakpoint) */}
