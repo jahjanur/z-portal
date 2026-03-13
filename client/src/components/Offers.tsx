@@ -276,7 +276,7 @@ const Offers: React.FC = () => {
                 />
                 <input
                   type="number"
-                  placeholder="Price"
+                  placeholder="Price (EUR)"
                   value={product.price ?? ""}
                   onChange={(e) =>
                     updateProduct(product.id, "price", e.target.value ? Number(e.target.value) : undefined)
@@ -315,9 +315,9 @@ const Offers: React.FC = () => {
         {/* Total */}
         <div className="mt-4 rounded-lg border border-[var(--color-border-hover)] bg-[var(--color-surface-3)] px-4 py-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-[var(--color-text-secondary)]">Total</span>
+            <span className="text-sm font-semibold text-[var(--color-text-secondary)]">Total (EUR)</span>
             <span className="text-xl font-bold tabular-nums text-[var(--color-text-primary)]">
-              ${total.toFixed(2)}
+              {total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
             </span>
           </div>
         </div>

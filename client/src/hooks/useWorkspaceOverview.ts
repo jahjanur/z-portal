@@ -7,6 +7,9 @@ export interface WorkspaceOverview {
   activeTasks: number;
   unpaidInvoices: number;
   domainsExpiringSoon: number;
+  domainsExpiringInOneWeek: number;
+  domainsExpiringInTwoWeeks: number;
+  domainsExpiringIn30Days: number;
   workersWithIncompleteTasks: number;
 }
 

@@ -423,6 +423,11 @@ const MAX_DESC_LENGTH = 380;
 const MAX_SCOPE_ITEMS = 12;
 const OVERVIEW_HEADER_RESERVED = 48;
 
+/** Format amount as Euro with symbol after the number (e.g. "1,500.00 €"). */
+function formatEuro(amount: number): string {
+  return `${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+}
+
 /** Normalize text for PDF: trim, collapse whitespace, strip weird chars, fallback "—". */
 function normalizeText(s: string | undefined, fallback = "—"): string {
   if (s == null) return fallback;
@@ -779,7 +784,7 @@ function drawPricingPage(doc: jsPDF, data: OfferProposalData, proposalId: string
   doc.setFontSize(22);
   doc.setFont(OFFER_PDF_FONT, "bold");
   doc.setTextColor(...PALETTE.text);
-  doc.text(`€${data.totalPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, MARGIN + 12, y + 38);
+  doc.text(formatEuro(data.totalPrice), MARGIN + 12, y + 38);
   doc.setFontSize(FONT.meta);
   doc.setFont(OFFER_PDF_FONT, "normal");
   doc.setTextColor(...PALETTE.meta);
@@ -801,7 +806,7 @@ function drawPricingPage(doc: jsPDF, data: OfferProposalData, proposalId: string
   const columns = ["Deliverable", "Timeline", "Tech", "Price"];
   const bodyRows = data.products.map((p) => {
     const tech = Array.isArray(p.techStack) ? (p.techStack as string[]).map((t) => normalizeText(t)).join(", ") : normalizeText(String(p.techStack || ""));
-    return [normalizeText(p.name), normalizeText(p.timeline), tech || "—", p.price != null ? `€${p.price.toFixed(2)}` : "—"];
+    return [normalizeText(p.name), normalizeText(p.timeline), tech || "—", p.price != null ? formatEuro(p.price) : "—"];
   });
   const rowAlt: [number, number, number] = [252, 252, 252];
 
@@ -857,11 +862,11 @@ function drawPricingPage(doc: jsPDF, data: OfferProposalData, proposalId: string
   doc.setFont(OFFER_PDF_FONT, "normal");
   doc.setTextColor(...PALETTE.text);
   doc.text("Subtotal", breakdownX, y);
-  doc.text(`€${subtotal.toFixed(2)}`, breakdownX + breakdownW, y, { align: "right" });
+  doc.text(formatEuro(subtotal), breakdownX + breakdownW, y, { align: "right" });
   y += bl + 4;
   doc.setTextColor(...PALETTE.meta);
   doc.text("Taxes (if any)", breakdownX, y);
-  doc.text(taxes === 0 ? "—" : `€${(taxes as number).toFixed(2)}`, breakdownX + breakdownW, y, { align: "right" });
+  doc.text(taxes === 0 ? "—" : formatEuro(taxes as number), breakdownX + breakdownW, y, { align: "right" });
   y += bl + 8;
   doc.setDrawColor(...PALETTE.border);
   doc.setLineWidth(0.5);
@@ -871,7 +876,7 @@ function drawPricingPage(doc: jsPDF, data: OfferProposalData, proposalId: string
   doc.setFont(OFFER_PDF_FONT, "bold");
   doc.setTextColor(...PALETTE.text);
   doc.text("Total", breakdownX, y);
-  doc.text(`€${total.toFixed(2)}`, breakdownX + breakdownW, y, { align: "right" });
+  doc.text(formatEuro(total), breakdownX + breakdownW, y, { align: "right" });
   y += bl + SECTION_GAP;
 
   // ----- Commercial Notes: refined block, thin border, bullets max 1 line -----

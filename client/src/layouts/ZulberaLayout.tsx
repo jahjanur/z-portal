@@ -45,8 +45,23 @@ function WorkspaceOverviewCard() {
   if (data.unpaidInvoices > 0) {
     alerts.push({ text: `${data.unpaidInvoices} unpaid invoice(s)`, href: "/admin/zulbera/invoices" });
   }
-  if (data.domainsExpiringSoon > 0) {
-    alerts.push({ text: `${data.domainsExpiringSoon} domain(s) expiring soon`, href: "/admin/zulbera/domains" });
+  if (data.domainsExpiringInOneWeek > 0) {
+    alerts.push({
+      text: `${data.domainsExpiringInOneWeek} domain(s) expire in 1 week`,
+      href: "/admin/zulbera/domains",
+    });
+  }
+  if (data.domainsExpiringInTwoWeeks > 0) {
+    alerts.push({
+      text: `${data.domainsExpiringInTwoWeeks} domain(s) expire in 2 weeks`,
+      href: "/admin/zulbera/domains",
+    });
+  }
+  if (data.domainsExpiringIn30Days > 0) {
+    alerts.push({
+      text: `${data.domainsExpiringIn30Days} domain(s) expire in 30 days`,
+      href: "/admin/zulbera/domains",
+    });
   }
 
   return (
@@ -71,11 +86,27 @@ function WorkspaceOverviewCard() {
             <span className="font-medium text-[var(--color-text-primary)]">{data.unpaidInvoices}</span>
           </p>
         </div>
-        {data.domainsExpiringSoon > 0 && (
-          <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-            {data.domainsExpiringSoon} domain{data.domainsExpiringSoon !== 1 ? "s" : ""} expiring soon
-          </p>
+        {(data.domainsExpiringInOneWeek > 0 || data.domainsExpiringInTwoWeeks > 0 || data.domainsExpiringIn30Days > 0) && (
+          <div className="space-y-1 text-xs text-amber-600 dark:text-amber-400">
+            {data.domainsExpiringInOneWeek > 0 && (
+              <p className="flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                {data.domainsExpiringInOneWeek} domain{data.domainsExpiringInOneWeek !== 1 ? "s" : ""} expire{data.domainsExpiringInOneWeek === 1 ? "s" : ""} in 1 week
+              </p>
+            )}
+            {data.domainsExpiringInTwoWeeks > 0 && (
+              <p className="flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                {data.domainsExpiringInTwoWeeks} domain{data.domainsExpiringInTwoWeeks !== 1 ? "s" : ""} expire{data.domainsExpiringInTwoWeeks === 1 ? "s" : ""} in 2 weeks
+              </p>
+            )}
+            {data.domainsExpiringIn30Days > 0 && (
+              <p className="flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                {data.domainsExpiringIn30Days} domain{data.domainsExpiringIn30Days !== 1 ? "s" : ""} expire{data.domainsExpiringIn30Days === 1 ? "s" : ""} in 30 days
+              </p>
+            )}
+          </div>
         )}
         {alerts.length > 0 && (
           <div className="pt-1 border-t border-[var(--color-border)] space-y-1">
