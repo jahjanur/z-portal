@@ -34,7 +34,7 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
       return res.status(400).json({ error: "Email, name, and role are required" });
     }
 
-    const normalizedRole = role.toUpperCase();
+    const normalizedRole = (String(role)).toUpperCase();
     if (!["WORKER", "CLIENT", "ERASPHERE"].includes(normalizedRole)) {
       return res.status(400).json({ error: "Role must be WORKER, CLIENT, or ERASPHERE" });
     }
@@ -44,7 +44,13 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
       return res.status(403).json({ error: "Only admins can invite workers or EraSphere partners" });
     }
 
-    const emailNorm = email.toLowerCase().trim();
+    const userId = req.user?.userId;
+    if (userId == null || typeof userId !== "number") {
+      console.error("Invite create: missing or invalid userId", req.user);
+      return res.status(401).json({ error: "Invalid session. Please log in again." });
+    }
+
+    const emailNorm = String(email).toLowerCase().trim();
     const existingUser = await prisma.user.findUnique({
       where: { email: emailNorm },
       select: { id: true, role: true, name: true },
@@ -65,7 +71,7 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
 
     // Invalidate any pending invites for this email+role
     await prisma.invite.updateMany({
-      where: { email: email.toLowerCase().trim(), role: normalizedRole, used: false, cancelled: false },
+      where: { email: emailNorm, role: normalizedRole, used: false, cancelled: false },
       data: { cancelled: true },
     });
 
@@ -75,21 +81,21 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
 
     const invite = await prisma.invite.create({
       data: {
-        email: email.toLowerCase().trim(),
-        name: name.trim(),
+        email: emailNorm,
+        name: String(name).trim(),
         role: normalizedRole,
         tokenHash,
-        invitedById: req.user.userId,
-        company: company?.trim() || null,
-        domainName: domainName || null,
-        domainExpiry: domainExpiry || null,
-        hostingPlan: hostingPlan || null,
-        hostingExpiry: hostingExpiry || null,
+        invitedById: userId,
+        company: company != null ? String(company).trim() || null : null,
+        domainName: domainName != null ? String(domainName) || null : null,
+        domainExpiry: domainExpiry != null ? String(domainExpiry) || null : null,
+        hostingPlan: hostingPlan != null ? String(hostingPlan) || null : null,
+        hostingExpiry: hostingExpiry != null ? String(hostingExpiry) || null : null,
         expiresAt,
       },
     });
 
-    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const clientUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || "http://localhost:5173";
     const inviteLink = `${clientUrl}/invite/accept?token=${rawToken}`;
 
     try {
@@ -103,6 +109,7 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
       });
     } catch (emailErr) {
       console.error("Failed to send invite email:", emailErr);
+      // Do not fail the request; invite was created
     }
 
     return res.status(201).json({
@@ -111,11 +118,18 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
       name: invite.name,
       role: invite.role,
       company: invite.company,
-      expiresAt: invite.expiresAt,
+      expiresAt: invite.expiresAt.toISOString(),
       inviteLink,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating invite:", error);
+    const code = error?.code;
+    if (code === "P2002") {
+      return res.status(400).json({ error: "An invite for this email and role already exists. Cancel it first or use a different email." });
+    }
+    if (code === "P2003") {
+      return res.status(400).json({ error: "Invalid session. Please log in again." });
+    }
     return res.status(500).json({ error: "Failed to create invite" });
   }
 });
@@ -379,24 +393,49 @@ router.post("/:id/cancel", verifyJWT, verifyAdminOrEraSphere, async (req: any, r
 // GET /invites/for-role/:role — admin: all invites for role; EraSphere: only their own CLIENT invites
 router.get("/for-role/:role", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
-    const role = req.params.role.toUpperCase();
+    const role = String(req.params.role || "").toUpperCase();
+    if (!["WORKER", "CLIENT", "ERASPHERE"].includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
     const isEraSphere = req.user?.role === "ERASPHERE";
     if (isEraSphere && role !== "CLIENT") {
       return res.status(403).json({ error: "EraSphere can only list invites for CLIENT role" });
     }
 
     const where: { role: string; invitedById?: number } = { role };
-    if (isEraSphere) where.invitedById = req.user.userId;
+    if (isEraSphere && req.user?.userId != null) {
+      where.invitedById = Number(req.user.userId);
+    }
 
     const invites = await prisma.invite.findMany({
       where,
       orderBy: { createdAt: "desc" },
-      include: { invitedBy: { select: { id: true, name: true } } },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        company: true,
+        role: true,
+        used: true,
+        cancelled: true,
+        createdAt: true,
+        expiresAt: true,
+        invitedBy: { select: { id: true, name: true } },
+      },
     });
 
     const now = new Date();
     const mapped = invites.map((inv) => ({
-      ...inv,
+      id: inv.id,
+      email: inv.email,
+      name: inv.name,
+      company: inv.company,
+      role: inv.role,
+      used: inv.used,
+      cancelled: inv.cancelled,
+      createdAt: inv.createdAt.toISOString(),
+      expiresAt: inv.expiresAt.toISOString(),
+      invitedBy: inv.invitedBy,
       status: inv.used ? "ACCEPTED" : inv.cancelled ? "CANCELLED" : inv.expiresAt < now ? "EXPIRED" : "PENDING",
     }));
 
