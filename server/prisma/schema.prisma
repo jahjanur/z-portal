@@ -38,6 +38,8 @@ model User {
   taskComments   TaskComment[]
   projects       TimesheetProject[] @relation("UserProjects")
   notifications  Notification[]
+  sentInvites    Invite[]           @relation("InviteSender")
+  notificationPreferences NotificationPreference[]
 }
 
 model Project {
@@ -227,4 +229,41 @@ model Notification {
 
   @@index([userId])
   @@index([read])
+  @@index([userId, createdAt])
+}
+
+model Invite {
+  id            Int       @id @default(autoincrement())
+  email         String
+  role          String
+  tokenHash     String    @unique
+  name          String
+  company       String?
+  domainName    String?
+  domainExpiry  String?
+  hostingPlan   String?
+  hostingExpiry String?
+  invitedById   Int
+  invitedBy     User      @relation("InviteSender", fields: [invitedById], references: [id])
+  used          Boolean   @default(false)
+  cancelled     Boolean   @default(false)
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+  expiresAt     DateTime
+
+  @@index([tokenHash])
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model NotificationPreference {
+  id           Int     @id @default(autoincrement())
+  userId       Int
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventType    String
+  inAppEnabled Boolean @default(true)
+  emailEnabled Boolean @default(true)
+
+  @@unique([userId, eventType])
+  @@index([userId])
 }

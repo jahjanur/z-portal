@@ -7,7 +7,7 @@ import path from "path";
 import fs from "fs";
 import { verifyJWT, verifyAdmin, verifyAdminOrEraSphere } from "../middleware/auth";
 import { notifyProfileCompleted } from "../services/notifications";
-import { notifyAdmins } from "../services/notificationStore";
+import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
 
 const router = Router();
@@ -475,20 +475,14 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
     });
 
     if (reqRole === "ERASPHERE" && roleNormalized === "CLIENT") {
-      try {
-        const partner = await prisma.user.findUnique({
-          where: { id: req.user.userId },
-          select: { name: true },
-        });
-        await notifyAdmins(
-          "ERASPHERE_NEW_CLIENT",
-          "EraSphere added a client",
-          `${partner?.name ?? "EraSphere partner"} added client: ${newUser.name} (${newUser.email})`,
-          "/admin/clients"
-        );
-      } catch (err) {
-        console.error("Failed to notify admins of new EraSphere client:", err);
-      }
+      const partner = await prisma.user.findUnique({ where: { id: req.user.userId }, select: { name: true } });
+      emit(EventType.ERASPHERE_NEW_CLIENT, {
+        title: "EraSphere added a client",
+        message: `${partner?.name ?? "EraSphere partner"} added client: ${newUser.name} (${newUser.email})`,
+        link: "/admin/clients",
+        clientId: newUser.id,
+        actorId: req.user.userId,
+      }).catch((err) => console.error("Failed to emit ERASPHERE_NEW_CLIENT:", err));
     }
 
     if (roleNormalized === "CLIENT" && domainName) {

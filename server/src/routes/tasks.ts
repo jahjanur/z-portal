@@ -2,8 +2,7 @@ import { Router } from "express";
 import { verifyJWT } from "../middleware/auth";
 import multer from "multer";
 import path from "path";
-import { notifyNewTask, notifyTaskPendingApproval, notifyTaskCompleted } from "../services/notifications";
-import { createNotification, notifyAdmins } from "../services/notificationStore";
+import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
 
 const router = Router();
@@ -321,42 +320,33 @@ router.post("/", verifyJWT, async (req: any, res) => {
       }
     });
 
-    for (const tw of task.workers) {
-      await notifyNewTask(task, { email: tw.user.email, name: tw.user.name });
-      await createNotification(
-        tw.user.id,
-        "TASK_ASSIGNED",
-        "New Task Assigned",
-        `You have been assigned to task: "${task.title}"`,
-        `/tasks/${task.id}`
-      );
-    }
+    await emit(EventType.TASK_ASSIGNED, {
+      title: "New Task Assigned",
+      message: `You have been assigned to task: "${task.title}"`,
+      link: `/tasks/${task.id}`,
+      taskId: task.id,
+      actorId: req.user.userId,
+    });
 
-    // Notify client about the new task
-    await createNotification(
+    await emit(EventType.TASK_CREATED, {
+      title: "New Task Created",
+      message: `A new task "${task.title}" has been created`,
+      link: `/tasks/${task.id}`,
+      taskId: task.id,
       clientId,
-      "TASK_CREATED",
-      "New Task Created",
-      `A new task "${task.title}" has been created for you`,
-      `/tasks/${task.id}`
-    );
+      actorId: req.user.userId,
+    });
 
     if (req.user?.role === "ERASPHERE") {
-      try {
-        const partner = await prisma.user.findUnique({
-          where: { id: req.user.userId },
-          select: { name: true },
-        });
-        const clientName = task.client?.name ?? task.client?.company ?? "client";
-        await notifyAdmins(
-          "ERASPHERE_NEW_TASK",
-          "EraSphere added a task",
-          `${partner?.name ?? "EraSphere partner"} added task "${task.title}" for ${clientName}`,
-          "/admin/tasks"
-        );
-      } catch (err) {
-        console.error("Failed to notify admins of new EraSphere task:", err);
-      }
+      const partner = await prisma.user.findUnique({ where: { id: req.user.userId }, select: { name: true } });
+      const clientName = task.client?.name ?? task.client?.company ?? "client";
+      await emit(EventType.ERASPHERE_NEW_TASK, {
+        title: "EraSphere added a task",
+        message: `${partner?.name ?? "EraSphere partner"} added task "${task.title}" for ${clientName}`,
+        link: `/tasks/${task.id}`,
+        taskId: task.id,
+        actorId: req.user.userId,
+      });
     }
 
     res.status(201).json(task);
@@ -429,61 +419,30 @@ router.patch("/:id/status", verifyJWT, async (req: any, res) => {
     });
 
     if (status && status !== existingTask.status) {
-      if (status === 'PENDING_APPROVAL') {
-        for (const tw of existingTask.workers) {
-          await notifyTaskPendingApproval(updatedTask, { name: tw.user.name });
-        }
-        // Notify admins that task is pending approval
-        const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
-        for (const admin of admins) {
-          await createNotification(
-            admin.id,
-            "TASK_PENDING_APPROVAL",
-            "Task Pending Approval",
-            `Task "${updatedTask.title}" is pending your approval`,
-            `/tasks/${taskId}`
-          );
-        }
-      } else if (status === 'COMPLETED') {
-        const recipients: { email: string; name: string; role: string }[] = [];
-        for (const tw of existingTask.workers) {
-          recipients.push({ email: tw.user.email, name: tw.user.name, role: 'WORKER' });
-          await createNotification(
-            tw.userId,
-            "TASK_COMPLETED",
-            "Task Completed",
-            `Task "${updatedTask.title}" has been marked as completed`,
-            `/tasks/${taskId}`
-          );
-        }
-        if (updatedTask.client) {
-          recipients.push({
-            email: updatedTask.client.email,
-            name: updatedTask.client.name,
-            role: 'CLIENT'
-          });
-          await createNotification(
-            updatedTask.client.id,
-            "TASK_COMPLETED",
-            "Task Completed",
-            `Your task "${updatedTask.title}" has been completed`,
-            `/tasks/${taskId}`
-          );
-        }
-        if (recipients.length > 0) {
-          await notifyTaskCompleted(updatedTask, recipients);
-        }
+      if (status === "PENDING_APPROVAL") {
+        await emit(EventType.TASK_PENDING_APPROVAL, {
+          title: "Task Pending Approval",
+          message: `Task "${updatedTask.title}" is pending your approval`,
+          link: `/tasks/${taskId}`,
+          taskId,
+          actorId: req.user.userId,
+        });
+      } else if (status === "COMPLETED") {
+        await emit(EventType.TASK_COMPLETED, {
+          title: "Task Completed",
+          message: `Task "${updatedTask.title}" has been marked as completed`,
+          link: `/tasks/${taskId}`,
+          taskId,
+          actorId: req.user.userId,
+        });
       } else {
-        // Generic status change notification to client
-        if (updatedTask.clientId) {
-          await createNotification(
-            updatedTask.clientId,
-            "TASK_UPDATED",
-            "Task Status Updated",
-            `Task "${updatedTask.title}" status changed to ${status}`,
-            `/tasks/${taskId}`
-          );
-        }
+        await emit(EventType.TASK_STATUS_CHANGED, {
+          title: "Task Status Updated",
+          message: `Task "${updatedTask.title}" status changed to ${status}`,
+          link: `/tasks/${taskId}`,
+          taskId,
+          actorId: req.user.userId,
+        });
       }
     }
 
@@ -694,65 +653,40 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
     });
 
     if (role === "ADMIN" && workerIds !== undefined && Array.isArray(workerIds) && workerIds.length > 0) {
-      for (const tw of updatedTask.workers) {
-        await createNotification(
-          tw.user.id,
-          "TASK_ASSIGNED",
-          "New Task Assigned",
-          `You have been assigned to task: "${updatedTask.title}"`,
-          `/tasks/${taskId}`
-        );
-      }
+      await emit(EventType.TASK_ASSIGNED, {
+        title: "New Task Assigned",
+        message: `You have been assigned to task: "${updatedTask.title}"`,
+        link: `/tasks/${taskId}`,
+        taskId,
+        actorId: req.user.userId,
+      });
     }
 
     if (status && status !== existingTask.status) {
-      const workersList = updatedTask.workers.map((tw) => tw.user);
-      if (status === 'PENDING_APPROVAL') {
-        for (const w of workersList) {
-          await notifyTaskPendingApproval(updatedTask, { name: w.name });
-        }
-        const admins = await prisma.user.findMany({ where: { role: "ADMIN" } });
-        for (const admin of admins) {
-          await createNotification(
-            admin.id,
-            "TASK_PENDING_APPROVAL",
-            "Task Pending Approval",
-            `Task "${updatedTask.title}" is pending your approval`,
-            `/tasks/${taskId}`
-          );
-        }
-      } else if (status === 'COMPLETED') {
-        const recipients: { email: string; name: string; role: string }[] = workersList.map((w) => ({ email: w.email, name: w.name, role: 'WORKER' }));
-        for (const tw of updatedTask.workers) {
-          await createNotification(
-            tw.user.id,
-            "TASK_COMPLETED",
-            "Task Completed",
-            `Task "${updatedTask.title}" has been marked as completed`,
-            `/tasks/${taskId}`
-          );
-        }
-        if (updatedTask.client) {
-          recipients.push({ email: updatedTask.client.email, name: updatedTask.client.name, role: 'CLIENT' });
-          await createNotification(
-            updatedTask.client.id,
-            "TASK_COMPLETED",
-            "Task Completed",
-            `Your task "${updatedTask.title}" has been completed`,
-            `/tasks/${taskId}`
-          );
-        }
-        if (recipients.length > 0) {
-          await notifyTaskCompleted(updatedTask, recipients);
-        }
-      } else if (updatedTask.clientId) {
-        await createNotification(
-          updatedTask.clientId,
-          "TASK_UPDATED",
-          "Task Status Updated",
-          `Task "${updatedTask.title}" status changed to ${status}`,
-          `/tasks/${taskId}`
-        );
+      if (status === "PENDING_APPROVAL") {
+        await emit(EventType.TASK_PENDING_APPROVAL, {
+          title: "Task Pending Approval",
+          message: `Task "${updatedTask.title}" is pending your approval`,
+          link: `/tasks/${taskId}`,
+          taskId,
+          actorId: req.user.userId,
+        });
+      } else if (status === "COMPLETED") {
+        await emit(EventType.TASK_COMPLETED, {
+          title: "Task Completed",
+          message: `Task "${updatedTask.title}" has been marked as completed`,
+          link: `/tasks/${taskId}`,
+          taskId,
+          actorId: req.user.userId,
+        });
+      } else {
+        await emit(EventType.TASK_STATUS_CHANGED, {
+          title: "Task Status Updated",
+          message: `Task "${updatedTask.title}" status changed to ${status}`,
+          link: `/tasks/${taskId}`,
+          taskId,
+          actorId: req.user.userId,
+        });
       }
     }
 

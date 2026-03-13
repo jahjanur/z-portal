@@ -1,32 +1,20 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import DatePicker from "../ui/DatePicker";
+import API from "../../api";
 
 interface ClientFormProps {
-  onSubmit: (data: {
-    name: string;
-    company: string;
-    email: string;
-    password: string;
-    colorHex: string;
-    postalAddress: string;
-    domainName?: string;
-    domainExpiry?: string;
-    hostingPlan?: string;
-    hostingExpiry?: string;
-    sslExpiry?: string;
-  }) => void;
+  onSubmit?: (data: any) => void;
+  onInviteSent?: () => void;
   colors: { primary: string };
-  /** When true, domain & hosting section is hidden (e.g. for EraSphere) */
   hideDomainAndHosting?: boolean;
 }
 
-const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAndHosting = false }) => {
+const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, onInviteSent, colors, hideDomainAndHosting = false }) => {
   const [formData, setFormData] = useState({
     name: "",
     company: "",
     email: "",
-    password: "",
     colorHex: "#6b7280",
     postalAddress: "",
     domainName: "",
@@ -37,27 +25,46 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAnd
   });
 
   const [showHostingFields, setShowHostingFields] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (!formData.name || !formData.company || !formData.email || !formData.password || !formData.postalAddress) {
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.company || !formData.email) {
       toast.error("Please fill in all required fields");
       return;
     }
-    onSubmit(formData);
-    setFormData({
-      name: "",
-      company: "",
-      email: "",
-      password: "",
-      colorHex: "#6b7280",
-      postalAddress: "",
-      domainName: "",
-      domainExpiry: "",
-      hostingPlan: "",
-      hostingExpiry: "",
-      sslExpiry: "",
-    });
-    setShowHostingFields(false);
+
+    setIsSubmitting(true);
+    try {
+      await API.post("/invites", {
+        email: formData.email.trim(),
+        name: formData.name.trim(),
+        role: "CLIENT",
+        company: formData.company.trim(),
+        domainName: formData.domainName || undefined,
+        domainExpiry: formData.domainExpiry || undefined,
+        hostingPlan: formData.hostingPlan || undefined,
+        hostingExpiry: formData.hostingExpiry || undefined,
+      });
+      toast.success("Invite sent to client!");
+      setFormData({
+        name: "",
+        company: "",
+        email: "",
+        colorHex: "#6b7280",
+        postalAddress: "",
+        domainName: "",
+        domainExpiry: "",
+        hostingPlan: "",
+        hostingExpiry: "",
+        sslExpiry: "",
+      });
+      setShowHostingFields(false);
+      onInviteSent?.();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.error || "Failed to send invite");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const setLifespanExpiry = (years: number) => {
@@ -116,43 +123,15 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAnd
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
-              Email Address <span className="text-red-400">*</span>
-            </label>
-            <input
-              placeholder="john@example.com"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
-              Password <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
-              required
-            />
-          </div>
-        </div>
-
         <div>
           <label className="block mb-2 text-sm font-semibold text-[var(--color-text-secondary)]">
-            Postal Address <span className="text-red-400">*</span>
+            Email Address <span className="text-red-400">*</span>
           </label>
           <input
-            placeholder="P.O. Box 123, City, Postal Code"
-            value={formData.postalAddress}
-            onChange={(e) => setFormData({ ...formData, postalAddress: e.target.value })}
+            placeholder="john@example.com"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
             className="w-full rounded-xl input-dark border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-0"
             required
           />
@@ -283,17 +262,18 @@ const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, colors, hideDomainAnd
         <button
           type="button"
           onClick={handleSubmit}
-          className="btn-primary w-full rounded-xl px-6 py-4 text-sm shadow-lg transition-all"
+          disabled={isSubmitting}
+          className="btn-primary w-full rounded-xl px-6 py-4 text-sm shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <span className="flex items-center justify-center gap-2">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
             </svg>
-            Add Client & Send Invite
+            {isSubmitting ? "Sending Invite..." : "Invite Client"}
           </span>
         </button>
         <p className="mt-3 text-center text-xs text-[var(--color-text-muted)]">
-          <span className="text-red-400">*</span> Required fields • Client will receive an email to complete their profile
+          <span className="text-red-400">*</span> Required fields • Client will receive an email to set their password and join
         </p>
       </div>
     </div>

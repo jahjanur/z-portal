@@ -148,10 +148,10 @@ export default function NotificationDropdown() {
                     <button
                       key={n.id}
                       type="button"
-                      onClick={() => {
-                        if (!n.read) markRead(n.id);
-                        if (n.link) navigate(n.link);
+                      onClick={async () => {
+                        if (!n.read) await markRead(n.id);
                         setOpen(false);
+                        if (n.link) navigate(n.link);
                       }}
                       className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-2)] ${
                         !n.read ? "bg-[var(--color-surface-2)]/50" : ""
@@ -192,6 +192,20 @@ export default function NotificationDropdown() {
                   );
                 })
               )}
+            </div>
+
+            {/* View all link */}
+            <div className="border-t border-[var(--color-border)] px-4 py-2.5 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  navigate("/notifications");
+                  setOpen(false);
+                }}
+                className="text-xs font-medium text-[var(--color-btn-primary-bg)] hover:underline"
+              >
+                View all notifications
+              </button>
             </div>
           </div>,
           document.body

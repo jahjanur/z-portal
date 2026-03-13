@@ -28,9 +28,10 @@ export function useNotifications() {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const { data } = await API.get("/notifications");
-      setNotifications(data);
-      setUnreadCount(data.filter((n: Notification) => !n.read).length);
+      const { data } = await API.get("/notifications?page=1&limit=20");
+      const items: Notification[] = data.notifications ?? data;
+      setNotifications(items);
+      setUnreadCount(items.filter((n) => !n.read).length);
     } catch {
       // silently fail
     }

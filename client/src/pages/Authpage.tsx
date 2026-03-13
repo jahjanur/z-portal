@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { login } from "../services/auth";
 
 export default function AuthPage() {
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -18,7 +20,8 @@ export default function AuthPage() {
       localStorage.setItem("role", res.user.role);
       localStorage.setItem("userId", res.user.id.toString());
       localStorage.setItem("name", res.user.name);
-      window.location.href = "/dashboard";
+      const redirect = searchParams.get("redirect");
+      window.location.href = redirect && redirect.startsWith("/") ? redirect : "/dashboard";
     } catch (err: unknown) {
       setMessage(err instanceof Error ? err.message : "Login failed");
     } finally {

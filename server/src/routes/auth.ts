@@ -27,18 +27,19 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    const role = String(user.role || "").toUpperCase();
     const token = jwt.sign(
-      { userId: user.id, role: user.role }, 
-      JWT_SECRET, 
+      { userId: user.id, role },
+      JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    return res.json({ 
-      token, 
-      user: { 
-        id: user.id, 
-        email: user.email, 
-        role: user.role,
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role,
         name: user.name,
         company: user.company,
         logo: user.logo,
