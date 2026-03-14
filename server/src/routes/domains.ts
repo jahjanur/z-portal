@@ -22,11 +22,22 @@ function addYears(date: Date, years: number): Date {
   return d;
 }
 
-// get all domains for a client (admin only; EraSphere cannot access domain/hosting)
-router.get("/client/:clientId", verifyJWT, verifyAdmin, async (req, res) => {
+// get all domains for a client (admin: any client; CLIENT: only own)
+router.get("/client/:clientId", verifyJWT, async (req: any, res) => {
   try {
     const { clientId } = req.params;
-    
+    const authUserId = req.user?.userId;
+    const role = req.user?.role;
+
+    // Admin can access any client's domains; CLIENT can only access their own
+    if (role === "CLIENT") {
+      if (Number(clientId) !== authUserId) {
+        return res.status(403).json({ error: "Not authorized to view these domains" });
+      }
+    } else if (role !== "ADMIN") {
+      return res.status(403).json({ error: "Only admins can view other clients' domains" });
+    }
+
     const domains = await prisma.domain.findMany({
       where: { clientId: Number(clientId) },
       include: {

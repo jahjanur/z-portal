@@ -95,8 +95,8 @@ function EraSphereLayoutInner() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] pt-16">
-      {/* Sidebar */}
-      <aside className="hidden lg:flex flex-col w-[220px] shrink-0 border-r border-[var(--color-border)] bg-[var(--color-bg)]">
+      {/* Sidebar - sticky so it stays in place when scrolling */}
+      <aside className="hidden lg:flex flex-col w-[220px] shrink-0 h-[calc(100vh-4rem)] sticky top-16 self-start overflow-y-auto border-r border-[var(--color-border)] bg-[var(--color-bg)]">
         <div className="px-5 pt-6 pb-4">
           <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)]">EraSphere</p>
         </div>
