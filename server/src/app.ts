@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import path from "path";
 import authRoutes from "./routes/auth";
 import taskRoutes from "./routes/tasks";
 import invoiceRoutes from "./routes/invoices";
@@ -13,13 +12,16 @@ import notificationRoutes from "./routes/notifications";
 import workspaceRoutes from "./routes/workspace";
 import inviteRoutes from "./routes/invites";
 import commentsRoutes from "./routes/comments";
+import { uploadsDir, ensureUploadsDir } from "./lib/uploadsPath";
+
+ensureUploadsDir();
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/uploads", express.static(uploadsDir));
 
 app.use("/auth", authRoutes);
 app.use("/users", usersRoutes);

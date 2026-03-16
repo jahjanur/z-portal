@@ -1,4 +1,5 @@
 import React from "react";
+import { getFileUrl } from "../../api";
 
 interface TaskFile {
   id: number;
@@ -45,7 +46,7 @@ const FileCard: React.FC<FileCardProps> = ({ file, formatDate }) => {
         </div>
       </div>
       <a
-        href={`http://localhost:4001${file.fileUrl}`}
+        href={getFileUrl(file.fileUrl)}
         target="_blank"
         rel="noopener noreferrer"
         className="block w-full px-3 py-2 mt-3 text-xs font-semibold text-center rounded-full bg-white text-app hover:bg-gray-200 transition-all"

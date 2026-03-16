@@ -4,12 +4,13 @@ import multer from "multer";
 import path from "path";
 import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
+import { uploadsDir } from "../lib/uploadsPath";
 
 const router = Router();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/");
+    cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -473,14 +474,43 @@ router.post("/:id/files", verifyJWT, upload.single("file"), async (req: any, res
   try {
     const { id } = req.params;
     const { section, caption, fileType, uploadedBy } = req.body;
-    
+    const { role, userId } = req.user;
+
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
 
+    const taskIdNum = parseInt(id, 10);
+    if (isNaN(taskIdNum)) {
+      return res.status(400).json({ error: "Invalid task id" });
+    }
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskIdNum },
+      include: { workers: { select: { userId: true } } },
+    });
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    const isAssignedWorker = task.workers.some((w) => w.userId === userId);
+    let canUpload =
+      role === "ADMIN" ||
+      (role === "WORKER" && isAssignedWorker) ||
+      (role === "CLIENT" && task.clientId === userId);
+    if (role === "ERASPHERE" && task.clientId) {
+      const referredClientIds = await prisma.user
+        .findMany({ where: { role: "CLIENT", referredById: userId }, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id));
+      canUpload = referredClientIds.includes(task.clientId);
+    }
+    if (!canUpload) {
+      return res.status(403).json({ error: "Not authorized to add files to this task" });
+    }
+
     const file = await prisma.taskFile.create({
       data: {
-        taskId: parseInt(id),
+        taskId: taskIdNum,
         fileName: req.file.originalname,
         fileUrl: `/uploads/${req.file.filename}`,
         fileType: fileType || "document",

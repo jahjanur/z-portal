@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { HexColorPicker } from "react-colorful";
-import API from "../api";
+import API, { getFileUrl } from "../api";
 
 const colors = {
   primary: "rgba(255,255,255,0.12)",
@@ -363,7 +363,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                           {existingFile.split('/').pop()}
                         </p>
                         <a
-                          href={`http://localhost:4001${existingFile}`}
+                          href={getFileUrl(existingFile)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-white/80 hover:underline"

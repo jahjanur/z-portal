@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import API from "../api";
+import API, { getFileUrl } from "../api";
 import AdminStatusControls from "../components/taskdetail/AdminStatusControls";
 import WorkerStatusControls from "../components/taskdetail/WorkerStatusControls";
 import ClientStatusView from "../components/taskdetail/ClientStatusView";
@@ -546,7 +546,7 @@ const TaskDetailPage: React.FC = () => {
                                 setViewerFile(file);
                                 setViewerOpen(true);
                               }}
-                              href={`http://localhost:4001${file.fileUrl}`}
+                              href={getFileUrl(file.fileUrl)}
                               className="btn-primary px-3 py-1 text-xs font-semibold"
                             >
                               View

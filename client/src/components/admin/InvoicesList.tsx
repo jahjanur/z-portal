@@ -3,6 +3,7 @@ import Pagination from "../ui/Pagination";
 import toast from "react-hot-toast";
 import { generateInvoicePdf } from "../../utils/pdfHelpers";
 import type { Invoice as AdminInvoice } from "../../contexts/AdminContext";
+import { getFileUrl } from "../../api";
 
 interface Invoice extends AdminInvoice {}
 
@@ -207,7 +208,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
 
                 {inv.fileUrl && (
                   <a
-                    href={`http://localhost:4001${inv.fileUrl}`}
+                    href={getFileUrl(inv.fileUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-secondary h-9 px-3 text-sm font-semibold rounded-lg inline-flex items-center justify-center gap-2 whitespace-nowrap"
