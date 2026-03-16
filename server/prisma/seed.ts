@@ -3,7 +3,10 @@ import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// In production, load server/.env.production so SEED_ADMIN_* are set when running seed in Docker
+// In production, load server/.env.production so SEED_ADMIN_* are set when running seed in Docker.
+// Use override: false so that DATABASE_URL (and others) already set in the shell (e.g. from .env) are kept.
+// That way you can run: export $(cat .env | xargs); NODE_ENV=production npx prisma db seed
+// and the .env DATABASE_URL (e.g. localhost) won't be overwritten by .env.production (e.g. portal_db).
 if (process.env.NODE_ENV === 'production') {
   const pathsToTry = [
     path.join(process.cwd(), '.env.production'),
@@ -11,7 +14,7 @@ if (process.env.NODE_ENV === 'production') {
     path.resolve(__dirname, '..', '.env.production'),
   ];
   for (const p of pathsToTry) {
-    const result = dotenv.config({ path: p, override: true });
+    const result = dotenv.config({ path: p, override: false });
     if (!result.error) break;
   }
 }
