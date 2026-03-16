@@ -39,10 +39,13 @@ const ListDisplay = <T extends { id: number }>({
         return (
           <div
             key={item.id}
-            onClick={() => navigate(`/clients/${item.id}`)}
-            className="flex cursor-pointer flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-white/15 hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between"
+            className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-white/15 hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between"
           >
-            <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => navigate(`/clients/${item.id}`)}
+              className="min-w-0 flex-1 cursor-pointer text-left focus:outline-none focus:ring-0"
+            >
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 {renderItem(item)}
                 {showProfileStatus && profileStatus && (
@@ -57,32 +60,24 @@ const ListDisplay = <T extends { id: number }>({
                   </span>
                 )}
               </div>
-            </div>
+            </button>
 
             <div
-              className="flex shrink-0 flex-wrap gap-2 justify-start sm:flex-nowrap sm:justify-end"
-              onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
+              className="relative z-10 flex shrink-0 flex-wrap gap-2 justify-start sm:flex-nowrap sm:justify-end"
             >
               {showProfileStatus && isIncomplete && onResendInvite && (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onResendInvite(item.id);
-                  }}
-                  className="h-9 px-3 text-sm font-semibold text-blue-300 bg-blue-500/20 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-colors whitespace-nowrap"
+                  onClick={() => onResendInvite(item.id)}
+                  className="h-9 cursor-pointer px-3 text-sm font-semibold text-blue-300 bg-blue-500/20 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-colors whitespace-nowrap"
                 >
                   Resend Invite
                 </button>
               )}
               <button
                 type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(item.id);
-                }}
-                className="h-9 px-3 text-sm font-semibold text-red-300 bg-red-500/20 rounded-full border border-red-500/30 hover:bg-red-500/30 transition-colors whitespace-nowrap"
+                onClick={() => onDelete(item.id)}
+                className="h-9 min-w-[4.5rem] cursor-pointer px-3 text-sm font-semibold text-red-300 bg-red-500/20 rounded-full border border-red-500/30 hover:bg-red-500/40 hover:border-red-500/50 active:bg-red-500/50 transition-colors whitespace-nowrap"
               >
                 Delete
               </button>
