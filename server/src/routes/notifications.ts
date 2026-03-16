@@ -44,6 +44,64 @@ router.get("/unread-count", verifyJWT, async (req: any, res) => {
   }
 });
 
+// Get unread counts by role (for admin comments page: comment notification badges per tab)
+router.get("/unread-counts-by-role", verifyJWT, async (req: any, res) => {
+  try {
+    const { userId } = req.user;
+    const [total, clientCount, workerCount] = await Promise.all([
+      prisma.notification.count({ where: { userId, read: false } }),
+      prisma.notification.count({
+        where: { userId, read: false, type: "TASK_COMMENT_ADDED", sourceRole: "CLIENT" },
+      }),
+      prisma.notification.count({
+        where: { userId, read: false, type: "TASK_COMMENT_ADDED", sourceRole: "WORKER" },
+      }),
+    ]);
+    res.json({
+      total,
+      byRole: { CLIENT: clientCount, WORKER: workerCount },
+    });
+  } catch (error) {
+    console.error("Error fetching unread counts by role:", error);
+    res.status(500).json({ error: "Failed to fetch unread counts" });
+  }
+});
+
+// Get unread counts for a task by thread (for task detail page tab badges)
+router.get("/unread-by-task", verifyJWT, async (req: any, res) => {
+  try {
+    const { userId } = req.user;
+    const taskId = Number(req.query.taskId);
+    if (!taskId || isNaN(taskId)) {
+      return res.status(400).json({ error: "taskId is required" });
+    }
+    const [internal, client] = await Promise.all([
+      prisma.notification.count({
+        where: {
+          userId,
+          read: false,
+          type: "TASK_COMMENT_ADDED",
+          taskId,
+          threadType: "internal",
+        },
+      }),
+      prisma.notification.count({
+        where: {
+          userId,
+          read: false,
+          type: "TASK_COMMENT_ADDED",
+          taskId,
+          threadType: "client",
+        },
+      }),
+    ]);
+    res.json({ internal, client });
+  } catch (error) {
+    console.error("Error fetching unread by task:", error);
+    res.status(500).json({ error: "Failed to fetch unread by task" });
+  }
+});
+
 // Mark all notifications as read (MUST come before /:id/read)
 router.patch("/read-all", verifyJWT, async (req: any, res) => {
   try {
@@ -56,6 +114,29 @@ router.patch("/read-all", verifyJWT, async (req: any, res) => {
   } catch (error) {
     console.error("Error marking all notifications as read:", error);
     res.status(500).json({ error: "Failed to mark all as read" });
+  }
+});
+
+// Mark notifications as read for a task + thread (when user views that tab on task detail)
+router.patch("/mark-read-for-task", verifyJWT, async (req: any, res) => {
+  try {
+    const { userId } = req.user;
+    const { taskId, threadType } = req.body;
+    const tid = Number(taskId);
+    if (!tid || isNaN(tid)) {
+      return res.status(400).json({ error: "taskId is required" });
+    }
+    if (threadType !== "internal" && threadType !== "client") {
+      return res.status(400).json({ error: "threadType must be internal or client" });
+    }
+    await prisma.notification.updateMany({
+      where: { userId, taskId: tid, threadType, read: false },
+      data: { read: true },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error marking notifications read for task:", error);
+    res.status(500).json({ error: "Failed to mark read for task" });
   }
 });
 

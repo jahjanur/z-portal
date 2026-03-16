@@ -229,6 +229,21 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
       return res.status(403).json({ error: "Not authorized to view this task" });
     }
 
+    // Client sees only client-visible comments (admin–client thread). Worker sees only internal (admin–worker thread).
+    if (role === "CLIENT") {
+      (task as any).comments = (task as any).comments.filter((c: { visibleToClient: boolean }) => c.visibleToClient);
+      (task as any).files = (task as any).files.map((f: { comments: { visibleToClient: boolean }[] }) => ({
+        ...f,
+        comments: f.comments.filter((c: { visibleToClient: boolean }) => c.visibleToClient),
+      }));
+    } else if (role === "WORKER") {
+      (task as any).comments = (task as any).comments.filter((c: { visibleToClient: boolean }) => !c.visibleToClient);
+      (task as any).files = (task as any).files.map((f: { comments: { visibleToClient: boolean }[] }) => ({
+        ...f,
+        comments: f.comments.filter((c: { visibleToClient: boolean }) => !c.visibleToClient),
+      }));
+    }
+
     res.json(task);
   } catch (error) {
     console.error("Error fetching task:", error);
@@ -486,7 +501,9 @@ router.post("/:id/files", verifyJWT, upload.single("file"), async (req: any, res
 router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) => {
   try {
     const { taskId, fileId } = req.params;
-    const { userId, content } = req.body;
+    const { content, visibleToClient: visibleToClientBody } = req.body;
+    const { role, userId: authUserId } = req.user;
+    const visibleToClient = role === "CLIENT" ? true : (visibleToClientBody === true || visibleToClientBody === "true");
 
     const file = await prisma.taskFile.findFirst({
       where: {
@@ -508,7 +525,6 @@ router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) 
       return res.status(404).json({ error: "Task not found" });
     }
 
-    const { role, userId: authUserId } = req.user;
     const canComment = task.workers.some((tw) => tw.userId === authUserId);
     if (role === "WORKER" && !canComment) {
       return res.status(403).json({ error: "Not authorized to comment on this task" });
@@ -520,8 +536,9 @@ router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) 
     const comment = await prisma.fileComment.create({
       data: {
         fileId: parseInt(fileId),
-        userId: parseInt(userId),
+        userId: authUserId,
         content,
+        visibleToClient,
       },
       include: {
         user: {
@@ -533,6 +550,18 @@ router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) 
           }
         }
       }
+    });
+
+    const commenterName = (comment.user as { name: string }).name;
+    const authorRole = (comment.user as { role?: string })?.role ?? "WORKER";
+    await emit(EventType.TASK_COMMENT_ADDED, {
+      title: "New comment on file",
+      message: `${commenterName} commented on a file in task "${task.title}"`,
+      link: `/tasks/${taskId}?highlightFileComment=${comment.id}`,
+      taskId: parseInt(taskId),
+      actorId: authUserId,
+      actorRole: authorRole,
+      threadType: visibleToClient ? "client" : "internal",
     });
 
     res.status(201).json(comment);
@@ -546,13 +575,43 @@ router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) 
 router.post("/:id/comments", verifyJWT, async (req: any, res) => {
   try {
     const { id } = req.params;
-    const { userId, content } = req.body;
+    const taskIdNum = parseInt(id, 10);
+    if (isNaN(taskIdNum)) {
+      return res.status(400).json({ error: "Invalid task id" });
+    }
+    const { content, visibleToClient: visibleToClientBody } = req.body;
+    const authUserId = req.user?.userId != null ? Number(req.user.userId) : null;
+    const role = req.user?.role;
+    if (authUserId == null || isNaN(authUserId)) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    if (!content || typeof content !== "string" || !content.trim()) {
+      return res.status(400).json({ error: "Comment content is required" });
+    }
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskIdNum },
+      include: { workers: { select: { userId: true } } },
+    });
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+    if (role === "WORKER") {
+      const canComment = task.workers.some((w) => w.userId === authUserId);
+      if (!canComment) return res.status(403).json({ error: "Not authorized to comment on this task" });
+    }
+    if (role === "CLIENT" && Number(task.clientId) !== authUserId) {
+      return res.status(403).json({ error: "Not authorized to comment on this task" });
+    }
+
+    const visibleToClient = role === "CLIENT" ? true : (visibleToClientBody === true || visibleToClientBody === "true");
 
     const comment = await prisma.taskComment.create({
       data: {
-        taskId: parseInt(id),
-        userId: parseInt(userId),
-        content,
+        taskId: taskIdNum,
+        userId: authUserId,
+        content: content.trim(),
+        visibleToClient,
       },
       include: {
         user: {
@@ -566,10 +625,41 @@ router.post("/:id/comments", verifyJWT, async (req: any, res) => {
       }
     });
 
+    try {
+      const commenterName = comment.user && typeof (comment.user as { name?: string }).name === "string"
+        ? (comment.user as { name: string }).name
+        : "Someone";
+      const authorRole = comment.user && typeof (comment.user as { role?: string }).role === "string"
+          ? (comment.user as { role: string }).role
+          : "WORKER";
+        await emit(EventType.TASK_COMMENT_ADDED, {
+          title: "New comment on task",
+          message: `${commenterName} commented on task "${task.title}"`,
+          link: `/tasks/${id}?highlightComment=${comment.id}`,
+          taskId: taskIdNum,
+          actorId: authUserId,
+          actorRole: authorRole,
+          threadType: visibleToClient ? "client" : "internal",
+        });
+    } catch (notifErr: any) {
+      console.error("Notification emit failed (comment still saved):", notifErr?.message ?? notifErr);
+    }
+
     res.status(201).json(comment);
-  } catch (error) {
-    console.error("Error adding comment:", error);
-    res.status(500).json({ error: "Failed to add comment" });
+  } catch (error: any) {
+    const code = error?.code;
+    const meta = error?.meta;
+    console.error("Error adding comment:", {
+      message: error?.message,
+      code,
+      meta,
+      stack: process.env.NODE_ENV !== "production" ? error?.stack : undefined,
+    });
+    if (code === "P2003") return res.status(400).json({ error: "Task not found or invalid." });
+    if (code === "P2014") return res.status(400).json({ error: "Invalid reference." });
+    const payload: { error: string; details?: string } = { error: "Failed to add comment" };
+    if (process.env.NODE_ENV !== "production" && error?.message) payload.details = error.message;
+    res.status(500).json(payload);
   }
 });
 

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useState, useRef } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import API from "../api";
 import AdminStatusControls from "../components/taskdetail/AdminStatusControls";
@@ -44,6 +44,7 @@ interface TaskComment {
   userId: number;
   content: string;
   createdAt: string;
+  visibleToClient?: boolean;
   user?: User;
 }
 
@@ -64,7 +65,9 @@ interface Task {
 const TaskDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightDoneRef = useRef(false);
+
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,14 +87,48 @@ const TaskDetailPage: React.FC = () => {
   const [viewerFile, setViewerFile] = useState<TaskFile | null>(null);
   const [workers, setWorkers] = useState<{ id: number; name: string; email: string }[]>([]);
   const [savingWorkers, setSavingWorkers] = useState(false);
+  const [activeCommentTab, setActiveCommentTab] = useState<"internal" | "client">("internal");
+  const [unreadByTaskThread, setUnreadByTaskThread] = useState({ internal: 0, client: 0 });
 
   const currentUserId = parseInt(localStorage.getItem("userId") || "0");
   const currentUserRole = localStorage.getItem("role") || "";
+  const isAdminOrWorker = currentUserRole === "ADMIN" || currentUserRole === "WORKER";
+  const isAdmin = currentUserRole === "ADMIN" || currentUserRole === "ERASPHERE";
 
   useEffect(() => {
     fetchTask();
+    highlightDoneRef.current = false;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Scroll to and highlight comment when opened from notification (e.g. ?highlightComment=123 or ?highlightFileComment=456)
+  useEffect(() => {
+    if (!task || highlightDoneRef.current) return;
+    const highlightCommentId = searchParams.get("highlightComment");
+    const highlightFileCommentId = searchParams.get("highlightFileComment");
+    const commentId = highlightCommentId ?? highlightFileCommentId;
+    if (!commentId) return;
+
+    const timeoutId = setTimeout(() => {
+      const el = document.getElementById(`task-comment-${commentId}`) ?? document.getElementById(`file-comment-${commentId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("comment-highlight-glow");
+        highlightDoneRef.current = true;
+        setTimeout(() => {
+          el.classList.remove("comment-highlight-glow");
+          setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete("highlightComment");
+            next.delete("highlightFileComment");
+            return next.toString() ? next : new URLSearchParams();
+          }, { replace: true });
+        }, 3000);
+      }
+    }, 400);
+
+    return () => clearTimeout(timeoutId);
+  }, [task, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (currentUserRole === "ADMIN") {
@@ -114,6 +151,33 @@ const TaskDetailPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const fetchUnreadByTask = useCallback(async () => {
+    if (!id || !isAdmin) return;
+    try {
+      const { data } = await API.get<{ internal: number; client: number }>("/notifications/unread-by-task", {
+        params: { taskId: id },
+      });
+      setUnreadByTaskThread({ internal: data?.internal ?? 0, client: data?.client ?? 0 });
+    } catch {
+      // ignore
+    }
+  }, [id, isAdmin]);
+
+  // Fetch unread counts for task tabs when task is loaded (admin only)
+  useEffect(() => {
+    if (task?.id && isAdmin) fetchUnreadByTask();
+  }, [task?.id, isAdmin, fetchUnreadByTask]);
+
+  // When admin views a tab, mark that thread as read so badge clears
+  useEffect(() => {
+    if (!id || !isAdmin || !task?.id) return;
+    const taskIdNum = parseInt(id, 10);
+    if (isNaN(taskIdNum)) return;
+    API.patch("/notifications/mark-read-for-task", { taskId: taskIdNum, threadType: activeCommentTab })
+      .then(() => fetchUnreadByTask())
+      .catch(() => {});
+  }, [activeCommentTab, id, isAdmin, task?.id]);
 
   const updateStatus = async (newStatus: string) => {
     try {
@@ -150,6 +214,7 @@ const TaskDetailPage: React.FC = () => {
       await API.post(`/tasks/${id}/comments`, {
         userId: currentUserId,
         content: "🔔 Worker has requested completion approval for this task.",
+        visibleToClient: false,
       });
       
       fetchTask();
@@ -170,6 +235,7 @@ const TaskDetailPage: React.FC = () => {
       await API.post(`/tasks/${id}/comments`, {
         userId: currentUserId,
         content: "✅ Admin has approved the task completion.",
+        visibleToClient: false,
       });
       fetchTask();
     } catch (err) {
@@ -181,17 +247,23 @@ const TaskDetailPage: React.FC = () => {
   const addComment = async () => {
     if (!newComment.trim()) return;
 
+    const visibleToClient = isAdmin
+      ? activeCommentTab === "client"
+      : currentUserRole === "CLIENT";
     try {
       setAddingComment(true);
       await API.post(`/tasks/${id}/comments`, {
         userId: currentUserId,
         content: newComment,
+        visibleToClient,
       });
       setNewComment("");
       fetchTask();
-    } catch (err) {
+      if (isAdmin) fetchUnreadByTask();
+    } catch (err: any) {
       console.error("Error adding comment:", err);
-      toast.error("Failed to add comment");
+      const msg = err?.response?.data?.details ?? err?.response?.data?.error ?? "Failed to add comment";
+      toast.error(msg);
     } finally {
       setAddingComment(false);
     }
@@ -203,9 +275,11 @@ const TaskDetailPage: React.FC = () => {
 
     try {
       setAddingFileComment({ ...addingFileComment, [fileId]: true });
+      const visibleToClient = isAdmin ? activeCommentTab === "client" : currentUserRole === "CLIENT";
       await API.post(`/tasks/${id}/files/${fileId}/comments`, {
         userId: currentUserId,
         content: comment,
+        visibleToClient,
       });
       setFileComments({ ...fileComments, [fileId]: "" });
       fetchTask();
@@ -487,7 +561,11 @@ const TaskDetailPage: React.FC = () => {
                             {file.comments && file.comments.length > 0 ? (
                               <div className="mb-3 space-y-2">
                                 {file.comments.map((comment) => (
-                                  <div key={comment.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2">
+                                  <div
+                                    key={comment.id}
+                                    id={`file-comment-${comment.id}`}
+                                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2 scroll-mt-4"
+                                  >
                                     <div className="mb-1 flex items-start justify-between">
                                       <p className="text-xs font-semibold text-[var(--color-text-primary)]">
                                         {comment.user?.name || `User #${comment.userId}`}
@@ -542,10 +620,45 @@ const TaskDetailPage: React.FC = () => {
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-6 shadow-lg shadow-[var(--color-card-shadow)] backdrop-blur-md">
             <h2 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">General Comments & Notes</h2>
 
+            {isAdmin && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {(
+                  [
+                    { key: "internal" as const, label: "Worker (admin & worker)", count: unreadByTaskThread.internal },
+                    { key: "client" as const, label: "Client (admin & client)", count: unreadByTaskThread.client },
+                  ] as const
+                ).map(({ key, label, count }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveCommentTab(key)}
+                    className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                      activeCommentTab === key
+                        ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border-[var(--color-tab-active-border)]"
+                        : "border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] text-[var(--color-tab-inactive-text)] hover:bg-[var(--color-tab-inactive-hover-bg)]"
+                    }`}
+                  >
+                    <span>{label}</span>
+                    {count > 0 && (
+                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--color-destructive-bg)] px-1.5 text-xs font-bold text-[var(--color-destructive-text)]">
+                        {count > 99 ? "99+" : count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Add Comment */}
             <div className="mb-6">
               <textarea
-                placeholder="Add a general comment or note about the task..."
+                placeholder={
+                  isAdmin
+                    ? activeCommentTab === "client"
+                      ? "Add a comment visible to the client..."
+                      : "Add an internal note for admin & workers..."
+                    : "Add a general comment or note about the task..."
+                }
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 rows={3}
@@ -561,25 +674,42 @@ const TaskDetailPage: React.FC = () => {
             </div>
 
             {/* Comments List */}
-            {task.comments.length > 0 ? (
-              <div className="space-y-3">
-                {task.comments.map((comment) => (
-                  <div key={comment.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
-                    <div className="mb-2 flex items-start justify-between">
-                      <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-                        {comment.user?.name || `User #${comment.userId}`}
-                      </p>
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        {new Date(comment.createdAt).toLocaleString()}
-                      </p>
+            {(() => {
+              const commentsToShow = isAdmin
+                ? activeCommentTab === "internal"
+                  ? task.comments.filter((c) => !c.visibleToClient)
+                  : task.comments.filter((c) => c.visibleToClient)
+                : task.comments;
+              return commentsToShow.length > 0 ? (
+                <div className="space-y-3">
+                  {commentsToShow.map((comment) => (
+                    <div
+                      key={comment.id}
+                      id={`task-comment-${comment.id}`}
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 scroll-mt-4"
+                    >
+                      <div className="mb-2 flex items-start justify-between">
+                        <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                          {comment.user?.name || `User #${comment.userId}`}
+                        </p>
+                        <p className="text-xs text-[var(--color-text-muted)]">
+                          {new Date(comment.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <p className="text-sm text-[var(--color-text-muted)]">{comment.content}</p>
                     </div>
-                    <p className="text-sm text-[var(--color-text-muted)]">{comment.content}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="py-8 text-center text-[var(--color-text-muted)]">No general comments yet</p>
-            )}
+                  ))}
+                </div>
+              ) : (
+                <p className="py-8 text-center text-[var(--color-text-muted)]">
+                  {isAdmin
+                    ? activeCommentTab === "internal"
+                      ? "No internal worker comments yet."
+                      : "No client comments yet."
+                    : "No general comments yet"}
+                </p>
+              );
+            })()}
           </div>
         </div>
       </div>

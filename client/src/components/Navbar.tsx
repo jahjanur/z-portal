@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useSearchParams } from "react-router-dom";
 import { useTheme } from "../contexts/ThemeContext";
 import { useMobileMenu } from "../contexts/MobileMenuContext";
 import { ThemeToggle } from "./ThemeToggle";
 import NotificationDropdown from "./NotificationDropdown";
+import { useNotifications } from "../hooks/useNotifications";
 
 const name = localStorage.getItem("name");
 
@@ -32,6 +33,7 @@ const ZULBERA_NAV_LINKS = [
   { path: "workers", label: "Workers" },
   { path: "clients", label: "Clients" },
   { path: "tasks", label: "Tasks" },
+  { path: "comments", label: "Comments" },
   { path: "invoices", label: "Invoices" },
   { path: "domains", label: "Domains" },
   { path: "send-offer", label: "Send Offer" },
@@ -49,8 +51,14 @@ export default function Navbar() {
   const isOnZulberaSection = role === "ADMIN" && (location.pathname === "/admin/zulbera" || location.pathname.startsWith("/admin/zulbera/"));
   const isOnEraSphereSection = role === "ADMIN" && (location.pathname === "/admin/erasphere" || location.pathname.startsWith("/admin/erasphere/"));
   const isDashboard = location.pathname === "/dashboard";
+  const isWorker = role === "WORKER";
+  const isClient = role === "CLIENT";
+  const [searchParams] = useSearchParams();
+  const workerTab = searchParams.get("tab") || "overview";
+  const clientTab = searchParams.get("tab") || "overview";
   const logoSrc = "/Zulbera-Text-Logo.svg";
   const { mobileMenuOpen, setMobileMenuOpen } = useMobileMenu();
+  const { unreadCount } = useNotifications();
 
   const logout = () => {
     localStorage.clear();
@@ -118,13 +126,29 @@ export default function Navbar() {
                   EraSphere
                 </Link>
               )}
-              {token && !isAdmin && (
+              {token && !isAdmin && !isWorker && !isClient && (
                 <Link
                   to={isEraSphere ? "/admin/erasphere-dashboard" : "/dashboard"}
                   className={`${navLinkBase} ${isDashboard ? navLinkActive : navLinkInactive}`}
                 >
                   Dashboard
                 </Link>
+              )}
+              {token && isWorker && (
+                <>
+                  <Link
+                    to="/dashboard?tab=overview"
+                    className={`${navLinkBase} ${isDashboard && workerTab === "overview" ? navLinkActive : navLinkInactive}`}
+                  >
+                    Overview
+                  </Link>
+                  <Link
+                    to="/dashboard?tab=tasks"
+                    className={`${navLinkBase} ${isDashboard && workerTab === "tasks" ? navLinkActive : navLinkInactive}`}
+                  >
+                    Tasks
+                  </Link>
+                </>
               )}
             </div>
 
@@ -179,11 +203,11 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* Mobile: hamburger */}
+            {/* Mobile + client: hamburger (client always uses menu; others only on mobile) */}
             <button
               type="button"
               onClick={() => setMobileMenuOpen((o) => !o)}
-              className="md:hidden flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+              className={`${!isClient ? "md:hidden " : ""}flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)] transition hover:bg-[var(--color-surface-3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]`}
               aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileMenuOpen}
             >
@@ -261,14 +285,20 @@ export default function Navbar() {
               {token && isAdmin && isOnZulberaSection && ZULBERA_NAV_LINKS.map(({ path, label }) => {
                 const to = `/admin/zulbera/${path}`;
                 const isActive = location.pathname === to || (path === "analytics" && location.pathname === "/admin/zulbera");
+                const showBadge = path === "comments" && unreadCount > 0;
                 return (
                   <Link
                     key={path}
                     to={to}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`${mobileLinkClass} ${isActive ? mobileLinkActive : mobileLinkInactive} pl-8`}
+                    className={`${mobileLinkClass} ${isActive ? mobileLinkActive : mobileLinkInactive} pl-8 flex items-center justify-between`}
                   >
                     {label}
+                    {showBadge && (
+                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -286,14 +316,46 @@ export default function Navbar() {
                   </Link>
                 );
               })}
-              {token && !isAdmin && (
+              {token && !isAdmin && !isClient && (
                 <Link
                   to={isEraSphere ? "/admin/erasphere-dashboard" : "/dashboard"}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`${mobileLinkClass} ${isDashboard ? mobileLinkActive : mobileLinkInactive}`}
+                  className={`${mobileLinkClass} ${isDashboard && !isWorker ? mobileLinkActive : mobileLinkInactive}`}
                 >
                   Dashboard
                 </Link>
+              )}
+              {token && isClient && isDashboard && (
+                <>
+                  {(["overview", "tasks", "invoices", "files", "domains"] as const).map((tab) => (
+                    <Link
+                      key={tab}
+                      to={`/dashboard?tab=${tab}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`${mobileLinkClass} ${clientTab === tab ? mobileLinkActive : mobileLinkInactive} pl-8`}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </Link>
+                  ))}
+                </>
+              )}
+              {token && isWorker && isDashboard && (
+                <>
+                  <Link
+                    to="/dashboard?tab=overview"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`${mobileLinkClass} ${workerTab === "overview" ? mobileLinkActive : mobileLinkInactive} pl-8`}
+                  >
+                    Overview
+                  </Link>
+                  <Link
+                    to="/dashboard?tab=tasks"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`${mobileLinkClass} ${workerTab === "tasks" ? mobileLinkActive : mobileLinkInactive} pl-8`}
+                  >
+                    Tasks
+                  </Link>
+                </>
               )}
               {token && !isAdmin && isEraSphere && ERASPHERE_TABS.map(({ path, label }) => {
                 const to = `/admin/${path}`;

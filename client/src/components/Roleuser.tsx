@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import API from "../api";
 import StatsCard from "./user/StatsCard";
 import ProgressBar from "./user/ProgressBar";
@@ -77,7 +77,12 @@ const RoleUser: React.FC = () => {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "tasks" | "invoices" | "files" | "domains">("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab: "overview" | "tasks" | "invoices" | "files" | "domains" =
+    (["overview", "tasks", "invoices", "files", "domains"] as const).includes(tabParam as any)
+      ? (tabParam as "overview" | "tasks" | "invoices" | "files" | "domains")
+      : "overview";
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [taskPage, setTaskPage] = useState(1);
@@ -229,29 +234,7 @@ const fetchAll = async () => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
-            {(["overview", "tasks", "invoices", "files", "domains"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => {
-                  setActiveTab(tab);
-                  setStatusFilter("ALL");
-                  setSearchQuery("");
-                  setTaskPage(1);
-                  setInvoicePage(1);
-                }}
-                className={`px-6 py-3 text-sm font-semibold rounded-full transition-all ${
-                  activeTab === tab
-                    ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
-                    : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
-                }`}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
+        <p className="mb-4 text-[var(--color-text-muted)]">Use the menu to switch between Overview, Tasks, Invoices, Files, and Domains.</p>
 
         {/* Overview Tab */}
         {activeTab === "overview" && (
@@ -422,7 +405,7 @@ const fetchAll = async () => {
                   )}
                 </div>
                 <button
-                  onClick={() => setActiveTab("tasks")}
+                  onClick={() => setSearchParams({ tab: "tasks" })}
                   className="btn-secondary mt-4 w-full rounded-lg px-4 py-2 text-sm font-semibold transition"
                 >
                   View All Projects
@@ -447,7 +430,7 @@ const fetchAll = async () => {
                   )}
                 </div>
                 <button
-                  onClick={() => setActiveTab("invoices")}
+                  onClick={() => setSearchParams({ tab: "invoices" })}
                   className="btn-secondary mt-4 w-full rounded-lg px-4 py-2 text-sm font-semibold transition"
                 >
                   View All Invoices

@@ -170,7 +170,9 @@ export interface EmitPayload {
   message: string;
   link?: string;
   actorId?: number;
+  actorRole?: string; // for TASK_COMMENT_ADDED: CLIENT | WORKER | ADMIN | ERASPHERE
   taskId?: number;
+  threadType?: "internal" | "client"; // for TASK_COMMENT_ADDED: per-tab badges on task detail
   invoiceId?: number;
   domainId?: number;
   clientId?: number;
@@ -260,6 +262,9 @@ export async function emit(eventType: EventTypeValue, payload: EmitPayload): Pro
             title: payload.title,
             message: payload.message,
             link: payload.link ?? null,
+            sourceRole: payload.actorRole ?? null,
+            taskId: payload.taskId ?? null,
+            threadType: payload.threadType ?? null,
           },
         });
       } catch (err) {

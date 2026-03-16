@@ -12,6 +12,7 @@ import projectRoutes from "./routes/projects";
 import notificationRoutes from "./routes/notifications";
 import workspaceRoutes from "./routes/workspace";
 import inviteRoutes from "./routes/invites";
+import commentsRoutes from "./routes/comments";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/projects", projectRoutes);
 app.use("/notifications", notificationRoutes);
 app.use("/workspace", workspaceRoutes);
 app.use("/invites", inviteRoutes);
+app.use("/comments", commentsRoutes);
 
 app.get("/api", (req, res) => res.send("API is running"));
 
