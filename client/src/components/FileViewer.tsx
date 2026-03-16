@@ -1,5 +1,6 @@
 import React from "react";
 import { X } from "lucide-react";
+import { getFileUrl } from "../api";
 
 interface FileViewerProps {
   isOpen: boolean;
@@ -17,7 +18,7 @@ const FileViewer: React.FC<FileViewerProps> = ({ isOpen, onClose, file }) => {
   if (!isOpen || !file) return null;
 
   const isImage = file.fileType.startsWith("image/");
-  const fullUrl = `http://localhost:4001${file.fileUrl}`;
+  const fullUrl = getFileUrl(file.fileUrl);
 
   return (
     <div

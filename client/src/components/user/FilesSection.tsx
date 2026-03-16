@@ -1,4 +1,5 @@
 import React from "react";
+import { getFileUrl } from "../../api";
 
 interface TaskFile {
   id: number;
@@ -50,7 +51,7 @@ const FilesBySection: React.FC<FilesBySectionProps> = ({ files }) => {
                       <p className="text-xs text-gray-500">{file.taskTitle}</p>
                     </div>
                     <a
-                      href={`http://localhost:4001${file.fileUrl}`}
+                      href={getFileUrl(file.fileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-3 py-1 text-xs font-semibold rounded-full bg-white text-app hover:bg-gray-200 transition-all"

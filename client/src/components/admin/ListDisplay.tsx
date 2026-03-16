@@ -60,19 +60,28 @@ const ListDisplay = <T extends { id: number }>({
             </div>
 
             <div
-              className="flex flex-wrap gap-2 justify-start sm:flex-nowrap sm:justify-end"
+              className="flex shrink-0 flex-wrap gap-2 justify-start sm:flex-nowrap sm:justify-end"
               onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
             >
               {showProfileStatus && isIncomplete && onResendInvite && (
                 <button
-                  onClick={() => onResendInvite(item.id)}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onResendInvite(item.id);
+                  }}
                   className="h-9 px-3 text-sm font-semibold text-blue-300 bg-blue-500/20 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-colors whitespace-nowrap"
                 >
                   Resend Invite
                 </button>
               )}
               <button
-                onClick={() => onDelete(item.id)}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(item.id);
+                }}
                 className="h-9 px-3 text-sm font-semibold text-red-300 bg-red-500/20 rounded-full border border-red-500/30 hover:bg-red-500/30 transition-colors whitespace-nowrap"
               >
                 Delete

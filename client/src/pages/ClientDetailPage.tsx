@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import API from "../api";
+import API, { getFileUrl } from "../api";
 import Modal from "../components/ui/Modal";
 
 const colors = {
@@ -292,7 +292,7 @@ const fetchAllFiles = async () => {
             <div className="flex items-start gap-4">
               {client.logo ? (
                 <img
-                  src={`http://localhost:4001${client.logo}`}
+                  src={getFileUrl(client.logo)}
                   alt={client.company || client.name}
                   className="h-20 w-20 rounded-xl border-2 border-white/10 object-cover"
                 />
@@ -697,7 +697,7 @@ const fetchAllFiles = async () => {
                         </div>
                         {invoice.fileUrl && (
                           <a
-                            href={`http://localhost:4001${invoice.fileUrl}`}
+                            href={getFileUrl(invoice.fileUrl)}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}
@@ -979,7 +979,7 @@ const fetchAllFiles = async () => {
                     </div>
                     <p className="mb-3 text-xs text-white/50">Uploaded {formatDate(file.uploadedAt)}</p>
                     <a
-                      href={`http://localhost:4001/${file.fileUrl}`}
+                      href={getFileUrl(file.fileUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-primary inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs"
