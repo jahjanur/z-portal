@@ -8,16 +8,19 @@ import {
   FileText,
   Globe,
   Mail,
+  MessageSquare,
   Users,
 } from "lucide-react";
 import { AdminProvider, useAdmin } from "../contexts/AdminContext";
 import { useWorkspaceOverview } from "../hooks/useWorkspaceOverview";
+import { useNotifications } from "../hooks/useNotifications";
 
 const ZULBERA_NAV = [
   { path: "/admin/zulbera/analytics", label: "Analytics", icon: BarChart3 },
   { path: "/admin/zulbera/workers", label: "Workers", icon: Users },
   { path: "/admin/zulbera/clients", label: "Clients", icon: Briefcase },
   { path: "/admin/zulbera/tasks", label: "Tasks", icon: Check },
+  { path: "/admin/zulbera/comments", label: "Comments", icon: MessageSquare, showNotificationBadge: true },
   { path: "/admin/zulbera/invoices", label: "Invoices", icon: FileText },
   { path: "/admin/zulbera/domains", label: "Domains", icon: Globe },
   { path: "/admin/zulbera/send-offer", label: "Send Offer", icon: Mail },
@@ -128,6 +131,7 @@ function WorkspaceOverviewCard() {
 
 function ZulberaLayoutInner() {
   const { loading, error } = useAdmin();
+  const { unreadCount } = useNotifications();
 
   if (loading) {
     return (
@@ -163,7 +167,7 @@ function ZulberaLayoutInner() {
           <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)]">Zulbera</p>
         </div>
         <nav className="flex-1 px-3 space-y-1">
-          {ZULBERA_NAV.map(({ path, label, icon: Icon }) => (
+          {ZULBERA_NAV.map(({ path, label, icon: Icon, showNotificationBadge }) => (
             <NavLink
               key={path}
               to={path}
@@ -177,7 +181,12 @@ function ZulberaLayoutInner() {
               }
             >
               <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
-              {label}
+              <span className="flex-1 min-w-0">{label}</span>
+              {showNotificationBadge && unreadCount > 0 && (
+                <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>

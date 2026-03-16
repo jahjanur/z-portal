@@ -29,7 +29,8 @@ async function main() {
 
   const emailTrimmed = adminEmail?.trim();
   const passwordTrimmed = adminPassword?.trim();
-  if (emailTrimmed && passwordTrimmed) {
+  const bootstrapOnly = process.env.NODE_ENV === 'production' && emailTrimmed && passwordTrimmed;
+  if (bootstrapOnly) {
     console.log('🌱 Bootstrap: creating/updating ADMIN from SEED_ADMIN_EMAIL...');
     const hashedPassword = await bcrypt.hash(passwordTrimmed, 10);
     const name = (process.env.SEED_ADMIN_NAME || 'Admin').trim();
@@ -60,6 +61,7 @@ async function main() {
   await prisma.invoice.deleteMany({});
   await prisma.task.deleteMany({});
   await prisma.domain.deleteMany({});
+  await prisma.invite.deleteMany({}); // must run before user.deleteMany (Invite.invitedById → User)
   await prisma.user.deleteMany({});
 
   const usersData = [

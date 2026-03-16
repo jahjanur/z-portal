@@ -130,23 +130,25 @@ model TaskFile {
 }
 
 model FileComment {
-  id        Int      @id @default(autoincrement())
-  fileId    Int
-  userId    Int
-  content   String
-  createdAt DateTime @default(now())
-  file      TaskFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id])
+  id              Int      @id @default(autoincrement())
+  fileId          Int
+  userId          Int
+  content         String
+  visibleToClient Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  file            TaskFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id])
 }
 
 model TaskComment {
-  id        Int      @id @default(autoincrement())
-  taskId    Int
-  userId    Int
-  content   String
-  createdAt DateTime @default(now())
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id])
+  id              Int      @id @default(autoincrement())
+  taskId          Int
+  userId          Int
+  content         String
+  visibleToClient Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id])
 }
 
 model Invoice {
@@ -217,19 +219,24 @@ model TimesheetEntry {
 }
 
 model Notification {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String
-  title     String
-  message   String
-  read      Boolean  @default(false)
-  link      String?
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String
+  title      String
+  message    String
+  read       Boolean  @default(false)
+  link       String?
+  sourceRole String?  // comment author role for TASK_COMMENT_ADDED (CLIENT | WORKER | ADMIN | ERASPHERE)
+  taskId     Int?     // for TASK_COMMENT_ADDED: task this comment belongs to
+  threadType String?  // "internal" | "client" for per-tab badges on task detail
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([read])
   @@index([userId, createdAt])
+  @@index([userId, type, sourceRole])
+  @@index([userId, taskId, threadType])
 }
 
 model Invite {

@@ -23,6 +23,7 @@ import AdminInvoicesPage from "./pages/admin/AdminInvoicesPage";
 import AdminDomainsPage from "./pages/admin/AdminDomainsPage";
 import AdminSendOfferPage from "./pages/admin/AdminSendOfferPage";
 import AdminTimesheetsPage from "./pages/admin/AdminTimesheetsPage";
+import AdminCommentsPage from "./pages/admin/AdminCommentsPage";
 import AdminEraSpherePartnersPage from "./pages/admin/AdminEraSpherePartnersPage";
 import EraSphereAnalyticsPage from "./pages/admin/EraSphereAnalyticsPage";
 import EraSphereAnalyticsAdminPage from "./pages/admin/EraSphereAnalyticsAdminPage";
@@ -97,6 +98,7 @@ function App() {
               <Route path="domains" element={<AdminDomainsPage />} />
               <Route path="send-offer" element={<AdminSendOfferPage />} />
               <Route path="timesheets" element={<AdminTimesheetsPage />} />
+              <Route path="comments" element={<AdminCommentsPage />} />
             </Route>
 
             {/* Admin area - legacy /admin/* redirects to Zulbera for admin; EraSphere role uses own dashboard */}

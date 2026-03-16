@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import API from "../api";
 
 interface Client {
@@ -29,8 +29,10 @@ const colors = {
 
 const RoleWorker: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const activeTab: "overview" | "tasks" = tabParam === "tasks" ? "tasks" : "overview";
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [activeTab, setActiveTab] = useState<"overview" | "tasks">("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -149,30 +151,7 @@ const RoleWorker: React.FC = () => {
           <h1 className="mb-2 text-4xl font-bold text-[var(--color-text-primary)]">
             My <span className="text-[var(--color-text-muted)]">Tasks</span>
           </h1>
-          <p className="text-lg text-[var(--color-text-muted)]">Track and manage your assigned tasks</p>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2">
-            {(["overview", "tasks"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => {
-                  setActiveTab(tab);
-                  setStatusFilter("ALL");
-                  setSearchQuery("");
-                }}
-                className={`px-6 py-3 text-sm font-semibold rounded-full transition-all ${
-                  activeTab === tab
-                    ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
-                    : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
-                }`}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
-          </div>
+          <p className="text-lg text-[var(--color-text-muted)]">Track and manage your assigned tasks. Use the menu to switch between Overview and Tasks.</p>
         </div>
 
         {/* Overview Tab */}
@@ -286,7 +265,7 @@ const RoleWorker: React.FC = () => {
               {overdueTasks > 0 && (
                 <div className="card-panel p-6 shadow-lg">
                   <div className="flex items-center gap-2 mb-4">
-                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                     <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Overdue Tasks</h3>
@@ -305,17 +284,17 @@ const RoleWorker: React.FC = () => {
                           <div
                             key={task.id}
                             onClick={() => navigate(`/tasks/${task.id}`)}
-                            className="p-4 transition-all border border-red-200 rounded-lg cursor-pointer bg-red-50 hover:shadow-md hover:border-red-300"
+                            className="p-4 rounded-lg cursor-pointer transition-all border border-red-300 dark:border-red-700 bg-[var(--color-surface-2)] hover:shadow-md hover:border-red-400 dark:hover:border-red-600 border-l-4 border-l-red-500 dark:border-l-red-400"
                           >
                             <div className="flex items-start justify-between">
-                              <div className="flex-1">
+                              <div className="flex-1 min-w-0">
                                 <h4 className="font-semibold text-[var(--color-text-primary)]">{task.title}</h4>
-                                <p className="text-sm text-[var(--color-text-muted)]">{task.client?.name || "No client"}</p>
-                                <p className="mt-1 text-xs font-semibold text-red-600">
+                                <p className="text-sm text-[var(--color-text-secondary)]">{task.client?.name || "No client"}</p>
+                                <p className="mt-1 text-xs font-semibold text-red-600 dark:text-red-400">
                                   Overdue by {Math.abs(daysUntil!)} days
                                 </p>
                               </div>
-                              <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(task.status)}`}>
+                              <span className={`shrink-0 ml-2 px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(task.status)}`}>
                                 {task.status?.replace("_", " ") || "N/A"}
                               </span>
                             </div>
@@ -360,7 +339,7 @@ const RoleWorker: React.FC = () => {
                   )}
                 </div>
                 <button
-                  onClick={() => setActiveTab("tasks")}
+                  onClick={() => setSearchParams({ tab: "tasks" })}
                   className="w-full px-4 py-2 mt-4 text-sm font-semibold text-[var(--color-text-secondary)] transition-colors btn-secondary w-full rounded-lg"
                 >
                   View All Tasks
