@@ -9,11 +9,12 @@ import { verifyJWT, verifyAdmin, verifyAdminOrEraSphere } from "../middleware/au
 import { notifyProfileCompleted } from "../services/notifications";
 import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
+import { uploadsDir } from "../lib/uploadsPath";
 
 const router = Router();
 const SALT_ROUNDS = 10;
 
-const filesDir = "uploads/files";
+const filesDir = path.join(uploadsDir, "files");
 if (!fs.existsSync(filesDir)) {
   fs.mkdirSync(filesDir, { recursive: true });
 }

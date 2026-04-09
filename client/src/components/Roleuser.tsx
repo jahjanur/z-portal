@@ -93,6 +93,13 @@ const RoleUser: React.FC = () => {
     fetchNotifications();
   }, []);
 
+  useEffect(() => {
+    if (activeTab === "files") {
+      fetchAll();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
 const fetchAll = async () => {
   setLoading(true);
   setError(null);

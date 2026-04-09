@@ -42,6 +42,13 @@ const RoleWorker: React.FC = () => {
     fetchTasks();
   }, []);
 
+  useEffect(() => {
+    if (activeTab === "tasks") {
+      fetchTasks();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   const fetchTasks = async () => {
     setLoading(true);
     setError(null);

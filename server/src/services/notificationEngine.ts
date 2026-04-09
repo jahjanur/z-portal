@@ -139,7 +139,7 @@ const ROUTING_MATRIX: Record<string, RecipientResolver[]> = {
   [EventType.TASK_COMPLETED]: [taskClient(), taskWorkers(), allAdmins()],
   [EventType.TASK_PENDING_APPROVAL]: [allAdmins()],
   [EventType.TASK_COMMENT_ADDED]: [taskClient(), taskWorkers(), allAdmins()],
-  [EventType.TASK_FILE_UPLOADED]: [taskClient()],
+  [EventType.TASK_FILE_UPLOADED]: [taskClient(), taskWorkers(), allAdmins()],
   [EventType.TASK_DEADLINE_APPROACHING]: [taskWorkers()],
   [EventType.TASK_OVERDUE]: [taskWorkers(), allAdmins()],
 
