@@ -80,7 +80,6 @@ router.get("/unread-by-task", verifyJWT, async (req: any, res) => {
         where: {
           userId,
           read: false,
-          type: "TASK_COMMENT_ADDED",
           taskId,
           threadType: "internal",
         },
@@ -89,7 +88,6 @@ router.get("/unread-by-task", verifyJWT, async (req: any, res) => {
         where: {
           userId,
           read: false,
-          type: "TASK_COMMENT_ADDED",
           taskId,
           threadType: "client",
         },

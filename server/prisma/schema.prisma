@@ -111,22 +111,32 @@ model TaskWorker {
   @@index([userId])
 }
 
+enum FileReviewStatus {
+  PENDING
+  APPROVED
+  NEEDS_REVISION
+  REJECTED
+}
+
 model TaskFile {
-  id          Int           @id @default(autoincrement())
-  taskId      Int
-  fileName    String
-  fileUrl     String
-  fileType    String
-  caption     String?
-  section     String?
-  isCompleted Boolean       @default(false)
-  completedAt DateTime?
-  completedBy Int?
-  uploadedAt  DateTime      @default(now())
-  uploadedBy  Int
-  version     Int           @default(1)
-  comments    FileComment[]
-  task        Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  id             Int              @id @default(autoincrement())
+  taskId         Int
+  fileName       String
+  fileUrl        String
+  fileType       String
+  caption        String?
+  section        String?
+  isCompleted    Boolean          @default(false)
+  completedAt    DateTime?
+  completedBy    Int?
+  uploadedAt     DateTime         @default(now())
+  uploadedBy     Int
+  version        Int              @default(1)
+  reviewStatus    FileReviewStatus @default(PENDING)
+  reviewComment   String?
+  visibleToClient Boolean          @default(true)
+  comments        FileComment[]
+  task           Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model FileComment {

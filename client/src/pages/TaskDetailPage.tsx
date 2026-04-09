@@ -16,6 +16,7 @@ interface User {
   id: number;
   name: string;
   email: string;
+  role?: string;
 }
 
 interface FileComment {
@@ -37,6 +38,9 @@ interface TaskFile {
   uploadedAt: string;
   uploadedBy: number;
   uploader?: { id: number; name: string; role: string } | null;
+  reviewStatus: "PENDING" | "APPROVED" | "NEEDS_REVISION" | "REJECTED";
+  reviewComment: string | null;
+  visibleToClient?: boolean;
   comments?: FileComment[];
 }
 
@@ -85,18 +89,36 @@ const TaskDetailPage: React.FC = () => {
   const [fileCaption, setFileCaption] = useState("");
   const [fileType, setFileType] = useState("screenshot");
   const [refreshing, setRefreshing] = useState(false);
-  const [fileTab, setFileTab] = useState<"all" | "admin" | "worker" | "client">("all");
+  const [activeChannel, setActiveChannel] = useState<"worker" | "client">("worker");
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<TaskFile | null>(null);
   const [workers, setWorkers] = useState<{ id: number; name: string; email: string }[]>([]);
   const [savingWorkers, setSavingWorkers] = useState(false);
-  const [activeCommentTab, setActiveCommentTab] = useState<"internal" | "client">("internal");
   const [unreadByTaskThread, setUnreadByTaskThread] = useState({ internal: 0, client: 0 });
+  const [reviewState, setReviewState] = useState<{
+    [fileId: number]: {
+      pending: "NEEDS_REVISION" | "REJECTED" | null; // which button opened the comment box
+      comment: string;
+      saving: boolean;
+    };
+  }>({});
 
   const currentUserId = parseInt(localStorage.getItem("userId") || "0");
   const currentUserRole = localStorage.getItem("role") || "";
   const isAdminOrWorker = currentUserRole === "ADMIN" || currentUserRole === "WORKER";
   const isAdmin = currentUserRole === "ADMIN" || currentUserRole === "ERASPHERE";
+
+  // localStorage-based last-seen timestamps for channel dot indicators (admin only)
+  const [lastSeenTs, setLastSeenTs] = useState<{ worker: number; client: number }>(() => ({
+    worker: parseInt(localStorage.getItem(`z_lastSeen_${id ?? ""}_worker`) || "0"),
+    client: parseInt(localStorage.getItem(`z_lastSeen_${id ?? ""}_client`) || "0"),
+  }));
+
+  const touchSeen = useCallback((channel: "worker" | "client") => {
+    const now = Date.now();
+    localStorage.setItem(`z_lastSeen_${id}_${channel}`, String(now));
+    setLastSeenTs((prev) => ({ ...prev, [channel]: now }));
+  }, [id]);
 
   useEffect(() => {
     fetchTask();
@@ -177,15 +199,22 @@ const TaskDetailPage: React.FC = () => {
     if (task?.id && isAdmin) fetchUnreadByTask();
   }, [task?.id, isAdmin, fetchUnreadByTask]);
 
+  // Mark the initially active channel as seen when task first loads (admin only)
+  useEffect(() => {
+    if (isAdmin && task?.id) touchSeen(activeChannel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, task?.id]);
+
   // When admin views a tab, mark that thread as read so badge clears
   useEffect(() => {
     if (!id || !isAdmin || !task?.id) return;
     const taskIdNum = parseInt(id, 10);
     if (isNaN(taskIdNum)) return;
-    API.patch("/notifications/mark-read-for-task", { taskId: taskIdNum, threadType: activeCommentTab })
+    const threadType = activeChannel === "client" ? "client" : "internal";
+    API.patch("/notifications/mark-read-for-task", { taskId: taskIdNum, threadType })
       .then(() => fetchUnreadByTask())
       .catch(() => {});
-  }, [activeCommentTab, id, isAdmin, task?.id]);
+  }, [activeChannel, id, isAdmin, task?.id]);
 
   const updateStatus = async (newStatus: string) => {
     try {
@@ -256,7 +285,7 @@ const TaskDetailPage: React.FC = () => {
     if (!newComment.trim()) return;
 
     const visibleToClient = isAdmin
-      ? activeCommentTab === "client"
+      ? activeChannel === "client"
       : currentUserRole === "CLIENT";
     try {
       setAddingComment(true);
@@ -277,13 +306,58 @@ const TaskDetailPage: React.FC = () => {
     }
   };
 
+  const submitReview = async (
+    fileId: number,
+    status: "APPROVED" | "NEEDS_REVISION" | "REJECTED",
+    comment?: string
+  ) => {
+    setReviewState((prev) => ({
+      ...prev,
+      [fileId]: { ...prev[fileId], saving: true },
+    }));
+    try {
+      const updated = await API.patch(`/tasks/${id}/files/${fileId}/review`, { status, comment });
+      // Optimistically update the file in task state
+      setTask((prev) =>
+        prev
+          ? {
+              ...prev,
+              files: prev.files.map((f) =>
+                f.id === fileId
+                  ? { ...f, reviewStatus: updated.data.reviewStatus, reviewComment: updated.data.reviewComment }
+                  : f
+              ),
+            }
+          : prev
+      );
+      setReviewState((prev) => ({
+        ...prev,
+        [fileId]: { pending: null, comment: "", saving: false },
+      }));
+      toast.success(
+        status === "APPROVED"
+          ? "File approved"
+          : status === "NEEDS_REVISION"
+          ? "Revision requested"
+          : "File rejected"
+      );
+    } catch (err: any) {
+      const msg = err?.response?.data?.error ?? "Failed to submit review";
+      toast.error(msg);
+      setReviewState((prev) => ({
+        ...prev,
+        [fileId]: { ...prev[fileId], saving: false },
+      }));
+    }
+  };
+
   const addFileComment = async (fileId: number) => {
     const comment = fileComments[fileId]?.trim();
     if (!comment) return;
 
     try {
       setAddingFileComment({ ...addingFileComment, [fileId]: true });
-      const visibleToClient = isAdmin ? activeCommentTab === "client" : currentUserRole === "CLIENT";
+      const visibleToClient = isAdmin ? activeChannel === "client" : currentUserRole === "CLIENT";
       await API.post(`/tasks/${id}/files/${fileId}/comments`, {
         userId: currentUserId,
         content: comment,
@@ -313,6 +387,9 @@ const TaskDetailPage: React.FC = () => {
       formData.append("caption", fileCaption);
       formData.append("fileType", fileType);
       formData.append("uploadedBy", currentUserId.toString());
+      if (isAdmin) {
+        formData.append("visibleToClient", activeChannel === "client" ? "true" : "false");
+      }
 
       await API.post(`/tasks/${id}/files`, formData, {
         headers: { "Content-Type": undefined },
@@ -386,20 +463,12 @@ const TaskDetailPage: React.FC = () => {
     }
   };
 
-  // Count files per uploader role for tab badges
-  const fileCounts = {
-    all: task.files.length,
-    admin: task.files.filter((f) => f.uploader?.role === "ADMIN" || f.uploader?.role === "ERASPHERE").length,
-    worker: task.files.filter((f) => f.uploader?.role === "WORKER").length,
-    client: task.files.filter((f) => f.uploader?.role === "CLIENT").length,
-  };
-
   const visibleFiles = task.files.filter((f) => {
-    if (fileTab === "all") return true;
-    if (fileTab === "admin") return f.uploader?.role === "ADMIN" || f.uploader?.role === "ERASPHERE";
-    if (fileTab === "worker") return f.uploader?.role === "WORKER";
-    if (fileTab === "client") return f.uploader?.role === "CLIENT";
-    return true;
+    if (!isAdmin) return true; // worker/client: backend already filtered to their channel
+    // Admin: filter by active channel tab
+    return activeChannel === "worker"
+      ? f.visibleToClient === false
+      : f.visibleToClient !== false; // true or undefined (legacy records)
   });
 
   const filesBySection: { [key: string]: TaskFile[] } = {};
@@ -410,6 +479,26 @@ const TaskDetailPage: React.FC = () => {
     }
     filesBySection[section].push(file);
   });
+
+  // Dot indicators: unseen activity from non-admin users since admin last viewed each channel
+  const hasUnseen = isAdmin
+    ? {
+        worker:
+          task.files
+            .filter((f) => f.visibleToClient === false && f.uploadedBy !== currentUserId)
+            .some((f) => new Date(f.uploadedAt).getTime() > lastSeenTs.worker) ||
+          task.comments
+            .filter((c) => !c.visibleToClient && c.userId !== currentUserId)
+            .some((c) => new Date(c.createdAt).getTime() > lastSeenTs.worker),
+        client:
+          task.files
+            .filter((f) => f.visibleToClient !== false && f.uploadedBy !== currentUserId)
+            .some((f) => new Date(f.uploadedAt).getTime() > lastSeenTs.client) ||
+          task.comments
+            .filter((c) => !!c.visibleToClient && c.userId !== currentUserId)
+            .some((c) => new Date(c.createdAt).getTime() > lastSeenTs.client),
+      }
+    : { worker: false, client: false };
 
   return (
     <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-app py-24">
@@ -516,38 +605,48 @@ const TaskDetailPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Filter tabs — only show if there are files */}
-            {fileCounts.all > 0 && (
-              <div className="mb-4 flex flex-wrap gap-1.5">
-                {(["all", "admin", "worker", "client"] as const).map((tab) => {
-                  const count = fileCounts[tab];
-                  if (tab !== "all" && count === 0) return null;
-                  const label = tab === "all" ? "All" : tab.charAt(0).toUpperCase() + tab.slice(1);
-                  const active = fileTab === tab;
-                  return (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setFileTab(tab)}
-                      className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors border ${
-                        active
-                          ? "bg-white text-gray-900 border-white"
-                          : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-3)]"
-                      }`}
-                    >
-                      {label}
-                      <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-white/20" : "bg-[var(--color-surface-3)]"}`}>
-                        {count}
+            {/* Channel tabs — admin only; worker/client see their channel directly */}
+            {isAdmin && (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {([
+                  { key: "worker" as const, label: "Worker Channel", count: unreadByTaskThread.internal },
+                  { key: "client" as const, label: "Client Channel", count: unreadByTaskThread.client },
+                ] as const).map(({ key, label, count }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => { setActiveChannel(key); touchSeen(key); }}
+                    className={`relative flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
+                      activeChannel === key
+                        ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border-[var(--color-tab-active-border)]"
+                        : "border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] text-[var(--color-tab-inactive-text)] hover:bg-[var(--color-tab-inactive-hover-bg)]"
+                    }`}
+                  >
+                    {/* Red dot: unseen activity from client/worker */}
+                    {hasUnseen[key] && activeChannel !== key && (
+                      <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--color-surface-2)] bg-red-500" />
+                    )}
+                    <span>{label}</span>
+                    {count > 0 && (
+                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--color-destructive-bg)] px-1.5 text-xs font-bold text-[var(--color-destructive-text)]">
+                        {count > 99 ? "99+" : count}
                       </span>
-                    </button>
-                  );
-                })}
+                    )}
+                  </button>
+                ))}
               </div>
             )}
 
             {/* Upload Form */}
             <div className="mb-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
-              <h3 className="mb-3 text-sm font-semibold text-[var(--color-text-muted)]">Upload File</h3>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[var(--color-text-muted)]">Upload File</h3>
+                {isAdmin && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                    Posting to {activeChannel === "client" ? "Client" : "Worker"}
+                  </span>
+                )}
+              </div>
               <div className="space-y-3">
                 <input
                   type="file"
@@ -595,11 +694,26 @@ const TaskDetailPage: React.FC = () => {
                   <div key={section} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
                     <h4 className="mb-3 text-sm font-bold text-[var(--color-text-muted)]">{section}</h4>
                     <div className="space-y-4">
-                      {files.map((file) => (
-                        <div key={file.id} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                      {files.map((file) => {
+                        const rs = file.reviewStatus ?? "PENDING";
+                        const rc = file.reviewComment;
+                        const isWorkerUpload = file.uploader?.role === "WORKER";
+                        const reviewEntry = reviewState[file.id] ?? { pending: null, comment: "", saving: false };
+                        const needsAction = rs === "NEEDS_REVISION" || rs === "REJECTED";
+
+                        // Card border highlight for worker when action needed
+                        const cardBorder =
+                          currentUserRole === "WORKER" && needsAction
+                            ? rs === "NEEDS_REVISION"
+                              ? "border-amber-500/60"
+                              : "border-red-500/60"
+                            : "border-[var(--color-border)]";
+
+                        return (
+                        <div key={file.id} className={`rounded-lg border bg-[var(--color-surface-2)] p-4 ${cardBorder}`}>
                           {/* File Header */}
                           <div className="mb-3 flex items-start justify-between">
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <p className="font-medium text-[var(--color-text-primary)]">{file.fileName}</p>
                               {file.caption && (
                                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{file.caption}</p>
@@ -621,14 +735,58 @@ const TaskDetailPage: React.FC = () => {
                                   <span className="text-xs text-[var(--color-text-muted)]">{file.uploader.name}</span>
                                 </div>
                               )}
+
+                              {/* Review status badge — only relevant for worker-uploaded files */}
+                              {isWorkerUpload && (
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  {rs === "PENDING" && (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                                      ⏳ Awaiting Review
+                                    </span>
+                                  )}
+                                  {rs === "APPROVED" && (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-green-500/40 bg-green-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-400">
+                                      ✅ Approved
+                                    </span>
+                                  )}
+                                  {rs === "NEEDS_REVISION" && (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                                      ✏️ Needs Revision
+                                    </span>
+                                  )}
+                                  {rs === "REJECTED" && (
+                                    <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-400">
+                                      ✗ Rejected
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Review comment (visible to all) */}
+                              {isWorkerUpload && rc && (
+                                <p className={`mt-1.5 rounded-lg border px-3 py-2 text-xs italic ${
+                                  rs === "NEEDS_REVISION"
+                                    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                                    : "border-red-500/30 bg-red-500/10 text-red-300"
+                                }`}>
+                                  "{rc}"
+                                </p>
+                              )}
+
+                              {/* Worker prompt when action needed */}
+                              {currentUserRole === "WORKER" && needsAction && (
+                                <p className="mt-2 text-xs font-semibold text-[var(--color-text-muted)]">
+                                  {rs === "NEEDS_REVISION"
+                                    ? "↑ Please upload a revised version of this file."
+                                    : "↑ This file has been rejected. You may upload a replacement."}
+                                </p>
+                              )}
                             </div>
-                            <div className="flex shrink-0 gap-2">
+
+                            <div className="flex shrink-0 gap-2 ml-3">
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setViewerFile(file);
-                                  setViewerOpen(true);
-                                }}
+                                onClick={() => { setViewerFile(file); setViewerOpen(true); }}
                                 className="btn-primary px-3 py-1 text-xs font-semibold"
                               >
                                 View
@@ -643,11 +801,119 @@ const TaskDetailPage: React.FC = () => {
                             </div>
                           </div>
 
+                          {/* Admin review actions — only for worker-uploaded files, locked once APPROVED */}
+                          {currentUserRole === "ADMIN" && activeChannel === "worker" && isWorkerUpload && rs !== "APPROVED" && (
+                            <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-3)] p-3">
+                              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                                Review Decision
+                              </p>
+
+                              {/* Action buttons — visible for PENDING, NEEDS_REVISION, REJECTED */}
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  disabled={reviewEntry.saving}
+                                  onClick={() => submitReview(file.id, "APPROVED")}
+                                  className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 border border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                                >
+                                  ✅ Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={reviewEntry.saving}
+                                  onClick={() =>
+                                    setReviewState((prev) => ({
+                                      ...prev,
+                                      [file.id]: {
+                                        ...prev[file.id],
+                                        pending: reviewEntry.pending === "NEEDS_REVISION" ? null : "NEEDS_REVISION",
+                                        comment: prev[file.id]?.comment ?? "",
+                                        saving: false,
+                                      },
+                                    }))
+                                  }
+                                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                                    rs === "NEEDS_REVISION"
+                                      ? "border border-amber-500/60 bg-amber-500/25 text-amber-300"
+                                      : "border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                                  }`}
+                                >
+                                  ✏️ Needs Revision
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={reviewEntry.saving}
+                                  onClick={() =>
+                                    setReviewState((prev) => ({
+                                      ...prev,
+                                      [file.id]: {
+                                        ...prev[file.id],
+                                        pending: reviewEntry.pending === "REJECTED" ? null : "REJECTED",
+                                        comment: prev[file.id]?.comment ?? "",
+                                        saving: false,
+                                      },
+                                    }))
+                                  }
+                                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                                    rs === "REJECTED"
+                                      ? "border border-red-500/60 bg-red-500/25 text-red-300"
+                                      : "border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                                  }`}
+                                >
+                                  ✗ Reject
+                                </button>
+                              </div>
+
+                              {/* Inline comment box for Needs Revision / Reject */}
+                              {reviewEntry.pending && (
+                                <div className="mt-3 space-y-2">
+                                  <textarea
+                                    rows={2}
+                                    placeholder={
+                                      reviewEntry.pending === "NEEDS_REVISION"
+                                        ? "Describe what needs to be changed…"
+                                        : "Reason for rejection…"
+                                    }
+                                    value={reviewEntry.comment}
+                                    onChange={(e) =>
+                                      setReviewState((prev) => ({
+                                        ...prev,
+                                        [file.id]: { ...prev[file.id], comment: e.target.value },
+                                      }))
+                                    }
+                                    className="w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-3 py-2 text-xs text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+                                  />
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={reviewEntry.saving || !reviewEntry.comment.trim()}
+                                      onClick={() => submitReview(file.id, reviewEntry.pending!, reviewEntry.comment)}
+                                      className="rounded-lg px-3 py-1.5 text-xs font-semibold btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {reviewEntry.saving ? "Submitting…" : "Submit"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setReviewState((prev) => ({
+                                          ...prev,
+                                          [file.id]: { ...prev[file.id], pending: null },
+                                        }))
+                                      }
+                                      className="rounded-lg px-3 py-1.5 text-xs font-semibold btn-secondary"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           {/* File Comments Section */}
                           <div className="mt-3 border-t border-[var(--color-border)] pt-3">
                             <p className="mb-2 text-xs font-semibold text-[var(--color-text-secondary)]">Comments on this file:</p>
 
-                            {/* Existing Comments */}
                             {file.comments && file.comments.length > 0 ? (
                               <div className="mb-3 space-y-2">
                                 {file.comments.map((comment) => (
@@ -672,7 +938,6 @@ const TaskDetailPage: React.FC = () => {
                               <p className="mb-3 text-xs text-[var(--color-text-muted)]">No comments yet</p>
                             )}
 
-                            {/* Add Comment */}
                             <div className="flex gap-2">
                               <input
                                 type="text"
@@ -680,9 +945,7 @@ const TaskDetailPage: React.FC = () => {
                                 value={fileComments[file.id] || ""}
                                 onChange={(e) => setFileComments({ ...fileComments, [file.id]: e.target.value })}
                                 onKeyPress={(e) => {
-                                  if (e.key === "Enter") {
-                                    addFileComment(file.id);
-                                  }
+                                  if (e.key === "Enter") addFileComment(file.id);
                                 }}
                                 className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
                               />
@@ -696,7 +959,8 @@ const TaskDetailPage: React.FC = () => {
                             </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -710,44 +974,22 @@ const TaskDetailPage: React.FC = () => {
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-6 shadow-lg shadow-[var(--color-card-shadow)] backdrop-blur-md">
             <h2 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">General Comments & Notes</h2>
 
-            {isAdmin && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {(
-                  [
-                    { key: "internal" as const, label: "Worker (admin & worker)", count: unreadByTaskThread.internal },
-                    { key: "client" as const, label: "Client (admin & client)", count: unreadByTaskThread.client },
-                  ] as const
-                ).map(({ key, label, count }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setActiveCommentTab(key)}
-                    className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all ${
-                      activeCommentTab === key
-                        ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border-[var(--color-tab-active-border)]"
-                        : "border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] text-[var(--color-tab-inactive-text)] hover:bg-[var(--color-tab-inactive-hover-bg)]"
-                    }`}
-                  >
-                    <span>{label}</span>
-                    {count > 0 && (
-                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--color-destructive-bg)] px-1.5 text-xs font-bold text-[var(--color-destructive-text)]">
-                        {count > 99 ? "99+" : count}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Add Comment */}
             <div className="mb-6">
+              <div className="mb-2 flex items-center justify-between">
+                {isAdmin && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                    Posting to {activeChannel === "client" ? "Client" : "Worker"}
+                  </span>
+                )}
+              </div>
               <textarea
                 placeholder={
                   isAdmin
-                    ? activeCommentTab === "client"
+                    ? activeChannel === "client"
                       ? "Add a comment visible to the client..."
                       : "Add an internal note for admin & workers..."
-                    : "Add a general comment or note about the task..."
+                    : "Add a comment or note about the task..."
                 }
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
@@ -766,7 +1008,7 @@ const TaskDetailPage: React.FC = () => {
             {/* Comments List */}
             {(() => {
               const commentsToShow = isAdmin
-                ? activeCommentTab === "internal"
+                ? activeChannel === "worker"
                   ? task.comments.filter((c) => !c.visibleToClient)
                   : task.comments.filter((c) => c.visibleToClient)
                 : task.comments;
@@ -778,11 +1020,24 @@ const TaskDetailPage: React.FC = () => {
                       id={`task-comment-${comment.id}`}
                       className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 scroll-mt-4"
                     >
-                      <div className="mb-2 flex items-start justify-between">
-                        <p className="text-sm font-semibold text-[var(--color-text-primary)]">
-                          {comment.user?.name || `User #${comment.userId}`}
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)]">
+                      <div className="mb-2 flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {comment.user?.role && (
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                              comment.user.role === "ADMIN" || comment.user.role === "ERASPHERE"
+                                ? "bg-purple-500/20 text-purple-400"
+                                : comment.user.role === "WORKER"
+                                ? "bg-blue-500/20 text-blue-400"
+                                : "bg-green-500/20 text-green-400"
+                            }`}>
+                              {comment.user.role === "ERASPHERE" ? "Admin" : comment.user.role}
+                            </span>
+                          )}
+                          <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                            {comment.user?.name || `User #${comment.userId}`}
+                          </p>
+                        </div>
+                        <p className="text-xs text-[var(--color-text-muted)] shrink-0">
                           {new Date(comment.createdAt).toLocaleString()}
                         </p>
                       </div>
@@ -793,10 +1048,10 @@ const TaskDetailPage: React.FC = () => {
               ) : (
                 <p className="py-8 text-center text-[var(--color-text-muted)]">
                   {isAdmin
-                    ? activeCommentTab === "internal"
-                      ? "No internal worker comments yet."
-                      : "No client comments yet."
-                    : "No general comments yet"}
+                    ? activeChannel === "worker"
+                      ? "No worker channel comments yet."
+                      : "No client channel comments yet."
+                    : "No comments yet"}
                 </p>
               );
             })()}
