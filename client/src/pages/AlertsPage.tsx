@@ -53,6 +53,11 @@ const colors = {
 
 export default function AlertsPage() {
   const navigate = useNavigate();
+  const isAdmin = localStorage.getItem("role") === "ADMIN";
+  const tasksPath = isAdmin ? "/admin/zulbera/tasks" : "/admin/tasks";
+  const invoicesPath = isAdmin ? "/admin/zulbera/invoices" : "/admin/invoices";
+  const clientsPath = isAdmin ? "/admin/zulbera/clients" : "/admin/clients";
+  const domainsPath = isAdmin ? "/admin/zulbera/domains" : "/admin/domains";
   const [tasks, setTasks] = useState<Task[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -239,7 +244,7 @@ export default function AlertsPage() {
                     <div
                       key={domain.id}
                       className="flex items-center justify-between p-4 transition-all border-l-4 border-orange-500 rounded-r-lg cursor-pointer bg-orange-50 hover:shadow-md"
-                      onClick={() => navigate("/admin/domains")}
+                      onClick={() => navigate(domainsPath)}
                     >
                       <div className="flex-1">
                         <h4 className="font-semibold text-white">{domain.domainName}</h4>
@@ -279,7 +284,7 @@ export default function AlertsPage() {
                     <div
                       key={domain.id}
                       className="flex cursor-pointer items-center justify-between rounded-r-lg border-l-4 border-white/25 bg-white/5 p-4 transition-all hover:bg-white/10"
-                      onClick={() => navigate("/admin/domains")}
+                      onClick={() => navigate(domainsPath)}
                     >
                       <div className="flex-1">
                         <h4 className="font-semibold text-white">{domain.domainName}</h4>
@@ -319,7 +324,7 @@ export default function AlertsPage() {
                     <div
                       key={domain.id}
                       className="flex items-center justify-between p-4 transition-all border-l-4 border-green-500 rounded-r-lg cursor-pointer bg-green-50 hover:shadow-md"
-                      onClick={() => navigate("/admin/domains")}
+                      onClick={() => navigate(domainsPath)}
                     >
                       <div className="flex-1">
                         <h4 className="font-semibold text-white">{domain.domainName}</h4>
@@ -357,7 +362,7 @@ export default function AlertsPage() {
                   <div
                     key={task.id}
                     className="flex cursor-pointer items-center justify-between rounded-r-lg border-l-4 border-white/25 bg-white/5 p-4 transition-all hover:bg-white/10"
-                    onClick={() => navigate("/admin/tasks")}
+                    onClick={() => navigate(tasksPath)}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">{task.title}</h4>
@@ -394,7 +399,7 @@ export default function AlertsPage() {
                   <div
                     key={task.id}
                     className="flex items-center justify-between p-4 transition-all border-l-4 border-red-500 rounded-r-lg cursor-pointer bg-red-50 hover:shadow-md"
-                    onClick={() => navigate("/admin/tasks")}
+                    onClick={() => navigate(tasksPath)}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">{task.title}</h4>
@@ -433,7 +438,7 @@ export default function AlertsPage() {
                   <div
                     key={invoice.id}
                     className="flex items-center justify-between p-4 transition-all border-l-4 rounded-r-lg cursor-pointer border-amber-500 bg-amber-50 hover:shadow-md"
-                    onClick={() => navigate("/admin/invoices")}
+                    onClick={() => navigate(invoicesPath)}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">Invoice #{invoice.invoiceNumber}</h4>
@@ -472,7 +477,7 @@ export default function AlertsPage() {
                   <div
                     key={invoice.id}
                     className="flex items-center justify-between p-4 transition-all border-l-4 border-yellow-500 rounded-r-lg cursor-pointer bg-yellow-50 hover:shadow-md"
-                    onClick={() => navigate("/admin/invoices")}
+                    onClick={() => navigate(invoicesPath)}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">Invoice #{invoice.invoiceNumber}</h4>
@@ -509,7 +514,7 @@ export default function AlertsPage() {
                   <div
                     key={client.id}
                     className="flex items-center justify-between p-4 transition-all border-l-4 border-blue-500 rounded-r-lg cursor-pointer bg-blue-50 hover:shadow-md"
-                    onClick={() => navigate("/admin/clients")}
+                    onClick={() => navigate(clientsPath)}
                   >
                     <div className="flex-1">
                       <h4 className="font-semibold text-white">{client.name}</h4>

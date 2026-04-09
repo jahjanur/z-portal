@@ -229,6 +229,14 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
     if (role === "CLIENT" && task.clientId !== userId) {
       return res.status(403).json({ error: "Not authorized to view this task" });
     }
+    if (role === "ERASPHERE") {
+      const referredClientIds = await prisma.user
+        .findMany({ where: { role: "CLIENT", referredById: userId }, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id));
+      if (task.clientId === null || !referredClientIds.includes(task.clientId)) {
+        return res.status(403).json({ error: "Not authorized to view this task" });
+      }
+    }
 
     // Resolve uploader name + role for every file (uploadedBy is a raw Int with no DB relation)
     const uploaderIds = [...new Set((task as any).files.map((f: { uploadedBy: number }) => f.uploadedBy).filter(Boolean))];
@@ -244,18 +252,16 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
       uploader: uploaderMap[f.uploadedBy] ?? null,
     }));
 
-    // Client sees only client-visible comments (admin–client thread). Worker sees only internal (admin–worker thread).
-    if (role === "CLIENT") {
+    // Comment visibility per role:
+    //   CLIENT    → only client-visible comments (admin–client thread)
+    //   ERASPHERE → same as CLIENT (no internal notes)
+    //   WORKER    → all comments (needs full context of both threads)
+    //   ADMIN     → all comments (no filter)
+    if (role === "CLIENT" || role === "ERASPHERE") {
       (task as any).comments = (task as any).comments.filter((c: { visibleToClient: boolean }) => c.visibleToClient);
       (task as any).files = (task as any).files.map((f: { comments: { visibleToClient: boolean }[] }) => ({
         ...f,
         comments: f.comments.filter((c: { visibleToClient: boolean }) => c.visibleToClient),
-      }));
-    } else if (role === "WORKER") {
-      (task as any).comments = (task as any).comments.filter((c: { visibleToClient: boolean }) => !c.visibleToClient);
-      (task as any).files = (task as any).files.map((f: { comments: { visibleToClient: boolean }[] }) => ({
-        ...f,
-        comments: f.comments.filter((c: { visibleToClient: boolean }) => !c.visibleToClient),
       }));
     }
 

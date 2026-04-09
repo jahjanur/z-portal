@@ -440,8 +440,8 @@ const TaskDetailPage: React.FC = () => {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
               <p className="text-sm font-semibold text-[var(--color-text-muted)]">Client</p>
-              <p className="text-[var(--color-text-primary)]">{task.client.name}</p>
-              <p className="text-sm text-[var(--color-text-muted)]">{task.client.email}</p>
+              <p className="text-[var(--color-text-primary)]">{task.client?.name ?? "Client removed"}</p>
+              <p className="text-sm text-[var(--color-text-muted)]">{task.client?.email ?? ""}</p>
             </div>
             <div>
               <p className="text-sm font-semibold text-[var(--color-text-muted)]">Assigned Workers</p>

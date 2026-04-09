@@ -1,10 +1,11 @@
 import express from "express";
 import prisma from "../lib/prisma";
+import { verifyJWT, verifyAdmin } from "../middleware/auth";
 
 const router = express.Router();
 
 // get all projects
-router.get("/projects", async (req, res) => {
+router.get("/projects", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const projects = await prisma.timesheetProject.findMany({
       include: {
@@ -51,7 +52,7 @@ router.get("/projects", async (req, res) => {
 });
 
 // get single project
-router.get("/projects/:id", async (req, res) => {
+router.get("/projects/:id", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const projectId = parseInt(req.params.id);
 
@@ -104,7 +105,7 @@ router.get("/projects/:id", async (req, res) => {
 });
 
 // create project
-router.post("/projects", async (req, res) => {
+router.post("/projects", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const { projectName, clientId, description } = req.body;
 
@@ -144,7 +145,7 @@ router.post("/projects", async (req, res) => {
 });
 
 // create project entry
-router.post("/projects/:id/entries", async (req, res) => {
+router.post("/projects/:id/entries", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const projectId = parseInt(req.params.id);
     const { date, hoursWorked, hourlyRate, notes } = req.body;
@@ -206,7 +207,7 @@ router.post("/projects/:id/entries", async (req, res) => {
 });
 
 // update entry
-router.patch("/entries/:id", async (req, res) => {
+router.patch("/entries/:id", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const entryId = parseInt(req.params.id);
     const { date, hoursWorked, hourlyRate, notes } = req.body;
@@ -280,7 +281,7 @@ router.patch("/entries/:id", async (req, res) => {
 });
 
 // delete entry
-router.delete("/entries/:id", async (req, res) => {
+router.delete("/entries/:id", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const entryId = parseInt(req.params.id);
 
@@ -306,7 +307,7 @@ router.delete("/entries/:id", async (req, res) => {
 });
 
 // delete project and all entries
-router.delete("/projects/:id", async (req, res) => {
+router.delete("/projects/:id", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const projectId = parseInt(req.params.id);
 
@@ -335,7 +336,7 @@ router.delete("/projects/:id", async (req, res) => {
 });
 
 // update project paid status
-router.patch("/projects/:id/mark-paid", async (req, res) => {
+router.patch("/projects/:id/mark-paid", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const projectId = parseInt(req.params.id);
 
@@ -377,7 +378,7 @@ router.patch("/projects/:id/mark-paid", async (req, res) => {
 });
 
 // update project unpaid status
-router.patch("/projects/:id/mark-unpaid", async (req, res) => {
+router.patch("/projects/:id/mark-unpaid", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const projectId = parseInt(req.params.id);
 

@@ -5,9 +5,20 @@ import { verifyJWT, verifyAdminOrEraSphere } from "../middleware/auth";
 const router = express.Router();
 
 // GET /api/projects - Get all projects (for tasks)
-router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
+router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
+    const { role, userId } = req.user;
+
+    let clientFilter: { clientId?: { in: number[] } } = {};
+    if (role === "ERASPHERE") {
+      const referredClientIds = await prisma.user
+        .findMany({ where: { role: "CLIENT", referredById: userId }, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id));
+      clientFilter = { clientId: { in: referredClientIds } };
+    }
+
     const projects = await prisma.project.findMany({
+      where: clientFilter,
       include: {
         client: {
           select: {
@@ -34,51 +45,6 @@ router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
   } catch (error) {
     console.error("Error fetching projects:", error);
     res.status(500).json({ error: "Failed to fetch projects" });
-  }
-});
-
-// GET /api/projects/:id - Get single project
-router.get("/:id", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const project = await prisma.project.findUnique({
-      where: { id: Number(id) },
-      include: {
-        client: {
-          select: {
-            id: true,
-            name: true,
-            company: true,
-            email: true,
-          },
-        },
-        tasks: {
-          include: {
-            workers: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: { createdAt: "desc" },
-        },
-      },
-    });
-
-    if (!project) {
-      return res.status(404).json({ error: "Project not found" });
-    }
-
-    res.json(project);
-  } catch (error) {
-    console.error("Error fetching project:", error);
-    res.status(500).json({ error: "Failed to fetch project" });
   }
 });
 
@@ -118,10 +84,22 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
 });
 
 // PATCH /api/projects/:id - Update project
-router.patch("/:id", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
+router.patch("/:id", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
     const { id } = req.params;
+    const { role, userId } = req.user;
     const { name, description, status, clientId, startDate, endDate } = req.body;
+
+    if (role === "ERASPHERE") {
+      const existing = await prisma.project.findUnique({ where: { id: Number(id) }, select: { clientId: true } });
+      if (!existing) return res.status(404).json({ error: "Project not found" });
+      const referredClientIds = await prisma.user
+        .findMany({ where: { role: "CLIENT", referredById: userId }, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id));
+      if (existing.clientId === null || !referredClientIds.includes(existing.clientId)) {
+        return res.status(403).json({ error: "Not authorized to update this project" });
+      }
+    }
 
     const updateData: any = {};
 
@@ -154,9 +132,10 @@ router.patch("/:id", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
 });
 
 // DELETE /api/projects/:id - Delete project
-router.delete("/:id", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
+router.delete("/:id", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
     const { id } = req.params;
+    const { role, userId } = req.user;
 
     // Check if project has tasks
     const project = await prisma.project.findUnique({
@@ -166,6 +145,15 @@ router.delete("/:id", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
 
     if (!project) {
       return res.status(404).json({ error: "Project not found" });
+    }
+
+    if (role === "ERASPHERE") {
+      const referredClientIds = await prisma.user
+        .findMany({ where: { role: "CLIENT", referredById: userId }, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id));
+      if (project.clientId === null || !referredClientIds.includes(project.clientId)) {
+        return res.status(403).json({ error: "Not authorized to delete this project" });
+      }
     }
 
     // Delete project (tasks will become standalone due to onDelete: SetNull)
@@ -181,10 +169,22 @@ router.delete("/:id", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
 });
 
 // PATCH /api/projects/:id/status - Update project status
-router.patch("/:id/status", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
+router.patch("/:id/status", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
     const { id } = req.params;
+    const { role, userId } = req.user;
     const { status } = req.body;
+
+    if (role === "ERASPHERE") {
+      const existing = await prisma.project.findUnique({ where: { id: Number(id) }, select: { clientId: true } });
+      if (!existing) return res.status(404).json({ error: "Project not found" });
+      const referredClientIds = await prisma.user
+        .findMany({ where: { role: "CLIENT", referredById: userId }, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id));
+      if (existing.clientId === null || !referredClientIds.includes(existing.clientId)) {
+        return res.status(403).json({ error: "Not authorized to update this project" });
+      }
+    }
 
     const validStatuses = ["ACTIVE", "COMPLETED", "ARCHIVED"];
     

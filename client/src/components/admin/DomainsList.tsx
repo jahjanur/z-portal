@@ -19,10 +19,11 @@ interface DomainsListProps {
   domains: Domain[];
   onEdit: (domain: Domain) => void;
   onDelete: (id: number) => void;
+  onSetPrimary?: (id: number) => void;
   colors: { primary: string; secondary: string };
 }
 
-const DomainsList: React.FC<DomainsListProps> = ({ domains, onEdit, onDelete }) => {
+const DomainsList: React.FC<DomainsListProps> = ({ domains, onEdit, onDelete, onSetPrimary }) => {
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "—";
     const d = new Date(dateString);
@@ -100,6 +101,14 @@ const DomainsList: React.FC<DomainsListProps> = ({ domains, onEdit, onDelete }) 
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 shrink-0 sm:flex-nowrap">
+                {onSetPrimary && !domain.isPrimary && (
+                  <button
+                    onClick={() => onSetPrimary(domain.id)}
+                    className="h-9 px-3 text-sm font-semibold btn-secondary rounded-lg whitespace-nowrap"
+                  >
+                    Set Primary
+                  </button>
+                )}
                 <button
                   onClick={() => onEdit(domain)}
                   className="h-9 px-3 text-sm font-semibold btn-primary rounded-lg whitespace-nowrap"

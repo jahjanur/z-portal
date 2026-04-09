@@ -17,6 +17,7 @@ interface Client {
 
 export default function ClientsList() {
   const navigate = useNavigate();
+  const isAdmin = localStorage.getItem("role") === "ADMIN";
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "complete" | "incomplete">("all");
@@ -216,7 +217,7 @@ export default function ClientsList() {
               <div
                 key={client.id}
                 className={`p-6 transition-all cursor-pointer rounded-2xl border border-border-subtle bg-card backdrop-blur-sm hover:border-white/15`}
-                onClick={() => navigate("/admin/clients")}
+                onClick={() => navigate(isAdmin ? "/admin/zulbera/clients" : "/admin/clients")}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">

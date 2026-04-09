@@ -145,9 +145,13 @@ interface AdminContextValue {
   resendInvite: (clientId: number) => Promise<void>;
   createTask: (data: { title: string; description: string; clientId: string; workerIds: number[]; dueDate: string; projectId: string }) => void;
   handleCreateProject: (data: { name: string; clientId: string; description: string }) => Promise<void>;
+  updateProject: (id: number, data: { name?: string; description?: string; status?: string; clientId?: string }) => Promise<void>;
+  deleteProject: (id: number) => Promise<void>;
   deleteTask: (id: number) => Promise<void>;
   createInvoice: (formData: FormData) => Promise<void>;
+  updateInvoice: (id: number, data: { status?: string; dueDate?: string; paymentLink?: string; notes?: string; paidAt?: string | null }) => Promise<void>;
   deleteInvoice: (id: number) => Promise<void>;
+  requestPayment: (invoiceId: number) => Promise<void>;
   createDomain: (data: {
     clientId: string;
     domainName: string;
@@ -171,6 +175,7 @@ interface AdminContextValue {
     lifespanYears?: number | null;
     status?: string;
   }) => Promise<void>;
+  setPrimaryDomain: (id: number) => Promise<void>;
   deleteDomain: (id: number) => void;
   handleEditDomain: (domain: Domain) => void;
   handleCancelEdit: () => void;
@@ -330,6 +335,24 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     await fetchProjects();
   };
 
+  const updateProject = async (id: number, data: { name?: string; description?: string; status?: string; clientId?: string }) => {
+    await API.patch(`/projects/${id}`, {
+      name: data.name,
+      description: data.description || null,
+      status: data.status,
+      clientId: data.clientId ? Number(data.clientId) : null,
+    });
+    await fetchProjects();
+    toast.success("Project updated!");
+  };
+
+  const deleteProject = async (id: number) => {
+    if (!confirm("Delete this project? Tasks assigned to it will become standalone.")) return;
+    await API.delete(`/projects/${id}`);
+    await fetchProjects();
+    toast.success("Project deleted!");
+  };
+
   const deleteTask = async (id: number) => {
     await API.delete(`/tasks/${id}`);
     await fetchAll();
@@ -340,9 +363,20 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     await fetchAll();
   };
 
+  const updateInvoice = async (id: number, data: { status?: string; dueDate?: string; paymentLink?: string; notes?: string; paidAt?: string | null }) => {
+    await API.put(`/invoices/${id}`, data);
+    await fetchAll();
+    toast.success("Invoice updated!");
+  };
+
   const deleteInvoice = async (id: number) => {
     await API.delete(`/invoices/${id}`);
     await fetchAll();
+  };
+
+  const requestPayment = async (invoiceId: number) => {
+    await API.post(`/invoices/${invoiceId}/request-payment`);
+    toast.success("Payment request sent!");
   };
 
   const createDomain = async (data: {
@@ -403,6 +437,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     toast.success("Domain updated successfully!");
   };
 
+  const setPrimaryDomain = async (id: number) => {
+    await API.post(`/domains/${id}/set-primary`);
+    await fetchAll();
+    toast.success("Primary domain updated!");
+  };
+
   const deleteDomain = async (id: number) => {
     if (!confirm("Are you sure you want to delete this domain?")) return;
     await API.delete(`/domains/${id}`);
@@ -461,11 +501,16 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     resendInvite,
     createTask,
     handleCreateProject,
+    updateProject,
+    deleteProject,
     deleteTask,
     createInvoice,
+    updateInvoice,
     deleteInvoice,
+    requestPayment,
     createDomain,
     updateDomain,
+    setPrimaryDomain,
     deleteDomain,
     handleEditDomain,
     handleCancelEdit,
