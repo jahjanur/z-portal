@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { verifyJWT } from "../middleware/auth";
+import { verifyJWT, verifyAdmin } from "../middleware/auth";
 import multer from "multer";
 import path from "path";
 import { emit, EventType } from "../services/notificationEngine";
@@ -252,16 +252,24 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
       uploader: uploaderMap[f.uploadedBy] ?? null,
     }));
 
-    // Comment visibility per role:
-    //   CLIENT    → only client-visible comments (admin–client thread)
-    //   ERASPHERE → same as CLIENT (no internal notes)
-    //   WORKER    → all comments (needs full context of both threads)
-    //   ADMIN     → all comments (no filter)
+    // Channel visibility per role:
+    //   CLIENT    → only client-channel content (visibleToClient: true)
+    //   ERASPHERE → same as CLIENT
+    //   WORKER    → only worker-channel content (visibleToClient: false)
+    //   ADMIN     → all content, no filter
     if (role === "CLIENT" || role === "ERASPHERE") {
       (task as any).comments = (task as any).comments.filter((c: { visibleToClient: boolean }) => c.visibleToClient);
+      (task as any).files = (task as any).files.filter((f: { visibleToClient: boolean }) => f.visibleToClient);
       (task as any).files = (task as any).files.map((f: { comments: { visibleToClient: boolean }[] }) => ({
         ...f,
         comments: f.comments.filter((c: { visibleToClient: boolean }) => c.visibleToClient),
+      }));
+    } else if (role === "WORKER") {
+      (task as any).comments = (task as any).comments.filter((c: { visibleToClient: boolean }) => !c.visibleToClient);
+      (task as any).files = (task as any).files.filter((f: { visibleToClient: boolean }) => !f.visibleToClient);
+      (task as any).files = (task as any).files.map((f: { comments: { visibleToClient: boolean }[] }) => ({
+        ...f,
+        comments: f.comments.filter((c: { visibleToClient: boolean }) => !c.visibleToClient),
       }));
     }
 
@@ -528,6 +536,39 @@ router.post("/:id/files", verifyJWT, upload.single("file"), async (req: any, res
       return res.status(403).json({ error: "Not authorized to add files to this task" });
     }
 
+    // Auto-versioning: if a prior file with the same base name in this task
+    // was NEEDS_REVISION or REJECTED, treat this upload as a new version of it.
+    const uploadBaseName = path.parse(req.file.originalname).name.toLowerCase().trim();
+    const existingFiles = await prisma.taskFile.findMany({
+      where: { taskId: taskIdNum },
+      select: { fileName: true, version: true, reviewStatus: true },
+    });
+    const related = existingFiles.filter((f) => {
+      const fBase = path.parse(f.fileName).name.toLowerCase().trim();
+      return fBase === uploadBaseName;
+    });
+    let newVersion = 1;
+    if (related.length > 0) {
+      const hadReview = related.some(
+        (f) => f.reviewStatus === "NEEDS_REVISION" || f.reviewStatus === "REJECTED"
+      );
+      if (hadReview) {
+        newVersion = Math.max(...related.map((f) => f.version)) + 1;
+      }
+    }
+
+    // Determine channel visibility based on uploader role
+    let fileVisibleToClient: boolean;
+    if (role === "CLIENT") {
+      fileVisibleToClient = true;
+    } else if (role === "WORKER") {
+      fileVisibleToClient = false;
+    } else {
+      // ADMIN/ERASPHERE: read from form body, default true (client channel)
+      const bodyVal = req.body.visibleToClient;
+      fileVisibleToClient = bodyVal === "false" || bodyVal === false ? false : true;
+    }
+
     const file = await prisma.taskFile.create({
       data: {
         taskId: taskIdNum,
@@ -537,20 +578,60 @@ router.post("/:id/files", verifyJWT, upload.single("file"), async (req: any, res
         section: section || null,
         caption: caption || null,
         uploadedBy: userId, // use verified JWT identity, not client-supplied body field
+        version: newVersion,
+        visibleToClient: fileVisibleToClient,
       },
     });
 
-    // Notify all parties on the task (engine strips the actor automatically)
-    const uploader = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
-    await emit(EventType.TASK_FILE_UPLOADED, {
-      title: "New file uploaded",
-      message: `${uploader?.name ?? "Someone"} uploaded "${req.file.originalname}" to task "${task.title}"`,
-      actorId: userId,
-      taskId: taskIdNum,
-      clientId: task.clientId ?? undefined,
-      workerIds: task.workers.map((w) => w.userId),
-      link: `/tasks/${taskIdNum}`,
-    }).catch((err) => console.error("Failed to emit TASK_FILE_UPLOADED:", err));
+    // Channel-isolated file upload notifications (same routing as comments)
+    try {
+      const uploader = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+      const uploaderName = uploader?.name ?? "Someone";
+      const threadType = fileVisibleToClient ? "client" : "internal";
+      const link = `/tasks/${taskIdNum}`;
+      const message = `${uploaderName} uploaded "${req.file.originalname}" to task "${task.title}"`;
+
+      const adminUsers = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+      const recipientIds: number[] = [];
+
+      if (fileVisibleToClient) {
+        if (role === "CLIENT") {
+          // Client uploaded → notify admins
+          recipientIds.push(...adminUsers.map((a) => a.id));
+        } else {
+          // Admin uploaded to client channel → notify client
+          if (task.clientId) recipientIds.push(task.clientId);
+        }
+      } else {
+        if (role === "WORKER") {
+          // Worker uploaded → notify admins
+          recipientIds.push(...adminUsers.map((a) => a.id));
+        } else {
+          // Admin uploaded to worker channel → notify workers
+          recipientIds.push(...task.workers.map((w) => w.userId));
+        }
+      }
+
+      const finalRecipients = recipientIds.filter((uid) => uid !== userId);
+      await Promise.all(
+        finalRecipients.map((recipientId) =>
+          prisma.notification.create({
+            data: {
+              userId: recipientId,
+              type: "TASK_FILE_UPLOADED",
+              title: "New file uploaded",
+              message,
+              link,
+              taskId: taskIdNum,
+              threadType,
+              read: false,
+            },
+          })
+        )
+      );
+    } catch (err) {
+      console.error("Failed to send file upload notification:", err);
+    }
 
     res.status(201).json(file);
   } catch (error) {
@@ -692,19 +773,60 @@ router.post("/:id/comments", verifyJWT, async (req: any, res) => {
         ? (comment.user as { name: string }).name
         : "Someone";
       const authorRole = comment.user && typeof (comment.user as { role?: string }).role === "string"
-          ? (comment.user as { role: string }).role
-          : "WORKER";
-        await emit(EventType.TASK_COMMENT_ADDED, {
-          title: "New comment on task",
-          message: `${commenterName} commented on task "${task.title}"`,
-          link: `/tasks/${id}?highlightComment=${comment.id}`,
-          taskId: taskIdNum,
-          actorId: authUserId,
-          actorRole: authorRole,
-          threadType: visibleToClient ? "client" : "internal",
-        });
+        ? (comment.user as { role: string }).role
+        : "WORKER";
+
+      // Channel-isolated notification routing:
+      //   Client channel (visibleToClient=true):
+      //     Client posts → notify admins only
+      //     Admin posts  → notify client only
+      //   Worker channel (visibleToClient=false):
+      //     Worker posts → notify admins only
+      //     Admin posts  → notify task workers only
+      const taskWithWorkers = await prisma.task.findUnique({
+        where: { id: taskIdNum },
+        select: { clientId: true, workers: { select: { userId: true } } },
+      });
+      const adminUsers = await prisma.user.findMany({
+        where: { role: "ADMIN" },
+        select: { id: true },
+      });
+
+      const recipientIds: number[] = [];
+      if (visibleToClient) {
+        if (role === "CLIENT") {
+          recipientIds.push(...adminUsers.map((a) => a.id));
+        } else {
+          if (taskWithWorkers?.clientId) recipientIds.push(taskWithWorkers.clientId);
+        }
+      } else {
+        if (role === "WORKER") {
+          recipientIds.push(...adminUsers.map((a) => a.id));
+        } else {
+          recipientIds.push(...(taskWithWorkers?.workers.map((w) => w.userId) ?? []));
+        }
+      }
+      const finalRecipients = recipientIds.filter((uid) => uid !== authUserId);
+
+      await Promise.all(
+        finalRecipients.map((userId) =>
+          prisma.notification.create({
+            data: {
+              userId,
+              type: "TASK_COMMENT_ADDED",
+              title: "New comment on task",
+              message: `${commenterName} commented on task "${task.title}"`,
+              link: `/tasks/${id}?highlightComment=${comment.id}`,
+              taskId: taskIdNum,
+              sourceRole: authorRole,
+              threadType: visibleToClient ? "client" : "internal",
+              read: false,
+            },
+          })
+        )
+      );
     } catch (notifErr: any) {
-      console.error("Notification emit failed (comment still saved):", notifErr?.message ?? notifErr);
+      console.error("Notification failed (comment still saved):", notifErr?.message ?? notifErr);
     }
 
     res.status(201).json(comment);
@@ -862,6 +984,93 @@ router.delete("/:id", verifyJWT, async (req: any, res) => {
   } catch (error) {
     console.error("Error deleting task:", error);
     res.status(500).json({ error: "Failed to delete task" });
+  }
+});
+
+// PATCH /tasks/:taskId/files/:fileId/review — admin submits a review decision on a file
+router.patch("/:taskId/files/:fileId/review", verifyJWT, verifyAdmin, async (req: any, res) => {
+  try {
+    const taskId = Number(req.params.taskId);
+    const fileId = Number(req.params.fileId);
+    const { status, comment } = req.body;
+    const { userId: adminId } = req.user;
+
+    const validStatuses = ["APPROVED", "NEEDS_REVISION", "REJECTED"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: "Invalid review status. Must be APPROVED, NEEDS_REVISION, or REJECTED" });
+    }
+    if ((status === "NEEDS_REVISION" || status === "REJECTED") && !comment?.trim()) {
+      return res.status(400).json({ error: "A comment is required when requesting revision or rejecting a file" });
+    }
+
+    const taskFile = await prisma.taskFile.findFirst({
+      where: { id: fileId, taskId },
+      include: {
+        task: { select: { title: true, clientId: true } },
+      },
+    });
+    if (!taskFile) {
+      return res.status(404).json({ error: "File not found in this task" });
+    }
+    if (taskFile.reviewStatus === "APPROVED") {
+      return res.status(400).json({ error: "This file has already been approved and cannot be re-reviewed." });
+    }
+
+    const updated = await prisma.taskFile.update({
+      where: { id: fileId },
+      data: {
+        reviewStatus: status,
+        reviewComment: comment?.trim() || null,
+      },
+    });
+
+    // Build per-recipient messages
+    const fileName = taskFile.fileName;
+    const taskTitle = taskFile.task.title;
+    const link = `/tasks/${taskId}`;
+
+    let uploaderMessage: string;
+    let clientMessage: string;
+    if (status === "APPROVED") {
+      uploaderMessage = `Your file "${fileName}" on task "${taskTitle}" was approved ✅`;
+      clientMessage = `A file "${fileName}" on task "${taskTitle}" has been approved ✅`;
+    } else if (status === "NEEDS_REVISION") {
+      uploaderMessage = `Your file "${fileName}" on task "${taskTitle}" needs revision — ${comment!.trim()}`;
+      clientMessage = `A file "${fileName}" on task "${taskTitle}" requires revision`;
+    } else {
+      uploaderMessage = `Your file "${fileName}" on task "${taskTitle}" was rejected — ${comment!.trim()}`;
+      clientMessage = `A file "${fileName}" on task "${taskTitle}" was rejected`;
+    }
+
+    // Notify the file uploader (usually the worker) if not the reviewing admin
+    const recipientNotifications: { userId: number; message: string }[] = [];
+    if (taskFile.uploadedBy !== adminId) {
+      recipientNotifications.push({ userId: taskFile.uploadedBy, message: uploaderMessage });
+    }
+    // Notify the task client (separate message)
+    if (taskFile.task.clientId && taskFile.task.clientId !== adminId) {
+      recipientNotifications.push({ userId: taskFile.task.clientId, message: clientMessage });
+    }
+
+    await Promise.all(
+      recipientNotifications.map(({ userId, message }) =>
+        prisma.notification.create({
+          data: {
+            userId,
+            type: "TASK_FILE_REVIEWED",
+            title: "File Review Update",
+            message,
+            link,
+            read: false,
+          },
+        })
+      )
+    );
+
+    res.json(updated);
+  } catch (error) {
+    console.error("Error submitting file review:", error);
+    res.status(500).json({ error: "Failed to submit file review" });
   }
 });
 
