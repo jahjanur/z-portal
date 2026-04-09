@@ -198,6 +198,17 @@ const Timesheets = () => {
     }
   };
 
+  const editEntry = async (entryId: number, data: { date: string; hoursWorked: number; hourlyRate: number; notes?: string }) => {
+    try {
+      await API.patch(`/timesheets/entries/${entryId}`, data);
+      fetchProjects();
+      toast.success("Entry updated!");
+    } catch (error) {
+      console.error("Error updating entry:", error);
+      toast.error("Failed to update entry");
+    }
+  };
+
   const deleteProject = async (projectId: number) => {
     if (!confirm("Delete this entire project and all its entries?")) return;
 
@@ -459,6 +470,7 @@ const Timesheets = () => {
                 setEntryNotes={setEntryNotes}
                 addEntry={addEntry}
                 deleteEntry={deleteEntry}
+                editEntry={editEntry}
                 deleteProject={deleteProject}
                 markProjectPaid={markProjectPaid}
                 exportProjectToPDF={exportProjectToPDF}
@@ -562,6 +574,7 @@ interface ProjectCardProps {
   setEntryNotes: (notes: string) => void;
   addEntry: (projectId: number) => void;
   deleteEntry: (entryId: number) => void;
+  editEntry: (entryId: number, data: { date: string; hoursWorked: number; hourlyRate: number; notes?: string }) => Promise<void>;
   deleteProject: (projectId: number) => void;
   markProjectPaid: (projectId: number, isPaid: boolean) => void;
   exportProjectToPDF: (project: TimesheetProject) => void;
@@ -581,11 +594,42 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   setEntryNotes,
   addEntry,
   deleteEntry,
+  editEntry,
   deleteProject,
   markProjectPaid,
   exportProjectToPDF,
 }) => {
   const [showEntries, setShowEntries] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
+  const [editEntryDate, setEditEntryDate] = useState("");
+  const [editEntryHours, setEditEntryHours] = useState(0);
+  const [editEntryRate, setEditEntryRate] = useState(0);
+  const [editEntryNotes, setEditEntryNotes] = useState("");
+  const [editEntrySaving, setEditEntrySaving] = useState(false);
+
+  const openEditEntry = (entry: TimesheetEntry) => {
+    setEditingEntryId(entry.id);
+    setEditEntryDate(entry.date.slice(0, 10));
+    setEditEntryHours(entry.hoursWorked);
+    setEditEntryRate(entry.hourlyRate);
+    setEditEntryNotes(entry.notes ?? "");
+  };
+
+  const saveEditEntry = async () => {
+    if (!editingEntryId) return;
+    setEditEntrySaving(true);
+    try {
+      await editEntry(editingEntryId, {
+        date: editEntryDate,
+        hoursWorked: editEntryHours,
+        hourlyRate: editEntryRate,
+        notes: editEntryNotes || undefined,
+      });
+      setEditingEntryId(null);
+    } finally {
+      setEditEntrySaving(false);
+    }
+  };
 
   return (
     <div className="rounded-2xl card-panel p-4 shadow-lg transition hover:-translate-y-[1px] card-panel-hover sm:p-6">
@@ -780,39 +824,81 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 
           {showEntries && (
             <div className="space-y-2">
-              {project.entries.map((entry) => (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1">
-                      <span className="text-sm font-semibold text-[var(--color-text-primary)]">
-                        {new Date(entry.date).toLocaleDateString()}
-                      </span>
-                      <span className="text-xs text-[var(--color-text-muted)]">
-                        {entry.hoursWorked}h × ${entry.hourlyRate}
-                      </span>
+              {project.entries.map((entry) =>
+                editingEntryId === entry.id ? (
+                  <div key={entry.id} className="rounded-lg border-2 border-[var(--color-border-hover)] bg-[var(--color-surface-2)] p-3 space-y-2">
+                    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                      <div>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Date</label>
+                        <DatePicker value={editEntryDate} onChange={setEditEntryDate} placeholder="yyyy/mm/dd" className="input-dark w-full rounded-lg px-2 py-1.5 text-xs min-h-[34px]" />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Hours</label>
+                        <input type="number" step="0.5" min="0" value={editEntryHours || ""} onChange={(e) => setEditEntryHours(Number(e.target.value))} className="input-dark w-full rounded-lg px-2 py-1.5 text-xs" />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Rate ($)</label>
+                        <input type="number" step="0.01" min="0" value={editEntryRate || ""} onChange={(e) => setEditEntryRate(Number(e.target.value))} className="input-dark w-full rounded-lg px-2 py-1.5 text-xs" />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Total</label>
+                        <input type="text" value={`$${(editEntryHours * editEntryRate).toFixed(2)}`} disabled className="input-dark w-full rounded-lg px-2 py-1.5 text-xs font-bold bg-[var(--color-surface-3)]" />
+                      </div>
                     </div>
-                    {entry.notes && (
-                      <p className="text-xs text-[var(--color-text-muted)]">{entry.notes}</p>
-                    )}
+                    <div>
+                      <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Notes</label>
+                      <input type="text" value={editEntryNotes} onChange={(e) => setEditEntryNotes(e.target.value)} placeholder="Optional notes..." className="input-dark w-full rounded-lg px-2 py-1.5 text-xs" />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={saveEditEntry} disabled={editEntrySaving} className="btn-primary px-3 py-1.5 text-xs rounded-lg font-semibold disabled:opacity-60">
+                        {editEntrySaving ? "Saving…" : "Save"}
+                      </button>
+                      <button onClick={() => setEditingEntryId(null)} className="btn-secondary px-3 py-1.5 text-xs rounded-lg font-semibold">Cancel</button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-[var(--color-text-primary)]">
-                      ${entry.totalPay.toFixed(2)}
-                    </span>
-                    <button
-                      onClick={() => deleteEntry(entry.id)}
-                      className="p-1 text-red-600 transition-colors rounded bg-red-50 hover:bg-red-100"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                ) : (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+                          {new Date(entry.date).toLocaleDateString()}
+                        </span>
+                        <span className="text-xs text-[var(--color-text-muted)]">
+                          {entry.hoursWorked}h × ${entry.hourlyRate}
+                        </span>
+                      </div>
+                      {entry.notes && (
+                        <p className="text-xs text-[var(--color-text-muted)]">{entry.notes}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-[var(--color-text-primary)]">
+                        ${entry.totalPay.toFixed(2)}
+                      </span>
+                      <button
+                        onClick={() => openEditEntry(entry)}
+                        className="p-1 text-[var(--color-text-muted)] transition-colors rounded hover:bg-[var(--color-surface-3)]"
+                        title="Edit entry"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => deleteEntry(entry.id)}
+                        className="p-1 text-red-600 transition-colors rounded bg-red-50 hover:bg-red-100"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </div>
           )}
         </>

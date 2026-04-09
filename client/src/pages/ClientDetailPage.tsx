@@ -93,6 +93,9 @@ const ClientDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"overview" | "tasks" | "invoices" | "hosting">("overview");
   const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
+  const isAdmin = localStorage.getItem("role") === "ADMIN";
+  const tasksPath = isAdmin ? "/admin/zulbera/tasks" : "/admin/tasks";
+  const invoicesPath = isAdmin ? "/admin/zulbera/invoices" : "/admin/invoices";
   
   // Files modal state
   const [showFilesModal, setShowFilesModal] = useState(false);
@@ -367,14 +370,14 @@ const fetchAllFiles = async () => {
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                onClick={() => navigate("/admin/tasks")}
+                onClick={() => navigate(tasksPath)}
                 className="btn-primary px-4 py-2 text-sm rounded-lg"
               >
                 Create New Task
               </button>
               <button
                 type="button"
-                onClick={() => navigate("/admin/invoices")}
+                onClick={() => navigate(invoicesPath)}
                 className="btn-secondary px-4 py-2 text-sm rounded-lg"
               >
                 Generate Invoice
@@ -641,7 +644,7 @@ const fetchAllFiles = async () => {
                       <div
                         key={invoice.id}
                         className="flex items-center justify-between p-4 cursor-pointer rounded-xl border border-white/10 hover:bg-white/10"
-                        onClick={() => navigate("/admin/invoices")}
+                        onClick={() => navigate(invoicesPath)}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">
@@ -680,7 +683,7 @@ const fetchAllFiles = async () => {
                       <div
                         key={invoice.id}
                         className="flex items-center justify-between p-4 cursor-pointer rounded-xl border border-white/10 hover:bg-white/10"
-                        onClick={() => navigate("/admin/invoices")}
+                        onClick={() => navigate(invoicesPath)}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">

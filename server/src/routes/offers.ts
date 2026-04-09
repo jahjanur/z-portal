@@ -1,6 +1,7 @@
 import express from "express";
 import PDFDocument from "pdfkit";
 import { sendOfferPDF } from "../services/email_offer";
+import { verifyJWT, verifyAdmin } from "../middleware/auth";
 
 const router = express.Router();
 
@@ -197,7 +198,7 @@ const generateOfferPDF = (offer: Offer): Promise<Buffer> => {
 };
 
 // POST
-router.post("/send-offer", async (req, res) => {
+router.post("/send-offer", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const offer: Offer = req.body;
 
@@ -241,7 +242,7 @@ router.post("/send-offer", async (req, res) => {
 });
 
 // POST
-router.post("/download", async (req, res) => {
+router.post("/download", verifyJWT, verifyAdmin, async (req, res) => {
   try {
     const offer: Offer = req.body;
 

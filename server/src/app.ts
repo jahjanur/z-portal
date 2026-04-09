@@ -12,7 +12,8 @@ import notificationRoutes from "./routes/notifications";
 import workspaceRoutes from "./routes/workspace";
 import inviteRoutes from "./routes/invites";
 import commentsRoutes from "./routes/comments";
-import { uploadsDir, ensureUploadsDir } from "./lib/uploadsPath";
+import { ensureUploadsDir } from "./lib/uploadsPath";
+import filesRoutes from "./routes/files";
 
 ensureUploadsDir();
 
@@ -21,7 +22,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-app.use("/uploads", express.static(uploadsDir));
+// Protected file serving — replaces the open express.static mount.
+// Access is verified per-file based on task ownership / worker assignment.
+app.use("/uploads", filesRoutes);
 
 app.use("/auth", authRoutes);
 app.use("/users", usersRoutes);

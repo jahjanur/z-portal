@@ -685,13 +685,27 @@ router.delete("/:id", verifyJWT, verifyAdmin, async (req, res) => {
 // get clients
 router.get("/clients/list", verifyJWT, async (req: any, res) => {
   try {
-    const { role } = req.user;
+    const { role, userId } = req.user;
     if (role !== "ADMIN" && role !== "WORKER" && role !== "ERASPHERE") {
       return res.status(403).json({ error: "Not authorized" });
     }
 
+    let clientFilter: { role: "CLIENT"; id?: { in: number[] } } = { role: "CLIENT" };
+
+    if (role === "WORKER") {
+      // Workers may only see clients from tasks they are assigned to
+      const assignedTasks = await prisma.taskWorker.findMany({
+        where: { userId },
+        select: { task: { select: { clientId: true } } },
+      });
+      const clientIds = [...new Set(
+        assignedTasks.map((tw) => tw.task.clientId).filter((id): id is number => id !== null)
+      )];
+      clientFilter = { role: "CLIENT", id: { in: clientIds } };
+    }
+
     const clients = await prisma.user.findMany({
-      where: { role: "CLIENT" },
+      where: clientFilter,
       select: {
         id: true,
         name: true,

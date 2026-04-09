@@ -10,6 +10,7 @@ interface Invoice extends AdminInvoice {}
 interface InvoicesListProps {
   invoices: Invoice[];
   onDelete: (id: number) => void;
+  onEdit?: (invoice: Invoice) => void;
   onRequestPayment?: (invoice: Invoice) => void;
   colors: { primary: string };
 }
@@ -17,6 +18,7 @@ interface InvoicesListProps {
 const InvoicesList: React.FC<InvoicesListProps> = ({
   invoices,
   onDelete,
+  onEdit,
   onRequestPayment,
   colors: _colors,
 }) => {
@@ -244,6 +246,19 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                   </svg>
                   {downloadingId === inv.id ? "Generating…" : "Download PDF"}
                 </button>
+
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(inv)}
+                    className="btn-secondary h-9 px-3 text-sm font-semibold flex items-center justify-center gap-2 rounded-lg whitespace-nowrap"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                  </button>
+                )}
 
                 {inv.status.toUpperCase() === "PENDING" && onRequestPayment && (
                   <button

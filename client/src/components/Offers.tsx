@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import axios from "axios";
+import API from "../api";
 import { generateOfferProposalPdf } from "../utils/pdf/generateOfferProposalPdf";
 import { TechStackSelector } from "./TechStackSelector";
 
@@ -64,7 +64,7 @@ const Offers: React.FC = () => {
     setLoading(true);
     try {
       const totalPrice = products.reduce((s, p) => s + (p.price || 0), 0);
-      await axios.post("/api/offers/send-offer", {
+      await API.post("/api/offers/send-offer", {
         clientName,
         clientEmail: recipientEmail,
         pageTitle,

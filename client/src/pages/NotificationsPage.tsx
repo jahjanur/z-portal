@@ -67,7 +67,7 @@ export default function NotificationsPage() {
         // silently fail
       }
     }
-    if (n.link) navigate(n.link);
+    if (n.link && n.link.startsWith("/") && !n.link.includes("://")) navigate(n.link);
   };
 
   return (

@@ -22,6 +22,7 @@ const colors = {
 
 export default function RevenueList() {
   const navigate = useNavigate();
+  const isAdmin = localStorage.getItem("role") === "ADMIN";
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "paid" | "pending">("all");
@@ -290,7 +291,7 @@ export default function RevenueList() {
               <div
                 key={invoice.id}
                 className="flex cursor-pointer flex-col gap-4 rounded-xl card-panel p-4 shadow-lg backdrop-blur-md transition hover:-translate-y-[1px] card-panel-hover md:flex-row md:items-center md:justify-between"
-                onClick={() => navigate("/admin/invoices")}
+                onClick={() => navigate(isAdmin ? "/admin/zulbera/invoices" : "/admin/invoices")}
               >
                 <div className="flex items-start gap-4">
                   <div className="rounded-lg bg-[var(--color-surface-3)] p-3">

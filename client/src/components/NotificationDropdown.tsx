@@ -151,7 +151,7 @@ export default function NotificationDropdown() {
                       onClick={async () => {
                         if (!n.read) await markRead(n.id);
                         setOpen(false);
-                        if (n.link) navigate(n.link);
+                        if (n.link && n.link.startsWith("/") && !n.link.includes("://")) navigate(n.link);
                       }}
                       className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-2)] ${
                         !n.read ? "bg-[var(--color-surface-2)]/50" : ""
