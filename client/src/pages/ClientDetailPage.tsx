@@ -152,9 +152,7 @@ const fetchAllFiles = async () => {
 
   const handleOpenFiles = () => {
     setShowFilesModal(true);
-    if (allFiles.length === 0) {
-      fetchAllFiles();
-    }
+    fetchAllFiles();
   };
 
   const formatCurrency = (amount: number) => {

@@ -230,6 +230,20 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
       return res.status(403).json({ error: "Not authorized to view this task" });
     }
 
+    // Resolve uploader name + role for every file (uploadedBy is a raw Int with no DB relation)
+    const uploaderIds = [...new Set((task as any).files.map((f: { uploadedBy: number }) => f.uploadedBy).filter(Boolean))];
+    const uploaders = uploaderIds.length
+      ? await prisma.user.findMany({
+          where: { id: { in: uploaderIds as number[] } },
+          select: { id: true, name: true, role: true },
+        })
+      : [];
+    const uploaderMap = Object.fromEntries(uploaders.map((u) => [u.id, u]));
+    (task as any).files = (task as any).files.map((f: any) => ({
+      ...f,
+      uploader: uploaderMap[f.uploadedBy] ?? null,
+    }));
+
     // Client sees only client-visible comments (admin–client thread). Worker sees only internal (admin–worker thread).
     if (role === "CLIENT") {
       (task as any).comments = (task as any).comments.filter((c: { visibleToClient: boolean }) => c.visibleToClient);
@@ -516,9 +530,21 @@ router.post("/:id/files", verifyJWT, upload.single("file"), async (req: any, res
         fileType: fileType || "document",
         section: section || null,
         caption: caption || null,
-        uploadedBy: parseInt(uploadedBy),
+        uploadedBy: userId, // use verified JWT identity, not client-supplied body field
       },
     });
+
+    // Notify all parties on the task (engine strips the actor automatically)
+    const uploader = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    await emit(EventType.TASK_FILE_UPLOADED, {
+      title: "New file uploaded",
+      message: `${uploader?.name ?? "Someone"} uploaded "${req.file.originalname}" to task "${task.title}"`,
+      actorId: userId,
+      taskId: taskIdNum,
+      clientId: task.clientId ?? undefined,
+      workerIds: task.workers.map((w) => w.userId),
+      link: `/tasks/${taskIdNum}`,
+    }).catch((err) => console.error("Failed to emit TASK_FILE_UPLOADED:", err));
 
     res.status(201).json(file);
   } catch (error) {

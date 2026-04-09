@@ -6,10 +6,11 @@ import fs from "fs";
 import nodemailer from "nodemailer";
 import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
+import { uploadsDir } from "../lib/uploadsPath";
 
 const router = Router();
 
-const invoicesDir = "uploads/invoices";
+const invoicesDir = path.join(uploadsDir, "invoices");
 if (!fs.existsSync(invoicesDir)) {
   fs.mkdirSync(invoicesDir, { recursive: true });
 }

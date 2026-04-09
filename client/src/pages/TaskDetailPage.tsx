@@ -36,6 +36,7 @@ interface TaskFile {
   version: number;
   uploadedAt: string;
   uploadedBy: number;
+  uploader?: { id: number; name: string; role: string } | null;
   comments?: FileComment[];
 }
 
@@ -83,6 +84,8 @@ const TaskDetailPage: React.FC = () => {
   const [fileSection, setFileSection] = useState("");
   const [fileCaption, setFileCaption] = useState("");
   const [fileType, setFileType] = useState("screenshot");
+  const [refreshing, setRefreshing] = useState(false);
+  const [fileTab, setFileTab] = useState<"all" | "admin" | "worker" | "client">("all");
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewerFile, setViewerFile] = useState<TaskFile | null>(null);
   const [workers, setWorkers] = useState<{ id: number; name: string; email: string }[]>([]);
@@ -140,15 +143,20 @@ const TaskDetailPage: React.FC = () => {
 
   const fetchTask = async () => {
     try {
-      setLoading(true);
+      if (!task) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
       const response = await API.get(`/tasks/${id}`);
       setTask(response.data);
       setError(null);
     } catch (err) {
       console.error("Error fetching task:", err);
-      setError("Failed to load task");
+      if (!task) setError("Failed to load task");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -307,7 +315,7 @@ const TaskDetailPage: React.FC = () => {
       formData.append("uploadedBy", currentUserId.toString());
 
       await API.post(`/tasks/${id}/files`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": undefined },
       });
 
       setSelectedFile(null);
@@ -378,8 +386,24 @@ const TaskDetailPage: React.FC = () => {
     }
   };
 
+  // Count files per uploader role for tab badges
+  const fileCounts = {
+    all: task.files.length,
+    admin: task.files.filter((f) => f.uploader?.role === "ADMIN" || f.uploader?.role === "ERASPHERE").length,
+    worker: task.files.filter((f) => f.uploader?.role === "WORKER").length,
+    client: task.files.filter((f) => f.uploader?.role === "CLIENT").length,
+  };
+
+  const visibleFiles = task.files.filter((f) => {
+    if (fileTab === "all") return true;
+    if (fileTab === "admin") return f.uploader?.role === "ADMIN" || f.uploader?.role === "ERASPHERE";
+    if (fileTab === "worker") return f.uploader?.role === "WORKER";
+    if (fileTab === "client") return f.uploader?.role === "CLIENT";
+    return true;
+  });
+
   const filesBySection: { [key: string]: TaskFile[] } = {};
-  task.files.forEach((file) => {
+  visibleFiles.forEach((file) => {
     const section = file.section || "Uncategorized";
     if (!filesBySection[section]) {
       filesBySection[section] = [];
@@ -476,7 +500,50 @@ const TaskDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Files Section */}
           <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-6 shadow-lg shadow-[var(--color-card-shadow)] backdrop-blur-md">
-            <h2 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">Files & Screenshots</h2>
+            {/* Header row */}
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
+                Files & Screenshots
+                {refreshing && <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">Refreshing...</span>}
+              </h2>
+              <button
+                type="button"
+                onClick={fetchTask}
+                disabled={refreshing}
+                className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
+              >
+                ↻ Refresh
+              </button>
+            </div>
+
+            {/* Filter tabs — only show if there are files */}
+            {fileCounts.all > 0 && (
+              <div className="mb-4 flex flex-wrap gap-1.5">
+                {(["all", "admin", "worker", "client"] as const).map((tab) => {
+                  const count = fileCounts[tab];
+                  if (tab !== "all" && count === 0) return null;
+                  const label = tab === "all" ? "All" : tab.charAt(0).toUpperCase() + tab.slice(1);
+                  const active = fileTab === tab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      onClick={() => setFileTab(tab)}
+                      className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors border ${
+                        active
+                          ? "bg-white text-gray-900 border-white"
+                          : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-3)]"
+                      }`}
+                    >
+                      {label}
+                      <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${active ? "bg-white/20" : "bg-[var(--color-surface-3)]"}`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Upload Form */}
             <div className="mb-6 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
@@ -540,17 +607,40 @@ const TaskDetailPage: React.FC = () => {
                               <p className="mt-1 text-xs text-[var(--color-text-muted)]">
                                 {file.fileType} • v{file.version} • {new Date(file.uploadedAt).toLocaleDateString()}
                               </p>
+                              {file.uploader && (
+                                <div className="mt-1.5 flex items-center gap-1.5">
+                                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                                    file.uploader.role === "ADMIN" || file.uploader.role === "ERASPHERE"
+                                      ? "bg-purple-500/20 text-purple-400"
+                                      : file.uploader.role === "WORKER"
+                                      ? "bg-blue-500/20 text-blue-400"
+                                      : "bg-green-500/20 text-green-400"
+                                  }`}>
+                                    {file.uploader.role === "ERASPHERE" ? "Admin" : file.uploader.role}
+                                  </span>
+                                  <span className="text-xs text-[var(--color-text-muted)]">{file.uploader.name}</span>
+                                </div>
+                              )}
                             </div>
-                            <a
+                            <div className="flex shrink-0 gap-2">
+                              <button
+                                type="button"
                                 onClick={() => {
-                                setViewerFile(file);
-                                setViewerOpen(true);
-                              }}
-                              href={getFileUrl(file.fileUrl)}
-                              className="btn-primary px-3 py-1 text-xs font-semibold"
-                            >
-                              View
-                            </a>
+                                  setViewerFile(file);
+                                  setViewerOpen(true);
+                                }}
+                                className="btn-primary px-3 py-1 text-xs font-semibold"
+                              >
+                                View
+                              </button>
+                              <a
+                                href={getFileUrl(file.fileUrl)}
+                                download={file.fileName}
+                                className="flex items-center gap-1 rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                              >
+                                Download
+                              </a>
+                            </div>
                           </div>
 
                           {/* File Comments Section */}
