@@ -63,7 +63,7 @@ const ListDisplay = <T extends { id: number }>({
             </button>
 
             <div
-              className="relative z-10 flex shrink-0 flex-wrap gap-2 justify-start sm:flex-nowrap sm:justify-end"
+              className="relative z-10 flex shrink-0 flex-wrap gap-2 justify-start sm:flex-nowrap sm:justify-end pointer-events-auto"
             >
               {showProfileStatus && isIncomplete && onResendInvite && (
                 <button
@@ -76,7 +76,12 @@ const ListDisplay = <T extends { id: number }>({
               )}
               <button
                 type="button"
-                onClick={() => onDelete(item.id)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (window.confirm("Delete this client? This cannot be undone.")) {
+                    onDelete(item.id);
+                  }
+                }}
                 className="h-9 min-w-[4.5rem] cursor-pointer px-3 text-sm font-semibold text-red-300 bg-red-500/20 rounded-full border border-red-500/30 hover:bg-red-500/40 hover:border-red-500/50 active:bg-red-500/50 transition-colors whitespace-nowrap"
               >
                 Delete
