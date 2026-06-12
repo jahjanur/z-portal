@@ -107,10 +107,11 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
                           {c.company} • {c.email}
                         </p>
                       </div>
-                      <div className="flex gap-2 ml-3">
+                      <div className="flex shrink-0 gap-2 ml-3 pointer-events-auto">
                         {/* Only show Resend Invite for INCOMPLETE clients - SAME LOGIC AS CLIENTSLIST */}
                         {isIncomplete && (
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleResendInvite(c.id, c.email);
@@ -138,14 +139,16 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
                           </button>
                         )}
                         <button
+                          type="button"
                           onClick={(e) => {
+                            e.preventDefault();
                             e.stopPropagation();
-                            if (confirm(`Delete ${c.name}?`)) {
+                            if (window.confirm(`Delete ${c.name}? This cannot be undone.`)) {
                               onDelete(c.id);
                               setSearch("");
                             }
                           }}
-                          className="px-3 py-1.5 text-xs font-semibold text-red-300 bg-red-500/20 rounded-full hover:bg-red-500/30 transition-colors border border-red-500/30"
+                          className="px-3 py-1.5 text-xs font-semibold text-red-300 bg-red-500/20 rounded-full hover:bg-red-500/30 transition-colors border border-red-500/30 cursor-pointer"
                           title="Delete client"
                         >
                           Delete

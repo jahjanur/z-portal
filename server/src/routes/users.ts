@@ -671,10 +671,54 @@ router.post("/complete-profile", uploadFile.array("files", 10), async (req, res)
   }
 });
 
-// delete user
+// delete user (and all related data to avoid FK violations)
 router.delete("/:id", verifyJWT, verifyAdmin, async (req, res) => {
   try {
-    await prisma.user.delete({ where: { id: Number(req.params.id) } });
+    const id = Number(req.params.id);
+    const user = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Comments and activity by this user (worker/any role)
+      await tx.fileComment.deleteMany({ where: { userId: id } });
+      await tx.taskComment.deleteMany({ where: { userId: id } });
+      await tx.invite.deleteMany({ where: { invitedById: id } });
+
+      if (user.role === "CLIENT") {
+        // 2. Tasks for this client: files, comments, workers, then tasks
+        const clientTaskIds = (await tx.task.findMany({ where: { clientId: id }, select: { id: true } })).map((t) => t.id);
+        if (clientTaskIds.length > 0) {
+          await tx.fileComment.deleteMany({ where: { file: { taskId: { in: clientTaskIds } } } });
+          await tx.taskComment.deleteMany({ where: { taskId: { in: clientTaskIds } } });
+          await tx.taskWorker.deleteMany({ where: { taskId: { in: clientTaskIds } } });
+          await tx.taskFile.deleteMany({ where: { taskId: { in: clientTaskIds } } });
+          await tx.task.deleteMany({ where: { id: { in: clientTaskIds } } });
+        }
+        // 3. Invoices (line items cascade in DB or delete explicitly)
+        const invoiceIds = (await tx.invoice.findMany({ where: { clientId: id }, select: { id: true } })).map((i) => i.id);
+        if (invoiceIds.length > 0) {
+          await tx.invoiceLineItem.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+          await tx.invoice.deleteMany({ where: { clientId: id } });
+        }
+        // 4. Domains, unlink projects/timesheet projects
+        await tx.domain.deleteMany({ where: { clientId: id } });
+        await tx.project.updateMany({ where: { clientId: id }, data: { clientId: null } });
+        await tx.timesheetProject.updateMany({ where: { clientId: id }, data: { clientId: null } });
+      }
+
+      // 5. If EraSphere: unlink referred clients so we can delete this user
+      await tx.user.updateMany({ where: { referredById: id }, data: { referredById: null } });
+
+      // 6. Notifications and preferences (may already cascade via schema; safe to delete explicitly)
+      await tx.notification.deleteMany({ where: { userId: id } });
+      await tx.notificationPreference.deleteMany({ where: { userId: id } });
+
+      // 7. Finally delete the user
+      await tx.user.delete({ where: { id } });
+    });
+
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting user:", error);
