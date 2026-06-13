@@ -149,6 +149,23 @@ router.get("/", verifyJWT, async (req: any, res) => {
       return res.status(403).json({ error: "Invalid role" });
     }
 
+    // Channel visibility for list payloads — mirror GET /tasks/:id so internal
+    // (worker-channel) files/comments never leak into a client's response, and
+    // client-channel content isn't exposed to workers. ADMIN sees everything.
+    if (role === "CLIENT" || role === "ERASPHERE") {
+      tasks = (tasks as any[]).map((t: any) => ({
+        ...t,
+        comments: (t.comments ?? []).filter((c: { visibleToClient: boolean }) => c.visibleToClient),
+        files: (t.files ?? []).filter((f: { visibleToClient: boolean }) => f.visibleToClient),
+      }));
+    } else if (role === "WORKER") {
+      tasks = (tasks as any[]).map((t: any) => ({
+        ...t,
+        comments: (t.comments ?? []).filter((c: { visibleToClient: boolean }) => !c.visibleToClient),
+        files: (t.files ?? []).filter((f: { visibleToClient: boolean }) => !f.visibleToClient),
+      }));
+    }
+
     res.json(tasks);
   } catch (error) {
     console.error("Error fetching tasks:", error);
