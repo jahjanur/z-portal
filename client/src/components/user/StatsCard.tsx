@@ -1,4 +1,5 @@
 import React from "react";
+import StatCard from "../ui/StatCard";
 
 interface StatsCardProps {
   title: string;
@@ -9,34 +10,13 @@ interface StatsCardProps {
   valueColor?: string;
 }
 
-const StatsCard: React.FC<StatsCardProps> = ({
-  title,
-  value,
-  subtitle,
-  icon,
-  iconBgColor,
-  valueColor,
-}) => {
-  return (
-    <div
-      className="p-6 rounded-2xl border backdrop-blur-sm"
-      style={{
-        backgroundColor: "rgba(42, 42, 42, 0.8)",
-        borderColor: "rgba(255, 255, 255, 0.08)",
-      }}
-    >
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm font-semibold text-gray-400 uppercase tracking-wide">{title}</p>
-        <div className="p-2 rounded-lg" style={{ backgroundColor: iconBgColor }}>
-          {icon}
-        </div>
-      </div>
-      <p className="text-3xl font-bold text-white" style={{ color: valueColor || undefined }}>
-        {value}
-      </p>
-      {subtitle && <p className="mt-2 text-sm text-gray-500">{subtitle}</p>}
-    </div>
-  );
+/**
+ * Legacy stats card — kept for API compatibility.
+ * Renders the modern ui/StatCard internally (iconBgColor/valueColor are
+ * superseded by the token-based design system and intentionally unused).
+ */
+const StatsCard: React.FC<StatsCardProps> = ({ title, value, subtitle, icon }) => {
+  return <StatCard label={title} value={value} icon={icon} hint={subtitle} />;
 };
 
 export default StatsCard;

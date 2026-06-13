@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 import { useAdmin } from "../../contexts/AdminContext";
 import TasksList from "../../components/admin/TasksList";
+import PageHeader from "../../components/ui/PageHeader";
+import EmptyState from "../../components/ui/EmptyState";
+import { SkeletonRows } from "../../components/ui/Skeleton";
+import { CONTROL_INPUT } from "../../components/ui/controls";
 
 const colors = { primary: "" };
 
@@ -42,80 +46,69 @@ export default function EraSphereTasksPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
-        <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Tasks</h2>
-        <div className="flex min-h-[200px] items-center justify-center rounded-2xl card-panel p-8">
-          <span className="text-[var(--color-text-muted)]">Loading...</span>
-        </div>
+      <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0 space-y-6">
+        <PageHeader title="EraSphere Tasks" subtitle="Tasks for clients referred by EraSphere partners" />
+        <SkeletonRows rows={5} />
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
-      <div className="rounded-2xl card-panel p-4 shadow-xl sm:p-6">
-        <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Tasks</h2>
-        <p className="mb-6 text-sm text-[var(--color-text-muted)]">
-          Tasks for clients referred by EraSphere partners. Create or edit tasks from the main Dashboard → Tasks (filter: EraSphere only).
-        </p>
+  const filterTabs: { key: StatusCategory; label: string; count: number }[] = [
+    { key: "pending", label: "Pending", count: pendingTasks.length },
+    { key: "in_progress", label: "In Progress", count: inProgressTasks.length },
+    { key: "completed", label: "Completed", count: completedTasks.length },
+  ];
 
-        <div className="mb-6">
+  return (
+    <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0 space-y-6">
+      <PageHeader
+        title="EraSphere Tasks"
+        subtitle="Tasks for clients referred by EraSphere partners. Create or edit tasks from the main Dashboard → Tasks (filter: EraSphere only)."
+      >
+        <div className="space-y-4">
           <input
             type="search"
             placeholder="Search tasks by title, description, or client..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="input-dark w-full max-w-sm rounded-xl px-4 py-2.5 text-sm"
+            className={`${CONTROL_INPUT} w-full sm:max-w-sm`}
           />
-        </div>
 
-        <div className="mb-4 flex gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1">
-          <button
-            type="button"
-            onClick={() => setStatusCategory("pending")}
-            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-              statusCategory === "pending"
-                ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
-                : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)]"
-            }`}
-          >
-            Pending ({pendingTasks.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusCategory("in_progress")}
-            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-              statusCategory === "in_progress"
-                ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
-                : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)]"
-            }`}
-          >
-            In Progress ({inProgressTasks.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatusCategory("completed")}
-            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
-              statusCategory === "completed"
-                ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
-                : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)]"
-            }`}
-          >
-            Completed ({completedTasks.length})
-          </button>
-        </div>
-
-        <div className="mt-4">
-          {currentTasks.length > 0 ? (
-            <TasksList tasks={currentTasks} onDelete={deleteTask} colors={colors} />
-          ) : (
-            <div className="card-panel py-12 text-center rounded-xl">
-              <p className="text-sm font-medium text-[var(--color-text-muted)]">
-                {searchQuery ? "No tasks match your search." : "No EraSphere tasks in this category."}
-              </p>
+          {/* Segmented filter pills — horizontal scroll on mobile */}
+          <div className="-mx-1 overflow-x-auto px-1">
+            <div className="inline-flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1">
+              {filterTabs.map(({ key, label, count }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatusCategory(key)}
+                  className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                    statusCategory === key
+                      ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
+                      : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-secondary)]"
+                  }`}
+                >
+                  {label} ({count})
+                </button>
+              ))}
             </div>
-          )}
+          </div>
         </div>
+      </PageHeader>
+
+      <div className="animate-fade-up">
+        {currentTasks.length > 0 ? (
+          <TasksList tasks={currentTasks} onDelete={deleteTask} colors={colors} />
+        ) : (
+          <EmptyState
+            title={searchQuery ? "No tasks match your search" : "No EraSphere tasks in this category"}
+            description={
+              searchQuery
+                ? "Try a different title, description or client name."
+                : "Tasks for EraSphere-referred clients will appear here."
+            }
+          />
+        )}
       </div>
     </div>
   );

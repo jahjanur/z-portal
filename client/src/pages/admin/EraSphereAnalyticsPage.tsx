@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
+import { CircleDollarSign, Users, ClipboardList, CheckCircle2, FileText, UserRound } from "lucide-react";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/ui/StatCard";
+import StatusBadge from "../../components/ui/StatusBadge";
+import EmptyState from "../../components/ui/EmptyState";
+import { SkeletonDashboard } from "../../components/ui/Skeleton";
 
 interface Client {
   id: number;
@@ -85,26 +91,16 @@ export default function EraSphereAnalyticsPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-[1400px] w-full max-w-full min-w-0 px-4 py-8">
-        <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Dashboard</h2>
-        <div className="flex min-h-[300px] items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex gap-2">
-              <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-80" />
-              <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-60" style={{ animationDelay: "0.1s" }} />
-              <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-40" style={{ animationDelay: "0.2s" }} />
-            </div>
-            <span className="text-[var(--color-text-muted)]">Loading analytics...</span>
-          </div>
-        </div>
+        <SkeletonDashboard />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="mx-auto max-w-[1400px] w-full max-w-full min-w-0 px-4 py-8">
-        <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Dashboard</h2>
-        <div className="rounded-2xl card-panel p-6 border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)]">
+      <div className="mx-auto max-w-[1400px] w-full max-w-full min-w-0 px-4 py-8 space-y-6">
+        <PageHeader title="EraSphere Dashboard" subtitle="Overview of your referred clients, projects, and earnings" />
+        <div className="card-panel p-5 sm:p-6 border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)]">
           <p className="text-[var(--color-destructive-text)]">{error || "No data available"}</p>
         </div>
       </div>
@@ -117,39 +113,53 @@ export default function EraSphereAnalyticsPage() {
   const recentInvoices = [...invoices].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
 
   return (
-    <div className="mx-auto max-w-[1400px] w-full max-w-full min-w-0 px-4 py-8">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Dashboard</h2>
-        <p className="mt-1 text-sm text-[var(--color-text-muted)]">Overview of your referred clients, projects, and earnings</p>
-      </div>
+    <div className="mx-auto max-w-[1400px] w-full max-w-full min-w-0 px-4 py-8 space-y-6">
+      <PageHeader
+        title="EraSphere Dashboard"
+        subtitle="All-time overview of your referred clients, projects, and earnings"
+      />
 
       {/* Stats cards */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl card-panel p-5 shadow-lg">
-          <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Total Clients</p>
-          <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">{stats.totalClients}</p>
-        </div>
-        <div className="rounded-2xl card-panel p-5 shadow-lg">
-          <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Active Tasks</p>
-          <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">{stats.activeTasks}</p>
-          <p className="mt-1 text-xs text-[var(--color-text-muted)]">{stats.completedTasks} completed</p>
-        </div>
-        <div className="rounded-2xl card-panel p-5 shadow-lg">
-          <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Total Revenue</p>
-          <p className="mt-2 text-3xl font-bold text-[var(--color-text-primary)]">{formatCurrency(stats.totalRevenue)}</p>
-        </div>
-        <div className="rounded-2xl card-panel p-5 shadow-lg">
-          <p className="text-sm font-semibold text-green-600 uppercase tracking-wide">Paid</p>
-          <p className="mt-2 text-3xl font-bold text-green-600">{formatCurrency(stats.paidRevenue)}</p>
-          <p className="mt-1 text-xs text-amber-600 font-medium">{formatCurrency(stats.pendingRevenue)} pending</p>
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 stagger-children">
+        <StatCard
+          label="Total Clients"
+          value={stats.totalClients}
+          tone="info"
+          icon={<Users className="h-5 w-5" />}
+          onClick={() => navigate("/admin/clients")}
+        />
+        <StatCard
+          label="Active Tasks"
+          value={stats.activeTasks}
+          tone="neutral"
+          icon={<ClipboardList className="h-5 w-5" />}
+          hint={`${stats.completedTasks} completed`}
+          onClick={() => navigate("/admin/tasks")}
+        />
+        <StatCard
+          label="Total Revenue"
+          value={formatCurrency(stats.totalRevenue)}
+          tone="success"
+          icon={<CircleDollarSign className="h-5 w-5" />}
+        />
+        <StatCard
+          label="Paid"
+          value={formatCurrency(stats.paidRevenue)}
+          tone={stats.pendingRevenue > 0 ? "warning" : "success"}
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          hint={
+            <span className="font-medium text-[var(--color-warning-text)]">
+              {formatCurrency(stats.pendingRevenue)} pending
+            </span>
+          }
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* My Clients */}
-        <div className="rounded-2xl card-panel p-5 shadow-lg">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-[var(--color-text-primary)]">My Clients</h3>
+        <div className="card-panel p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="section-title">My Clients</h3>
             <button
               onClick={() => navigate("/admin/clients")}
               className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
@@ -158,22 +168,29 @@ export default function EraSphereAnalyticsPage() {
             </button>
           </div>
           {clients.length === 0 ? (
-            <p className="py-6 text-center text-[var(--color-text-muted)]">No clients yet. Add your first client!</p>
+            <EmptyState
+              compact
+              icon={<UserRound className="h-6 w-6" />}
+              title="No clients yet"
+              description="Add your first client to get started."
+            />
           ) : (
             <div className="space-y-3">
               {clients.slice(0, 5).map((c) => (
-                <div key={c.id} className="flex items-center justify-between rounded-lg card-panel p-3">
+                <div
+                  key={c.id}
+                  className="row-hover flex flex-col gap-2 rounded-xl border border-[var(--color-border)] p-3 transition-all sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div className="min-w-0">
                     <p className="font-medium text-[var(--color-text-primary)] truncate">{c.name}</p>
                     <p className="text-xs text-[var(--color-text-muted)]">{c.company || c.email}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
-                    c.profileStatus === "COMPLETE"
-                      ? "bg-green-500/10 text-green-600"
-                      : "bg-amber-500/10 text-amber-600"
-                  }`}>
+                  <StatusBadge
+                    status={c.profileStatus === "COMPLETE" ? "COMPLETE" : "INCOMPLETE"}
+                    className="shrink-0 self-start sm:self-center"
+                  >
                     {c.profileStatus === "COMPLETE" ? "Complete" : "Incomplete"}
-                  </span>
+                  </StatusBadge>
                 </div>
               ))}
             </div>
@@ -181,9 +198,9 @@ export default function EraSphereAnalyticsPage() {
         </div>
 
         {/* Recent Tasks */}
-        <div className="rounded-2xl card-panel p-5 shadow-lg">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Recent Tasks</h3>
+        <div className="card-panel p-5 sm:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="section-title">Recent Tasks</h3>
             <button
               onClick={() => navigate("/admin/tasks")}
               className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
@@ -192,61 +209,60 @@ export default function EraSphereAnalyticsPage() {
             </button>
           </div>
           {recentTasks.length === 0 ? (
-            <p className="py-6 text-center text-[var(--color-text-muted)]">No tasks yet.</p>
+            <EmptyState
+              compact
+              icon={<ClipboardList className="h-6 w-6" />}
+              title="No tasks yet"
+              description="Tasks for your clients will appear here."
+            />
           ) : (
             <div className="space-y-3">
-              {recentTasks.map((t) => {
-                const statusColors: Record<string, string> = {
-                  PENDING: "bg-amber-500/10 text-amber-600",
-                  IN_PROGRESS: "bg-blue-500/10 text-blue-600",
-                  PENDING_APPROVAL: "bg-purple-500/10 text-purple-600",
-                  COMPLETED: "bg-green-500/10 text-green-600",
-                };
-                return (
-                  <div key={t.id} className="flex items-center justify-between rounded-lg card-panel p-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-[var(--color-text-primary)] truncate">{t.title}</p>
-                      <p className="text-xs text-[var(--color-text-muted)]">{new Date(t.createdAt).toLocaleDateString()}</p>
-                    </div>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${statusColors[t.status] || "bg-gray-500/10 text-gray-600"}`}>
-                      {t.status.replace(/_/g, " ")}
-                    </span>
+              {recentTasks.map((t) => (
+                <div
+                  key={t.id}
+                  className="row-hover flex flex-col gap-2 rounded-xl border border-[var(--color-border)] p-3 transition-all sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-[var(--color-text-primary)] truncate">{t.title}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{new Date(t.createdAt).toLocaleDateString()}</p>
                   </div>
-                );
-              })}
+                  <StatusBadge status={t.status} className="shrink-0 self-start sm:self-center" />
+                </div>
+              ))}
             </div>
           )}
         </div>
 
         {/* Recent Invoices (read-only view of their clients' invoices) */}
-        <div className="rounded-2xl card-panel p-5 shadow-lg lg:col-span-2 min-w-0 max-w-full">
-          <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Revenue Breakdown</h3>
+        <div className="card-panel p-5 sm:p-6 lg:col-span-2 min-w-0 max-w-full">
+          <h3 className="section-title mb-4">Revenue Breakdown</h3>
           {recentInvoices.length === 0 ? (
-            <p className="py-6 text-center text-[var(--color-text-muted)]">No invoices yet.</p>
+            <EmptyState
+              compact
+              icon={<FileText className="h-6 w-6" />}
+              title="No invoices yet"
+              description="Invoices issued to your clients will appear here."
+            />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+            <div className="table-wrap">
+              <table className="table-modern">
                 <thead>
-                  <tr className="border-b border-[var(--color-border)]">
-                    <th className="pb-3 pr-4 font-semibold text-[var(--color-text-primary)]">Invoice</th>
-                    <th className="pb-3 pr-4 font-semibold text-[var(--color-text-primary)]">Amount</th>
-                    <th className="pb-3 pr-4 font-semibold text-[var(--color-text-primary)]">Status</th>
-                    <th className="pb-3 font-semibold text-[var(--color-text-primary)]">Date</th>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recentInvoices.map((inv) => (
-                    <tr key={inv.id} className="border-b border-[var(--color-border)] last:border-0">
-                      <td className="py-3 pr-4 text-[var(--color-text-primary)]">{inv.invoiceNumber}</td>
-                      <td className="py-3 pr-4 font-medium text-[var(--color-text-primary)]">{formatCurrency(inv.amount)}</td>
-                      <td className="py-3 pr-4">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                          inv.status === "PAID" ? "bg-green-500/10 text-green-600" : "bg-amber-500/10 text-amber-600"
-                        }`}>
-                          {inv.status}
-                        </span>
+                    <tr key={inv.id}>
+                      <td className="text-[var(--color-text-primary)]">{inv.invoiceNumber}</td>
+                      <td className="font-medium text-[var(--color-text-primary)]">{formatCurrency(inv.amount)}</td>
+                      <td>
+                        <StatusBadge status={inv.status} />
                       </td>
-                      <td className="py-3 text-[var(--color-text-muted)]">{new Date(inv.createdAt).toLocaleDateString()}</td>
+                      <td className="text-[var(--color-text-muted)]">{new Date(inv.createdAt).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>

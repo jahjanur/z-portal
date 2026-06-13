@@ -1,6 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Pagination from "../ui/Pagination";
+import StatusBadge from "../ui/StatusBadge";
+import EmptyState from "../ui/EmptyState";
+import Button from "../ui/Button";
 
 interface User {
   name: string;
@@ -32,6 +35,12 @@ interface TasksListProps {
 
 const PAGE_SIZE = 10;
 
+const FILTERS = [
+  { key: "all", label: "All" },
+  { key: "withProject", label: "In Projects" },
+  { key: "standalone", label: "Standalone" },
+] as const;
+
 const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"all" | "grouped">("all");
@@ -39,23 +48,6 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
   const effectiveViewMode = filter === "withProject" ? "grouped" : viewMode;
-
-  const getStatusColor = () => {
-    return "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)] border border-[var(--color-border-hover)]";
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-        return "✓ Completed";
-      case "IN_PROGRESS":
-        return "⚡ In Progress";
-      case "PENDING":
-        return "○ Pending";
-      default:
-        return status;
-    }
-  };
 
   const toggleProject = (key: string) => {
     const newExpanded = new Set(expandedProjects);
@@ -85,7 +77,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
         const key = task.projectId ? `project-${task.projectId}` : 'standalone';
         if (!acc[key]) {
           acc[key] = {
-            projectName: task.project?.name || '📋 Standalone Tasks',
+            projectName: task.project?.name || 'Standalone Tasks',
             projectId: task.projectId,
             tasks: [],
           };
@@ -98,7 +90,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
   const TaskCard = ({ task }: { task: Task }) => (
     <li className="list-none">
       <article
-        className="group cursor-pointer rounded-xl card-panel p-4 shadow-lg transition hover:-translate-y-[1px] card-panel-hover"
+        className="card-panel row-hover group cursor-pointer p-4"
         onClick={() => navigate(`/tasks/${task.id}`)}
         role="button"
         tabIndex={0}
@@ -110,30 +102,24 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
           }
         }}
       >
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0 flex-1">
             {/* Title & Status */}
             <div className="mb-2 flex flex-wrap items-center gap-2 sm:gap-3">
-              <h4 className="text-base font-semibold text-[var(--color-text-primary)] transition-colors group-hover:text-[var(--color-text-primary)] break-words">
+              <h4 className="min-w-0 break-words text-base font-semibold text-[var(--color-text-primary)]">
                 {task.title}
               </h4>
-              <span 
-                className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusColor()} whitespace-nowrap`}
-                role="status"
-                aria-label={`Status: ${getStatusLabel(task.status)}`}
-              >
-                {getStatusLabel(task.status)}
-              </span>
+              <StatusBadge status={task.status} />
             </div>
 
             {/* Project Badge (if in project) */}
             {task.project && effectiveViewMode === "all" && (
-              <div className="mb-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border-hover)] bg-[var(--color-surface-3)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-primary)]">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <div className="mb-2 flex min-w-0">
+                <span className="inline-flex min-w-0 items-center gap-1.5 rounded-full border border-[var(--color-border-hover)] bg-[var(--color-surface-3)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-primary)]">
+                  <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                   </svg>
-                  <span aria-label={`Project: ${task.project.name}`}>{task.project.name}</span>
+                  <span className="min-w-0 truncate" aria-label={`Project: ${task.project.name}`}>{task.project.name}</span>
                 </span>
               </div>
             )}
@@ -142,7 +128,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
             <dl className="flex flex-wrap items-center gap-3 text-sm text-[var(--color-text-muted)]">
               <div className="flex items-center gap-1.5">
                 <dt className="sr-only">Client:</dt>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <dd>{task.client?.name || `Client #${task.clientId}`}</dd>
@@ -150,7 +136,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
 
               <div className="flex items-center gap-1.5">
                 <dt className="sr-only">Worker:</dt>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 <dd>
@@ -163,7 +149,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
               {task.dueDate && (
                 <div className="flex items-center gap-1.5">
                   <dt className="sr-only">Due date:</dt>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <dd>
@@ -177,19 +163,21 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
           </div>
 
           {/* Actions: Delete */}
-          <div className="flex flex-wrap gap-2 justify-start shrink-0 sm:justify-end">
-            <button
+          <div className="flex w-full gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+            <Button
+              variant="danger"
+              size="sm"
+              className="flex-1 sm:flex-none"
               onClick={(e) => {
                 e.stopPropagation();
                 if (confirm(`Delete task "${task.title}"?`)) {
                   onDelete(task.id);
                 }
               }}
-              className="h-9 px-3 text-sm font-semibold rounded-lg border border-red-500/20 bg-red-500/10 text-red-300 opacity-0 transition hover:border-red-500/30 hover:bg-red-500/15 group-hover:opacity-100 focus:opacity-100 whitespace-nowrap"
               aria-label={`Delete task: ${task.title}`}
             >
               Delete
-            </button>
+            </Button>
           </div>
         </div>
       </article>
@@ -197,71 +185,54 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
   );
 
   return (
-    <section className="space-y-4 min-w-0 max-w-full" aria-labelledby="tasks-heading">
+    <section className="min-w-0 max-w-full space-y-4" aria-labelledby="tasks-heading">
       {/* Header with Controls */}
-      <header className="flex flex-col gap-4 rounded-xl card-panel p-4 shadow-lg sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <h3 id="tasks-heading" className="text-lg font-bold text-[var(--color-text-primary)]">
+      <header className="card-panel flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <h3 id="tasks-heading" className="shrink-0 text-lg font-bold text-[var(--color-text-primary)]">
             Tasks
             <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
               ({filteredTasks.length})
             </span>
           </h3>
 
-          {/* Filter Tabs */}
-          <div className="flex gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1" role="tablist" aria-label="Task filters">
-            <button
-              onClick={() => setFilter("all")}
-              role="tab"
-              aria-selected={filter === "all"}
-              aria-controls="tasks-list"
-              className={`rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
-                filter === "all"
-                  ? "border border-[var(--color-tab-active-border)] bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
-                  : "border border-transparent bg-transparent text-[var(--color-tab-inactive-text)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:border-[var(--color-border)]"
-              }`}
+          {/* Filter pills */}
+          <div className="-mx-1 overflow-x-auto px-1">
+            <div
+              className="inline-flex shrink-0 gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1"
+              role="tablist"
+              aria-label="Task filters"
             >
-              All
-            </button>
-            <button
-              onClick={() => setFilter("withProject")}
-              role="tab"
-              aria-selected={filter === "withProject"}
-              aria-controls="tasks-list"
-              className={`rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
-                filter === "withProject"
-                  ? "border border-[var(--color-tab-active-border)] bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
-                  : "border border-transparent bg-transparent text-[var(--color-tab-inactive-text)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:border-[var(--color-border)]"
-              }`}
-            >
-              In Projects
-            </button>
-            <button
-              onClick={() => setFilter("standalone")}
-              role="tab"
-              aria-selected={filter === "standalone"}
-              aria-controls="tasks-list"
-              className={`rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
-                filter === "standalone"
-                  ? "border border-[var(--color-tab-active-border)] bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
-                  : "border border-transparent bg-transparent text-[var(--color-tab-inactive-text)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:border-[var(--color-border)]"
-              }`}
-            >
-              Standalone
-            </button>
+              {FILTERS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setFilter(key)}
+                  role="tab"
+                  aria-selected={filter === key}
+                  aria-controls="tasks-list"
+                  className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    filter === key
+                      ? "border border-[var(--color-tab-active-border)] bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
+                      : "border border-transparent bg-transparent text-[var(--color-tab-inactive-text)] hover:border-[var(--color-border)] hover:bg-[var(--color-tab-inactive-hover-bg)]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* View Toggle */}
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setViewMode(viewMode === "all" ? "grouped" : "all")}
           disabled={filter === "withProject"}
-          className={`btn-primary flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] focus:ring-offset-2 ${
-            filter === "withProject" ? "cursor-not-allowed opacity-50" : ""
-          }`}
+          className="w-full sm:w-auto sm:shrink-0"
           aria-label={effectiveViewMode === "all" ? "Group tasks by project" : "Show all tasks in a single list"}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             {effectiveViewMode === "all" ? (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
             ) : (
@@ -269,21 +240,21 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
             )}
           </svg>
           {effectiveViewMode === "all" ? "Group by Project" : "Show All"}
-        </button>
+        </Button>
       </header>
 
       {/* Tasks Display */}
       <div id="tasks-list" role="tabpanel">
         {filteredTasks.length === 0 ? (
-          <div className="rounded-2xl card-panel py-12 text-center shadow-lg">
-            <svg className="mx-auto mb-4 h-16 w-16 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            <p className="text-lg font-medium text-[var(--color-text-secondary)]">No tasks found</p>
-            <p className="mt-1 text-sm text-[var(--color-text-muted)]">
-              {filter !== "all" ? "Try changing the filter" : "Create your first task to get started"}
-            </p>
-          </div>
+          <EmptyState
+            title="No tasks found"
+            description={filter !== "all" ? "Try changing the filter" : "Create your first task to get started"}
+            icon={
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            }
+          />
         ) : effectiveViewMode === "grouped" && groupedTasks ? (
           <div className="space-y-6">
             {Object.entries(groupedTasks).map(([key, group]) => {
@@ -291,32 +262,32 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
               return (
                 <section
                   key={key}
-                  className="overflow-hidden rounded-2xl card-panel shadow-lg"
+                  className="card-panel overflow-hidden"
                   aria-labelledby={`project-${key}-heading`}
                 >
                   <header className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <svg className="h-5 w-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <svg className="h-5 w-5 shrink-0 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                       </svg>
-                      <h4 id={`project-${key}-heading`} className="text-base font-bold text-[var(--color-text-primary)]">
+                      <h4 id={`project-${key}-heading`} className="min-w-0 truncate text-base font-bold text-[var(--color-text-primary)]">
                         {group.projectName}
                       </h4>
-                      <span className="rounded-full border border-[var(--color-border-hover)] bg-[var(--color-surface-3)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-text-primary)]">
+                      <span className="shrink-0 rounded-full border border-[var(--color-border-hover)] bg-[var(--color-surface-3)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-text-primary)]">
                         {group.tasks.length} {group.tasks.length === 1 ? "task" : "tasks"}
                       </span>
                     </div>
                     <button
                       onClick={() => toggleProject(key)}
-                      className="rounded p-1 text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-3)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+                      className="shrink-0 rounded-lg p-1 text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-3)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
                       aria-expanded={isExpanded}
                       aria-controls={`project-${key}-tasks`}
                       aria-label={isExpanded ? `Collapse ${group.projectName}` : `Expand ${group.projectName}`}
                     >
-                      <svg 
-                        className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
-                        fill="none" 
-                        stroke="currentColor" 
+                      <svg
+                        className={`h-5 w-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                         aria-hidden="true"
                       >
@@ -342,7 +313,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
             })}
           </div>
         ) : (
-          <ul className="space-y-2" aria-label="All tasks">
+          <ul className="stagger-children space-y-3" aria-label="All tasks">
             {paginatedTasks.map((task) => (
               <TaskCard key={task.id} task={task} />
             ))}

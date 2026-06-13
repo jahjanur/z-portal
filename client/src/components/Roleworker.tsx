@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import API from "../api";
+import PageHeader from "./ui/PageHeader";
+import StatCard from "./ui/StatCard";
+import StatusBadge from "./ui/StatusBadge";
+import EmptyState from "./ui/EmptyState";
+import Button from "./ui/Button";
+import { SkeletonDashboard } from "./ui/Skeleton";
+import ProgressBar from "./user/ProgressBar";
 
 interface Client {
   id: number;
@@ -20,6 +27,10 @@ interface Task {
   client?: Client;
 }
 
+const TABS = [
+  { key: "overview", label: "Overview" },
+  { key: "tasks", label: "Tasks" },
+] as const;
 
 const RoleWorker: React.FC = () => {
   const navigate = useNavigate();
@@ -31,7 +42,7 @@ const RoleWorker: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  
+
   useEffect(() => {
     fetchTasks();
   }, []);
@@ -54,20 +65,6 @@ const RoleWorker: React.FC = () => {
       setError(err instanceof Error ? err.message : "Failed to fetch tasks");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getStatusColor = (status?: string | null) => {
-    if (!status) return "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] border-[var(--color-border)]";
-    switch (status.toUpperCase()) {
-      case "COMPLETED":
-        return "bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30";
-      case "IN_PROGRESS":
-        return "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30";
-      case "PENDING":
-        return "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30";
-      default:
-        return "bg-[var(--color-surface-3)] text-[var(--color-text-muted)] border-[var(--color-border)]";
     }
   };
 
@@ -110,355 +107,313 @@ const RoleWorker: React.FC = () => {
     return matchesStatus && matchesSearch;
   });
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-transparent">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)]" />
-            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-80" style={{ animationDelay: "0.1s" }} />
-            <div className="w-3 h-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-60" style={{ animationDelay: "0.2s" }} />
-          </div>
-          <span className="text-lg font-medium text-[var(--color-text-muted)]">Loading your tasks...</span>
-        </div>
-      </div>
-    );
-  }
+  const firstName = (localStorage.getItem("name") || "").trim().split(" ")[0];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-  const cardClass = "p-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] backdrop-blur-sm";
+  if (loading) {
+    return <SkeletonDashboard />;
+  }
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-transparent">
-        <div className="max-w-md p-6 border border-red-500/30 bg-red-500/10 rounded-2xl">
-          <p className="mb-2 text-lg font-semibold text-red-300">Error:</p>
-          <p className="text-red-400">{error}</p>
-          <button
-            onClick={fetchTasks}
-            className="btn-primary px-4 py-2 mt-4 text-sm font-semibold rounded-full"
-          >
+      <div className="mx-auto max-w-md animate-fade-up pt-10">
+        <div className="rounded-2xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] p-5 text-center sm:p-6">
+          <p className="text-base font-semibold text-[var(--color-destructive-text)]">Something went wrong</p>
+          <p className="mt-1.5 text-sm text-[var(--color-text-muted)]">{error}</p>
+          <Button variant="secondary" size="sm" className="mt-4" onClick={fetchTasks}>
             Try Again
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-transparent py-24">
-      <div className="px-4 mx-auto max-w-7xl min-w-0">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="mb-2 text-4xl font-bold text-[var(--color-text-primary)]">
-            My <span className="text-[var(--color-text-muted)]">Tasks</span>
-          </h1>
-          <p className="text-lg text-[var(--color-text-muted)]">Track and manage your assigned tasks. Use the menu to switch between Overview and Tasks.</p>
+    <div className="space-y-6">
+      <PageHeader
+        title={firstName ? `${greeting}, ${firstName}` : greeting}
+        subtitle="Track and manage your assigned tasks."
+      >
+        {/* Tab pills — segmented control */}
+        <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
+          <div className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1 shadow-elev-sm">
+            {TABS.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSearchParams({ tab: key })}
+                aria-current={activeTab === key ? "page" : undefined}
+                className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-semibold transition-colors ${
+                  activeTab === key
+                    ? "bg-[var(--color-nav-active-bg)] text-[var(--color-nav-active-text)]"
+                    : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
+      </PageHeader>
 
-        {/* Overview Tab */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {/* Total Tasks */}
-              <div className={cardClass}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Total Tasks</p>
-                  <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-                    <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-[var(--color-text-primary)]">{tasks.length}</p>
-                <p className="mt-2 text-sm text-[var(--color-text-muted)]">{completedTasks} completed</p>
-              </div>
+      {/* Overview Tab */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 stagger-children">
+            <StatCard
+              label="Total Tasks"
+              value={tasks.length}
+              hint={`${completedTasks} completed`}
+              icon={
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              }
+            />
+            <StatCard
+              label="In Progress"
+              value={inProgressTasks}
+              hint="Active work"
+              tone="info"
+              icon={
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              }
+            />
+            <StatCard
+              label="Overdue"
+              value={overdueTasks}
+              hint="Need attention"
+              tone="danger"
+              icon={
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              }
+            />
+            <StatCard
+              label="Due This Week"
+              value={upcomingTasks}
+              hint="Next 7 days"
+              tone="warning"
+              icon={
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              }
+            />
+          </div>
 
-              {/* Active Tasks */}
-              <div className={cardClass}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">In Progress</p>
-                  <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-                    <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-blue-400">{inProgressTasks}</p>
-                <p className="mt-2 text-sm text-[var(--color-text-muted)]">Active work</p>
-              </div>
-
-              {/* Overdue Tasks */}
-              <div className={cardClass}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Overdue</p>
-                  <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-                    <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-red-400">{overdueTasks}</p>
-                <p className="mt-2 text-sm text-[var(--color-text-muted)]">Need attention</p>
-              </div>
-
-              {/* Upcoming Tasks */}
-              <div className={cardClass}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Due This Week</p>
-                  <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-                    <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-amber-400">{upcomingTasks}</p>
-                <p className="mt-2 text-sm text-[var(--color-text-muted)]">Next 7 days</p>
-              </div>
-            </div>
-
-            {/* Task Progress */}
-            <div className={cardClass}>
-              <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Task Progress</h3>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-[var(--color-text-secondary)]">Completed</span>
-                    <span className="text-sm font-bold text-green-600">{completedTasks} / {tasks.length}</span>
-                  </div>
-                  <div className="w-full h-3 overflow-hidden bg-[var(--color-surface-3)] rounded-full">
-                    <div 
-                      className="h-full transition-all duration-500 bg-green-500 rounded-full"
-                      style={{ width: `${tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-[var(--color-text-secondary)]">In Progress</span>
-                    <span className="text-sm font-bold text-blue-600">{inProgressTasks} / {tasks.length}</span>
-                  </div>
-                  <div className="w-full h-3 overflow-hidden bg-[var(--color-surface-3)] rounded-full">
-                    <div 
-                      className="h-full transition-all duration-500 bg-blue-500 rounded-full"
-                      style={{ width: `${tasks.length > 0 ? (inProgressTasks / tasks.length) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-[var(--color-text-secondary)]">Pending</span>
-                    <span className="text-sm font-bold text-amber-600">{pendingTasks} / {tasks.length}</span>
-                  </div>
-                  <div className="w-full h-3 overflow-hidden bg-[var(--color-surface-3)] rounded-full">
-                    <div 
-                      className="h-full transition-all duration-500 rounded-full bg-amber-500"
-                      style={{ width: `${tasks.length > 0 ? (pendingTasks / tasks.length) * 100 : 0}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent & Priority Tasks */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              {/* Overdue Tasks */}
-              {overdueTasks > 0 && (
-                <div className="card-panel p-6 shadow-lg">
-                  <div className="flex items-center gap-2 mb-4">
-                    <svg className="w-5 h-5 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <h3 className="text-lg font-bold text-[var(--color-text-primary)]">Overdue Tasks</h3>
-                  </div>
-                  <div className="space-y-3">
-                    {tasks
-                      .filter(t => {
-                        const days = getDaysUntilDue(t.dueDate);
-                        return days !== null && days < 0 && t.status?.toUpperCase() !== "COMPLETED";
-                      })
-                      .slice(0, 5)
-                      .map((task) => {
-                        const daysUntil = getDaysUntilDue(task.dueDate);
-                        
-                        return (
-                          <div
-                            key={task.id}
-                            onClick={() => navigate(`/tasks/${task.id}`)}
-                            className="p-4 rounded-lg cursor-pointer transition-all border border-red-300 dark:border-red-700 bg-[var(--color-surface-2)] hover:shadow-md hover:border-red-400 dark:hover:border-red-600 border-l-4 border-l-red-500 dark:border-l-red-400"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-[var(--color-text-primary)]">{task.title}</h4>
-                                <p className="text-sm text-[var(--color-text-secondary)]">{task.client?.name || "No client"}</p>
-                                <p className="mt-1 text-xs font-semibold text-red-600 dark:text-red-400">
-                                  Overdue by {Math.abs(daysUntil!)} days
-                                </p>
-                              </div>
-                              <span className={`shrink-0 ml-2 px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(task.status)}`}>
-                                {task.status?.replace("_", " ") || "N/A"}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                </div>
-              )}
-
-              {/* Recent Tasks */}
-              <div className={cardClass}>
-                <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Recent Tasks</h3>
-                <div className="space-y-3">
-                  {tasks.slice(0, 5).map((task) => {
-                    const daysUntil = getDaysUntilDue(task.dueDate);
-                    const isOverdue = daysUntil !== null && daysUntil < 0 && task.status?.toUpperCase() !== "COMPLETED";
-                    
-                    return (
-                      <div
-                        key={task.id}
-                        onClick={() => navigate(`/tasks/${task.id}`)}
-                        className="p-4 transition-all border border-[var(--color-border)] rounded-lg cursor-pointer hover:shadow-md hover:border-[var(--color-border-hover)]"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-[var(--color-text-primary)]">{task.title}</h4>
-                            <p className="text-sm text-[var(--color-text-muted)]">{task.client?.name || "No client"}</p>
-                            {isOverdue && (
-                              <p className="mt-1 text-xs font-semibold text-red-600">Overdue by {Math.abs(daysUntil!)} days</p>
-                            )}
-                          </div>
-                          <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(task.status)}`}>
-                            {task.status?.replace("_", " ") || "N/A"}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {tasks.length === 0 && (
-                    <p className="py-8 text-center text-[var(--color-text-muted)]">No tasks yet</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => setSearchParams({ tab: "tasks" })}
-                  className="w-full px-4 py-2 mt-4 text-sm font-semibold text-[var(--color-text-secondary)] transition-colors btn-secondary w-full rounded-lg"
-                >
-                  View All Tasks
-                </button>
-              </div>
+          {/* Task Progress */}
+          <div className="card-panel p-5 sm:p-6">
+            <h3 className="section-title mb-4">Task Progress</h3>
+            <div className="space-y-4">
+              <ProgressBar label="Completed" current={completedTasks} total={tasks.length} />
+              <ProgressBar label="In Progress" current={inProgressTasks} total={tasks.length} />
+              <ProgressBar label="Pending" current={pendingTasks} total={tasks.length} />
             </div>
           </div>
-        )}
 
-        {/* Tasks Tab */}
-        {activeTab === "tasks" && (
-          <div className="space-y-6">
-            {/* Filters */}
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex flex-wrap gap-2">
-                {["ALL", "PENDING", "IN_PROGRESS", "COMPLETED"].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => setStatusFilter(status)}
-                    className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${
-                      statusFilter === status
-                        ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
-                        : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
-                    }`}
-                  >
-                    {status.replace("_", " ")}
-                  </button>
-                ))}
-              </div>
-              <input
-                type="text"
-                placeholder="Search tasks..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-              />
-            </div>
-
-            {/* Tasks List */}
-            <div className="space-y-4">
-              {filteredTasks.length === 0 ? (
-                <div className="rounded-2xl card-panel py-12 text-center shadow-lg">
-                  <p className="text-lg font-medium text-[var(--color-text-secondary)]">No tasks found</p>
-                  <p className="text-sm text-[var(--color-text-muted)]">Try adjusting your filters</p>
+          {/* Recent & Priority Tasks */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {/* Overdue Tasks */}
+            {overdueTasks > 0 && (
+              <div className="card-panel border-[var(--color-destructive-border)] p-5 sm:p-6">
+                <div className="mb-4 flex items-center gap-2">
+                  <svg className="h-5 w-5 text-[var(--color-destructive-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <h3 className="section-title">Overdue Tasks</h3>
                 </div>
-              ) : (
-                filteredTasks.map((task) => {
+                <div className="space-y-3">
+                  {tasks
+                    .filter(t => {
+                      const days = getDaysUntilDue(t.dueDate);
+                      return days !== null && days < 0 && t.status?.toUpperCase() !== "COMPLETED";
+                    })
+                    .slice(0, 5)
+                    .map((task) => {
+                      const daysUntil = getDaysUntilDue(task.dueDate);
+
+                      return (
+                        <div
+                          key={task.id}
+                          onClick={() => navigate(`/tasks/${task.id}`)}
+                          className="card-panel card-panel-hover cursor-pointer border-[var(--color-destructive-border)] p-4"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <h4 className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{task.title}</h4>
+                              <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">{task.client?.name || "No client"}</p>
+                              <span className="badge badge-danger mt-2">
+                                Overdue by {Math.abs(daysUntil!)} days
+                              </span>
+                            </div>
+                            <StatusBadge status={task.status} className="shrink-0" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Tasks */}
+            <div className="card-panel p-5 sm:p-6">
+              <h3 className="section-title mb-4">Recent Tasks</h3>
+              <div className="space-y-3">
+                {tasks.slice(0, 5).map((task) => {
                   const daysUntil = getDaysUntilDue(task.dueDate);
                   const isOverdue = daysUntil !== null && daysUntil < 0 && task.status?.toUpperCase() !== "COMPLETED";
-                  const isDueSoon = daysUntil !== null && daysUntil >= 0 && daysUntil <= 3;
 
                   return (
                     <div
                       key={task.id}
                       onClick={() => navigate(`/tasks/${task.id}`)}
-                      className="cursor-pointer rounded-2xl card-panel card-panel-hover p-6 shadow-lg transition hover:-translate-y-[1px]"
+                      className={`card-panel card-panel-hover cursor-pointer p-4 ${
+                        isOverdue ? "border-[var(--color-destructive-border)]" : ""
+                      }`}
                     >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h3 className="mb-2 text-xl font-bold text-[var(--color-text-primary)]">{task.title}</h3>
-                          {task.description && (
-                            <p className="mb-3 text-sm text-[var(--color-text-muted)]">{task.description}</p>
-                          )}
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--color-text-muted)]">
-                            {task.client && (
-                              <span className="flex items-center gap-2">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                                <span className="font-medium">{task.client.name}</span>
-                              </span>
-                            )}
-                            {task.dueDate && (
-                              <span
-                                className={`flex items-center gap-2 ${
-                                  isOverdue
-                                    ? "text-red-600 font-semibold"
-                                    : isDueSoon
-                                    ? "text-amber-600 font-semibold"
-                                    : ""
-                                }`}
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <span>
-                                  {isOverdue
-                                    ? `Overdue by ${Math.abs(daysUntil!)} days`
-                                    : isDueSoon
-                                    ? `Due in ${daysUntil} days`
-                                    : `Due: ${formatDate(task.dueDate)}`}
-                                </span>
-                              </span>
-                            )}
-                            <span className="flex items-center gap-2">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              <span>Created: {formatDate(task.createdAt)}</span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{task.title}</h4>
+                          <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">{task.client?.name || "No client"}</p>
+                          {isOverdue && (
+                            <span className="badge badge-danger mt-2">
+                              Overdue by {Math.abs(daysUntil!)} days
                             </span>
-                          </div>
+                          )}
                         </div>
-                        <span
-                          className={`px-4 py-2 text-sm font-semibold rounded-full border ${getStatusColor(
-                            task.status
-                          )}`}
-                        >
-                          {task.status?.replace("_", " ") || "N/A"}
-                        </span>
+                        <StatusBadge status={task.status} className="shrink-0" />
                       </div>
                     </div>
                   );
-                })
-              )}
+                })}
+                {tasks.length === 0 && (
+                  <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">No tasks yet</p>
+                )}
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-4 w-full"
+                onClick={() => setSearchParams({ tab: "tasks" })}
+              >
+                View All Tasks
+              </Button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Tasks Tab */}
+      {activeTab === "tasks" && (
+        <div className="space-y-6">
+          {/* Filters */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap gap-2">
+              {["ALL", "PENDING", "IN_PROGRESS", "COMPLETED"].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                    statusFilter === status
+                      ? "border-[var(--color-tab-active-border)] bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
+                      : "border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] text-[var(--color-tab-inactive-text)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
+                  }`}
+                >
+                  {status.replace("_", " ")}
+                </button>
+              ))}
+            </div>
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input-dark w-full rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] md:w-64"
+            />
+          </div>
+
+          {/* Tasks List */}
+          <div className="space-y-4 stagger-children">
+            {filteredTasks.length === 0 ? (
+              <EmptyState
+                title="No tasks found"
+                description="Try adjusting your filters"
+                icon={
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                }
+              />
+            ) : (
+              filteredTasks.map((task) => {
+                const daysUntil = getDaysUntilDue(task.dueDate);
+                const isOverdue = daysUntil !== null && daysUntil < 0 && task.status?.toUpperCase() !== "COMPLETED";
+                const isDueSoon = daysUntil !== null && daysUntil >= 0 && daysUntil <= 3;
+
+                return (
+                  <div
+                    key={task.id}
+                    onClick={() => navigate(`/tasks/${task.id}`)}
+                    className={`card-panel card-panel-hover cursor-pointer p-5 sm:p-6 ${
+                      isOverdue ? "border-[var(--color-destructive-border)]" : ""
+                    }`}
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg font-semibold tracking-tight text-[var(--color-text-primary)]">{task.title}</h3>
+                        {task.description && (
+                          <p className="mt-1 text-sm text-[var(--color-text-muted)]">{task.description}</p>
+                        )}
+                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[var(--color-text-muted)]">
+                          {task.client && (
+                            <span className="flex items-center gap-1.5">
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                              <span className="font-medium text-[var(--color-text-secondary)]">{task.client.name}</span>
+                            </span>
+                          )}
+                          {task.dueDate && (
+                            isOverdue ? (
+                              <span className="badge badge-danger">
+                                Overdue by {Math.abs(daysUntil!)} days
+                              </span>
+                            ) : isDueSoon ? (
+                              <span className="badge badge-warning">
+                                Due in {daysUntil} days
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1.5">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span>Due: {formatDate(task.dueDate)}</span>
+                              </span>
+                            )
+                          )}
+                          <span className="flex items-center gap-1.5">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Created: {formatDate(task.createdAt)}</span>
+                          </span>
+                        </div>
+                      </div>
+                      <StatusBadge status={task.status} className="shrink-0 self-start" />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

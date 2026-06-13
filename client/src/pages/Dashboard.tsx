@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import RoleUser from "../components/Roleuser";
 import RoleWorker from "../components/Roleworker";
+import { SkeletonDashboard } from "../components/ui/Skeleton";
 
 const Dashboard: React.FC = () => {
   const [role, setRole] = useState<string | null>(null);
@@ -11,23 +12,25 @@ const Dashboard: React.FC = () => {
     if (storedRole) setRole(storedRole);
   }, []);
 
-  if (!role) return (
-    <div className="flex min-h-[60vh] items-center justify-center bg-transparent">
-      <div className="flex flex-col items-center gap-3">
-        <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-text-muted)] animate-bounce opacity-80" />
-          <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-text-muted)] animate-bounce opacity-60" style={{ animationDelay: "0.1s" }} />
-          <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-text-muted)] animate-bounce opacity-40" style={{ animationDelay: "0.2s" }} />
-        </div>
-        <span className="text-sm text-[var(--color-text-muted)]">Loading...</span>
+  let content: React.ReactNode;
+  if (!role) {
+    content = <SkeletonDashboard />;
+  } else if (role === "WORKER") {
+    content = <RoleWorker />;
+  } else if (role === "CLIENT") {
+    content = <RoleUser />;
+  } else {
+    content = (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <p className="text-[var(--color-text-muted)]">Unauthorized</p>
       </div>
-    </div>
-  );
-  if (role === "WORKER") return <RoleWorker />;
-  if (role === "CLIENT") return <RoleUser />;
+    );
+  }
+
   return (
-    <div className="flex min-h-[60vh] items-center justify-center bg-transparent">
-      <p className="text-[var(--color-text-muted)]">Unauthorized</p>
+    // pt-24 clears the fixed h-16 navbar with breathing room
+    <div className="mx-auto w-full max-w-[1400px] min-w-0 px-4 py-6 pt-24 sm:px-6 lg:px-8">
+      {content}
     </div>
   );
 };

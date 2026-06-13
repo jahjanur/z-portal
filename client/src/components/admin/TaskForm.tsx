@@ -1,8 +1,9 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { CONTROL_INPUT, CONTROL_SELECT } from "../ui/controls";
+import { CONTROL_INPUT, CONTROL_SELECT, CONTROL_LABEL, BTN_ACTION } from "../ui/controls";
 import WorkerMultiSelect from "../ui/WorkerMultiSelect";
 import DatePicker from "../ui/DatePicker";
+import Button from "../ui/Button";
 
 interface User {
   id: number;
@@ -33,10 +34,10 @@ interface TaskFormProps {
   hideWorkerAssignment?: boolean;
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ 
-  onSubmit, 
-  clients, 
-  workers, 
+const TaskForm: React.FC<TaskFormProps> = ({
+  onSubmit,
+  clients,
+  workers,
   projects,
   onCreateProject,
   hideWorkerAssignment = false,
@@ -81,15 +82,15 @@ const TaskForm: React.FC<TaskFormProps> = ({
     : projects;
 
   return (
-    <div className="relative z-20 mb-6 overflow-visible rounded-xl card-panel p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-theme-primary">Add New Task</h3>
+    <div className="card-panel relative z-20 mb-6 overflow-visible p-5 sm:p-6">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="section-title !mb-0">Add New Task</h3>
         <button
           type="button"
           onClick={() => setShowProjectForm(!showProjectForm)}
-          className="btn-primary flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs"
+          className={`${BTN_ACTION} w-full sm:w-auto`}
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           New Project
@@ -98,126 +99,155 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
       {/* Quick Project Creation */}
       {showProjectForm && (
-        <div className="mb-4 rounded-xl border-2 border-[var(--color-border-hover)] card-panel p-4">
-          <h4 className="mb-3 text-xs font-semibold text-theme-primary">Create New Project</h4>
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-            <input
-              placeholder="Project name *"
-              value={newProject.name}
-              onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-              className="input-dark w-full px-3 py-2 text-xs rounded-lg"
-            />
-            <select
-              value={newProject.clientId}
-              onChange={(e) => setNewProject({ ...newProject, clientId: e.target.value })}
-              className="input-dark w-full px-3 py-2 text-xs rounded-lg"
-            >
-              <option value="">No Client (Standalone)</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.company && `(${c.company})`}
-                </option>
-              ))}
-            </select>
-            <input
-              placeholder="Description (optional)"
-              value={newProject.description}
-              onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-              className="input-dark w-full px-3 py-2 text-xs rounded-lg"
-            />
+        <div className="mb-5 rounded-2xl border border-[var(--color-border-hover)] bg-[var(--color-surface-2)] p-4 sm:p-5">
+          <h4 className="section-title">Create New Project</h4>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className={CONTROL_LABEL}>Project Name *</label>
+              <input
+                placeholder="Project name *"
+                value={newProject.name}
+                onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                className={CONTROL_INPUT}
+              />
+            </div>
+            <div>
+              <label className={CONTROL_LABEL}>Client</label>
+              <select
+                value={newProject.clientId}
+                onChange={(e) => setNewProject({ ...newProject, clientId: e.target.value })}
+                className={CONTROL_SELECT}
+              >
+                <option value="">No Client (Standalone)</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.company && `(${c.company})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-full">
+              <label className={CONTROL_LABEL}>Description</label>
+              <input
+                placeholder="Description (optional)"
+                value={newProject.description}
+                onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                className={CONTROL_INPUT}
+              />
+            </div>
           </div>
-          <div className="flex gap-2 mt-2">
-            <button
+          <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
               type="button"
-              onClick={handleCreateProject}
-              className="btn-primary px-3 py-1.5 text-xs rounded-lg"
-            >
-              Create
-            </button>
-            <button
-              type="button"
+              variant="secondary"
+              size="sm"
+              className="w-full sm:w-auto"
               onClick={() => {
                 setShowProjectForm(false);
                 setNewProject({ name: "", clientId: "", description: "" });
               }}
-              className="btn-secondary px-3 py-1.5 text-xs rounded-lg"
             >
               Cancel
-            </button>
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={handleCreateProject}
+            >
+              Create
+            </Button>
           </div>
         </div>
       )}
 
       {/* Task Form */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-6 min-w-0">
-        <input
-          placeholder="Task title *"
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          className={CONTROL_INPUT}
-          required
-        />
-        <input
-          placeholder="Description"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className={CONTROL_INPUT}
-        />
-        <select
-          value={formData.clientId}
-          onChange={(e) => {
-            setFormData({ ...formData, clientId: e.target.value });
-            if (formData.projectId) {
-              const selectedProject = projects.find(p => p.id.toString() === formData.projectId);
-              if (selectedProject && selectedProject.clientId?.toString() !== e.target.value) {
-                setFormData(prev => ({ ...prev, projectId: "" }));
+      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label className={CONTROL_LABEL}>Task Title *</label>
+          <input
+            placeholder="Task title *"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            className={CONTROL_INPUT}
+            required
+          />
+        </div>
+        <div>
+          <label className={CONTROL_LABEL}>Description</label>
+          <input
+            placeholder="Description"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            className={CONTROL_INPUT}
+          />
+        </div>
+        <div>
+          <label className={CONTROL_LABEL}>Client *</label>
+          <select
+            value={formData.clientId}
+            onChange={(e) => {
+              setFormData({ ...formData, clientId: e.target.value });
+              if (formData.projectId) {
+                const selectedProject = projects.find(p => p.id.toString() === formData.projectId);
+                if (selectedProject && selectedProject.clientId?.toString() !== e.target.value) {
+                  setFormData(prev => ({ ...prev, projectId: "" }));
+                }
               }
-            }
-          }}
-          className={CONTROL_SELECT}
-          required
-        >
-          <option value="">Select Client *</option>
-          {clients.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={formData.projectId}
-          onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
-          className={CONTROL_SELECT}
-        >
-          <option value="">No Project (Standalone)</option>
-          {filteredProjects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} {p.client ? `(${p.client.name})` : ''}
-            </option>
-          ))}
-        </select>
+            }}
+            className={CONTROL_SELECT}
+            required
+          >
+            <option value="">Select Client *</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={CONTROL_LABEL}>Project</label>
+          <select
+            value={formData.projectId}
+            onChange={(e) => setFormData({ ...formData, projectId: e.target.value })}
+            className={CONTROL_SELECT}
+          >
+            <option value="">No Project (Standalone)</option>
+            {filteredProjects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} {p.client ? `(${p.client.name})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
         {!hideWorkerAssignment && (
-        <WorkerMultiSelect
-          workers={workers}
-          value={formData.workerIds}
-          onChange={(workerIds) => setFormData({ ...formData, workerIds })}
-          placeholder="Assign workers (optional)"
-          autoApply
-        />
+          <div>
+            <label className={CONTROL_LABEL}>Workers</label>
+            <WorkerMultiSelect
+              workers={workers}
+              value={formData.workerIds}
+              onChange={(workerIds) => setFormData({ ...formData, workerIds })}
+              placeholder="Assign workers (optional)"
+              autoApply
+            />
+          </div>
         )}
-        <DatePicker
-          value={formData.dueDate}
-          onChange={(dueDate) => setFormData({ ...formData, dueDate })}
-          placeholder="yyyy/mm/dd"
-        />
+        <div>
+          <label className={CONTROL_LABEL}>Due Date</label>
+          <DatePicker
+            value={formData.dueDate}
+            onChange={(dueDate) => setFormData({ ...formData, dueDate })}
+            placeholder="yyyy/mm/dd"
+          />
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={handleSubmit}
-        className="btn-primary mt-3 flex h-11 w-full items-center justify-center rounded-xl px-4 text-sm"
-      >
-        Add Task
-      </button>
+      <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button type="button" variant="primary" onClick={handleSubmit} className="w-full sm:w-auto">
+          Add Task
+        </Button>
+      </div>
     </div>
   );
 };

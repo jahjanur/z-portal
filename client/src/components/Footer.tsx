@@ -3,15 +3,20 @@ import { useMobileMenu } from "../contexts/MobileMenuContext";
 export default function Footer() {
   const { mobileMenuOpen } = useMobileMenu();
 
-  /* Hide footer when mobile hamburger menu is open so it doesn't show when scrolling the menu */
+  /* Hide footer when the mobile drawer is open */
   if (mobileMenuOpen) {
     return null;
   }
 
   return (
-    <footer className="border-t border-[var(--color-border)] bg-[var(--color-bg)] z-50 w-full">
-      <div className="flex flex-col items-center justify-center max-w-6xl gap-4 px-6 py-4 mx-auto sm:flex-row">
-        <div className="text-sm text-[var(--color-text-muted)]">Made with ❤️ Zulbera</div>
+    <footer className="relative z-10 w-full border-t border-[var(--color-border)] bg-[var(--color-bg)]">
+      <div className="mx-auto flex max-w-[1920px] flex-col items-center justify-between gap-2 px-6 py-5 text-center sm:flex-row sm:text-left">
+        <p className="text-xs text-[var(--color-text-muted)]">
+          © {new Date().getFullYear()} Zulbera. All rights reserved.
+        </p>
+        <p className="text-xs text-[var(--color-text-muted)]">
+          Made with <span aria-hidden="true">❤️</span> by Zulbera
+        </p>
       </div>
     </footer>
   );

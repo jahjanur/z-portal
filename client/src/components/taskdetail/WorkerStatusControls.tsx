@@ -1,4 +1,6 @@
 import React from "react";
+import Button from "../ui/Button";
+import StatusBadge from "../ui/StatusBadge";
 
 interface WorkerStatusControlsProps {
   currentStatus: string;
@@ -10,22 +12,15 @@ const WorkerStatusControls: React.FC<WorkerStatusControlsProps> = ({
   onRequestCompletion,
 }) => {
   return (
-    <div className="flex flex-wrap gap-2 mt-6">
+    <div className="mt-6 flex flex-wrap items-center gap-2">
       {currentStatus !== "COMPLETED" && currentStatus !== "PENDING_APPROVAL" ? (
-        <button
-          onClick={onRequestCompletion}
-          className="btn-primary px-4 py-2 text-sm font-semibold"
-        >
+        <Button variant="primary" size="sm" onClick={onRequestCompletion}>
           Request Completion
-        </button>
+        </Button>
       ) : currentStatus === "PENDING_APPROVAL" ? (
-        <div className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white/80">
-          ⏳ Waiting for admin approval
-        </div>
+        <StatusBadge tone="warning">Waiting for admin approval</StatusBadge>
       ) : (
-        <div className="px-4 py-2 text-sm font-medium text-green-700 border border-green-200 rounded-lg bg-green-50">
-          ✓ Task completed
-        </div>
+        <StatusBadge tone="success">Task completed</StatusBadge>
       )}
     </div>
   );

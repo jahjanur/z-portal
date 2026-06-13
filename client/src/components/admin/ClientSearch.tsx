@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import API from "../../api";
+import StatusBadge from "../ui/StatusBadge";
+import Button from "../ui/Button";
 
 interface User {
   id: number;
@@ -54,19 +56,20 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
 
   return (
     <div className="mb-6">
-      <div className="relative max-w-md">
+      <div className="relative w-full sm:max-w-sm">
         <input
-          type="text"
+          type="search"
           placeholder="Search clients..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="input-dark w-full rounded-xl px-4 py-3 pl-11"
+          className="input-dark h-11 w-full rounded-full px-4 py-2.5 pl-11 text-sm"
         />
         <svg
-          className="absolute w-5 h-5 text-[var(--color-text-muted)] transform -translate-y-1/2 left-3.5 top-1/2"
+          className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[var(--color-text-muted)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <path
             strokeLinecap="round"
@@ -77,69 +80,57 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
         </svg>
 
         {search && (
-          <div className="absolute z-50 w-full mt-2 overflow-y-auto border border-[var(--color-border)] top-full rounded-xl max-h-80 bg-[var(--color-surface-1)] backdrop-blur-sm shadow-xl shadow-[var(--color-card-shadow)]">
+          <div className="absolute top-full z-50 mt-2 max-h-80 w-full overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-elev-lg backdrop-blur-sm">
             {filtered.length > 0 ? (
               <div className="p-2">
                 {filtered.map((c) => {
                   const isIncomplete = isProfileIncomplete(c);
-                  
+
                   return (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between p-3 transition-colors rounded-lg hover:bg-[var(--color-surface-2)]"
+                      className="row-hover flex flex-col gap-2 rounded-xl p-3 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div
-                        className="flex-1 cursor-pointer min-w-0"
+                        className="min-w-0 flex-1 cursor-pointer"
                         onClick={() => {
                           navigate(`/clients/${c.id}`);
                           setSearch("");
                         }}
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <p className="font-semibold text-[var(--color-text-primary)] truncate">{c.name}</p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <p className="min-w-0 truncate font-semibold text-[var(--color-text-primary)]">{c.name}</p>
                           {isIncomplete && (
-                            <span className="px-2 py-0.5 text-xs font-semibold text-amber-400 bg-amber-500/20 rounded-full shrink-0">
+                            <StatusBadge status="INCOMPLETE" className="shrink-0">
                               Incomplete
-                            </span>
+                            </StatusBadge>
                           )}
                         </div>
-                        <p className="text-sm text-[var(--color-text-muted)] truncate">
-                          {c.company} • {c.email}
+                        <p className="truncate text-sm text-[var(--color-text-muted)]">
+                          {c.company} &middot; {c.email}
                         </p>
                       </div>
-                      <div className="flex shrink-0 gap-2 ml-3 pointer-events-auto">
+                      <div className="pointer-events-auto flex w-full shrink-0 gap-2 sm:ml-3 sm:w-auto">
                         {/* Only show Resend Invite for INCOMPLETE clients - SAME LOGIC AS CLIENTSLIST */}
                         {isIncomplete && (
-                          <button
-                            type="button"
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            loading={resendingId === c.id}
+                            className="flex-1 whitespace-nowrap sm:flex-none"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleResendInvite(c.id, c.email);
                             }}
-                            disabled={resendingId === c.id}
-                            className="btn-secondary flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg disabled:opacity-50"
                             title="Resend invite email"
                           >
-                            {resendingId === c.id ? (
-                              <>
-                                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Sending...
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                </svg>
-                                Resend
-                              </>
-                            )}
-                          </button>
+                            {resendingId === c.id ? "Sending..." : "Resend"}
+                          </Button>
                         )}
-                        <button
-                          type="button"
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          className="flex-1 whitespace-nowrap sm:flex-none"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -148,18 +139,17 @@ const ClientSearch: React.FC<ClientSearchProps> = ({ clients, onDelete }) => {
                               setSearch("");
                             }
                           }}
-                          className="px-3 py-1.5 text-xs font-semibold text-red-300 bg-red-500/20 rounded-full hover:bg-red-500/30 transition-colors border border-red-500/30 cursor-pointer"
                           title="Delete client"
                         >
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="p-4 text-center text-[var(--color-text-muted)]">No clients found</div>
+              <div className="p-4 text-center text-sm text-[var(--color-text-muted)]">No clients found</div>
             )}
           </div>
         )}

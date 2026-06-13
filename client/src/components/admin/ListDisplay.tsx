@@ -1,4 +1,7 @@
 import { useNavigate } from "react-router-dom";
+import StatusBadge from "../ui/StatusBadge";
+import EmptyState from "../ui/EmptyState";
+import Button from "../ui/Button";
 
 interface ListDisplayProps<T extends { id: number }> {
   items: T[];
@@ -30,8 +33,12 @@ const ListDisplay = <T extends { id: number }>({
     );
   };
 
+  if (items.length === 0) {
+    return <EmptyState compact title="Nothing here yet" description="Items will appear here once added." />;
+  }
+
   return (
-    <div className="space-y-2">
+    <div className="stagger-children space-y-3">
       {items.map((item) => {
         const profileStatus = showProfileStatus && getProfileStatus ? getProfileStatus(item) : null;
         const isIncomplete = isProfileIncomplete(profileStatus);
@@ -39,53 +46,49 @@ const ListDisplay = <T extends { id: number }>({
         return (
           <div
             key={item.id}
-            className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4 transition-colors hover:border-white/15 hover:bg-white/[0.07] sm:flex-row sm:items-center sm:justify-between"
+            className="card-panel row-hover flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <button
               type="button"
               onClick={() => navigate(`/clients/${item.id}`)}
-              className="min-w-0 flex-1 cursor-pointer text-left focus:outline-none focus:ring-0"
+              className="min-w-0 flex-1 cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] rounded-lg"
             >
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
                 {renderItem(item)}
                 {showProfileStatus && profileStatus && (
-                  <span
-                    className={`whitespace-nowrap px-3 py-1 text-xs font-semibold rounded-full ${
-                      profileStatus.trim().toUpperCase() === "COMPLETE"
-                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                        : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                    }`}
+                  <StatusBadge
+                    status={profileStatus.trim().toUpperCase() === "COMPLETE" ? "COMPLETE" : "INCOMPLETE"}
                   >
-                    {profileStatus.trim().toUpperCase() === "COMPLETE" ? "✓ Complete" : "⚠ Incomplete Profile"}
-                  </span>
+                    {profileStatus.trim().toUpperCase() === "COMPLETE" ? "Complete" : "Incomplete Profile"}
+                  </StatusBadge>
                 )}
               </div>
             </button>
 
-            <div
-              className="relative z-10 flex shrink-0 flex-wrap gap-2 justify-start sm:flex-nowrap sm:justify-end pointer-events-auto"
-            >
+            <div className="relative z-10 flex w-full gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
               {showProfileStatus && isIncomplete && onResendInvite && (
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1 whitespace-nowrap sm:flex-none"
                   onClick={() => onResendInvite(item.id)}
-                  className="h-9 cursor-pointer px-3 text-sm font-semibold text-blue-300 bg-blue-500/20 rounded-full border border-blue-500/30 hover:bg-blue-500/30 transition-colors whitespace-nowrap"
                 >
                   Resend Invite
-                </button>
+                </Button>
               )}
-              <button
-                type="button"
+              <Button
+                variant="danger"
+                size="sm"
+                className="flex-1 whitespace-nowrap sm:flex-none"
                 onClick={(e) => {
                   e.preventDefault();
                   if (window.confirm("Delete this client? This cannot be undone.")) {
                     onDelete(item.id);
                   }
                 }}
-                className="h-9 min-w-[4.5rem] cursor-pointer px-3 text-sm font-semibold text-red-300 bg-red-500/20 rounded-full border border-red-500/30 hover:bg-red-500/40 hover:border-red-500/50 active:bg-red-500/50 transition-colors whitespace-nowrap"
               >
                 Delete
-              </button>
+              </Button>
             </div>
           </div>
         );

@@ -1,9 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import toast from "react-hot-toast";
 import { useAdmin } from "../../contexts/AdminContext";
 import ClientSearch from "../../components/admin/ClientSearch";
 import ClientForm from "../../components/admin/ClientForm";
 import ListDisplay from "../../components/admin/ListDisplay";
+import PageHeader from "../../components/ui/PageHeader";
+import StatusBadge from "../../components/ui/StatusBadge";
+import EmptyState from "../../components/ui/EmptyState";
+import Button from "../../components/ui/Button";
 import API from "../../api";
 
 const colors = { primary: "", secondary: "#374151", accent: "#6B7280", light: "#F8F9FA", dark: "#1A1A2E" };
@@ -26,6 +30,7 @@ export default function AdminClientsPage() {
   } = useAdmin();
   const [showCompletedProfiles, setShowCompletedProfiles] = useState(false);
   const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
+  const formRef = useRef<HTMLDivElement>(null);
 
   // Admin sees all clients (including EraSphere-referred). EraSphere sees only their referred clients (API already filters).
   const displayClients = clients;
@@ -76,91 +81,128 @@ export default function AdminClientsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
-      <div className="mt-6 rounded-2xl card-panel p-6 shadow-xl">
-        <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Clients Management</h2>
-        <ClientForm onInviteSent={handleInviteSent} colors={colors} hideDomainAndHosting={isEraSphere} />
+    <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-6">
+      <PageHeader
+        title="Clients"
+        subtitle="Invite new clients and manage existing accounts"
+        actions={
+          <Button
+            variant="primary"
+            onClick={() =>
+              formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Client
+          </Button>
+        }
+      />
 
-        {/* Pending client invites */}
-        {pendingInvites.length > 0 && (
-          <div className="mt-8">
-            <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">
-              Pending Invites <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({pendingInvites.length})</span>
-            </h3>
-            <div className="space-y-2">
-              {pendingInvites.map((inv) => (
-                <div key={inv.id} className="flex flex-col gap-2 rounded-lg card-panel p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-[var(--color-text-primary)]">{inv.name}</p>
-                    <p className="text-sm text-[var(--color-text-muted)]">{inv.company} &middot; {inv.email}</p>
-                    <p className={`text-xs ${inv.status === "EXPIRED" ? "text-red-400" : "text-amber-400"}`}>
-                      {inv.status === "EXPIRED" ? "Expired" : `Expires ${new Date(inv.expiresAt).toLocaleDateString()}`}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      onClick={() => handleResend(inv.id)}
-                      disabled={resendingIds.has(inv.id)}
-                      className="h-8 px-3 text-xs font-medium rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-50"
-                    >
-                      {resendingIds.has(inv.id) ? "Sending..." : "Resend"}
-                    </button>
-                    {inv.status === "PENDING" && (
-                      <button
-                        onClick={() => handleCancel(inv.id)}
-                        className="h-8 px-3 text-xs font-medium rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition"
-                      >
-                        Cancel
-                      </button>
+      <div ref={formRef} className="scroll-mt-24">
+        <ClientForm onInviteSent={handleInviteSent} colors={colors} hideDomainAndHosting={isEraSphere} />
+      </div>
+
+      {/* Pending client invites */}
+      {pendingInvites.length > 0 && (
+        <section>
+          <h3 className="section-title">
+            Pending Invites <span className="ml-1 text-xs font-normal text-[var(--color-text-muted)]">({pendingInvites.length})</span>
+          </h3>
+          <div className="stagger-children space-y-3">
+            {pendingInvites.map((inv) => (
+              <div key={inv.id} className="card-panel row-hover flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-[var(--color-text-primary)]">{inv.name}</p>
+                  <p className="truncate text-sm text-[var(--color-text-muted)]">{inv.company} &middot; {inv.email}</p>
+                  <div className="mt-1.5">
+                    {inv.status === "EXPIRED" ? (
+                      <StatusBadge status="EXPIRED" />
+                    ) : (
+                      <StatusBadge tone="warning">
+                        Expires {new Date(inv.expiresAt).toLocaleDateString()}
+                      </StatusBadge>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex w-full gap-2 sm:w-auto sm:shrink-0">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1 sm:flex-none"
+                    loading={resendingIds.has(inv.id)}
+                    onClick={() => handleResend(inv.id)}
+                  >
+                    {resendingIds.has(inv.id) ? "Sending..." : "Resend"}
+                  </Button>
+                  {inv.status === "PENDING" && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      className="flex-1 sm:flex-none"
+                      onClick={() => handleCancel(inv.id)}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section>
+        <h3 className="section-title">Search Clients</h3>
+        <ClientSearch clients={displayClients} onDelete={deleteUser} colors={colors} />
+      </section>
+
+      <section>
+        <button
+          type="button"
+          onClick={() => setShowCompletedProfiles(!showCompletedProfiles)}
+          className="card-panel row-hover mb-4 flex w-full items-center justify-between p-4 text-left"
+          aria-expanded={showCompletedProfiles}
+        >
+          <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
+            Active Clients <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({displayComplete.length})</span>
+          </h3>
+          <svg className={`h-5 w-5 shrink-0 text-[var(--color-text-muted)] transition-transform ${showCompletedProfiles ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {showCompletedProfiles && (
+          <div>
+            {displayComplete.length > 0 ? (
+              <ListDisplay
+                items={displayComplete}
+                onDelete={deleteUser}
+                showProfileStatus
+                getProfileStatus={(c) => c.profileStatus}
+                renderItem={(c) => (
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-[var(--color-text-primary)]">{c.name}</p>
+                    <p className="truncate text-sm text-[var(--color-text-muted)]">{c.company} &middot; {c.email}</p>
+                    {c.postalAddress && <p className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{c.postalAddress}</p>}
+                  </div>
+                )}
+              />
+            ) : (
+              <EmptyState
+                compact
+                title="No active clients yet"
+                description="Clients appear here once they complete their profile."
+                icon={
+                  <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24" aria-hidden="true">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                }
+              />
+            )}
           </div>
         )}
-
-        <div className="mt-8">
-          <h3 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">Search clients</h3>
-          <ClientSearch clients={displayClients} onDelete={deleteUser} colors={colors} />
-        </div>
-
-        <div className="mt-8">
-          <button
-            type="button"
-            onClick={() => setShowCompletedProfiles(!showCompletedProfiles)}
-            className="mb-4 flex w-full items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 text-left transition-colors hover:bg-[var(--color-surface-3)]"
-          >
-            <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
-              Active Clients <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({displayComplete.length})</span>
-            </h3>
-            <svg className={`h-5 w-5 text-[var(--color-text-muted)] transition-transform ${showCompletedProfiles ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          {showCompletedProfiles && (
-            <div>
-              {displayComplete.length > 0 ? (
-                <ListDisplay
-                  items={displayComplete}
-                  onDelete={deleteUser}
-                  showProfileStatus
-                  getProfileStatus={(c) => c.profileStatus}
-                  renderItem={(c) => (
-                    <div>
-                      <p className="font-semibold text-[var(--color-text-primary)]">{c.name}</p>
-                      <p className="text-sm text-[var(--color-text-muted)]">{c.company} &middot; {c.email}</p>
-                      {c.postalAddress && <p className="mt-1 text-xs text-[var(--color-text-muted)]">{c.postalAddress}</p>}
-                    </div>
-                  )}
-                />
-              ) : (
-                <p className="rounded-xl bg-[var(--color-surface-2)] py-4 text-center text-sm text-[var(--color-text-muted)]">No active clients yet</p>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -19,13 +19,10 @@ const TABS = ["workers", "clients", "tasks", "invoices", "domains", "offers", "t
 
 const TabsNavigation: React.FC<TabsNavigationProps> = ({ activeTab, setActiveTab, counts }) => {
   return (
-    <nav
-      className="mb-8 w-full"
-      aria-label="Dashboard sections"
-    >
-      <div className="overflow-x-auto">
+    <nav className="mb-8 w-full" aria-label="Dashboard sections">
+      <div className="-mx-1 overflow-x-auto px-1 pb-1">
         <div
-          className="inline-flex min-w-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1 shadow-sm"
+          className="inline-flex shrink-0 gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1 shadow-elev-sm"
           role="tablist"
         >
           {TABS.map((tab) => {
@@ -47,11 +44,11 @@ const TabsNavigation: React.FC<TabsNavigationProps> = ({ activeTab, setActiveTab
                 id={`tab-${tab}`}
                 onClick={() => setActiveTab(tab)}
                 className={`
-                  relative shrink-0 rounded-lg border-b-2 px-4 py-2.5 text-sm font-medium transition-all
+                  relative shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-all
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg)]
                   ${isActive
-                    ? "border-[var(--color-text-primary)] bg-[var(--color-surface-1)] text-[var(--color-text-primary)] shadow-sm"
-                    : "border-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                    ? "border border-[var(--color-tab-active-border)] bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] shadow-elev-sm"
+                    : "border border-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
                   }
                 `}
               >

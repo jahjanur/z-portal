@@ -1,4 +1,5 @@
 import React from "react";
+import StatusBadge from "../ui/StatusBadge";
 
 interface Task {
   id: number;
@@ -10,35 +11,28 @@ interface Task {
 interface RecentProjectCardProps {
   task: Task;
   onClick: () => void;
+  /** Legacy prop — statuses now render via StatusBadge; kept for API compatibility */
   getStatusColor: (status?: string | null) => string;
 }
 
-const RecentProjectCard: React.FC<RecentProjectCardProps> = ({
-  task,
-  onClick,
-  getStatusColor,
-}) => {
+const RecentProjectCard: React.FC<RecentProjectCardProps> = ({ task, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className="p-4 transition-all border rounded-xl cursor-pointer backdrop-blur-sm hover:border-white/15"
-      style={{
-        backgroundColor: "rgba(42, 42, 42, 0.8)",
-        borderColor: "rgba(255, 255, 255, 0.08)",
-      }}
+      className="card-panel card-panel-hover cursor-pointer p-4"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h4 className="font-semibold text-white">{task.title}</h4>
-          <p className="text-sm text-[var(--color-text-muted)]">{task.workers?.length ? task.workers.map((tw) => tw.user.name).join(", ") : "Unassigned"}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h4 className="truncate text-sm font-semibold text-[var(--color-text-primary)]">
+            {task.title}
+          </h4>
+          <p className="mt-0.5 truncate text-sm text-[var(--color-text-muted)]">
+            {task.workers?.length
+              ? task.workers.map((tw) => tw.user.name).join(", ")
+              : "Unassigned"}
+          </p>
         </div>
-        <span
-          className={`px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
-            task.status
-          )}`}
-        >
-          {task.status?.replace("_", " ") || "N/A"}
-        </span>
+        <StatusBadge status={task.status} className="shrink-0" />
       </div>
     </div>
   );

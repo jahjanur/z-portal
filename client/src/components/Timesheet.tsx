@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import API from "../api";
-import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT, CONTROL_TEXTAREA } from "./ui/controls";
+import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT, CONTROL_TEXTAREA, BTN_ACTION } from "./ui/controls";
 import DatePicker from "./ui/DatePicker";
+import Button from "./ui/Button";
+import StatusBadge from "./ui/StatusBadge";
+import EmptyState from "./ui/EmptyState";
+import { SkeletonRows } from "./ui/Skeleton";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -315,30 +319,19 @@ const Timesheets = () => {
   const totalPendingAmount = pendingProjects.reduce((sum, p) => sum + (p.totalPay || 0), 0);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[var(--color-border)] border-t-[var(--color-text-primary)]"></div>
-          <p className="text-sm text-[var(--color-text-muted)]">Loading projects...</p>
-        </div>
-      </div>
-    );
+    return <SkeletonRows rows={4} />;
   }
 
   return (
-    <>
-      <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">
-        Timesheets Management
-      </h2>
-
+    <div className="space-y-6">
       {/* New Project Button */}
-      <div className="mb-6">
+      <div>
         <button
           type="button"
           onClick={() => setShowNewProjectForm(!showNewProjectForm)}
-          className="inline-flex h-11 min-h-[44px] items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] px-4 text-sm font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-0"
+          className={BTN_ACTION}
         >
-          <svg className="h-5 w-5 text-[var(--color-text-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           New Project
@@ -347,9 +340,9 @@ const Timesheets = () => {
 
       {/* New Project Form */}
       {showNewProjectForm && (
-        <div className="mb-6 rounded-2xl card-panel p-6 shadow-lg">
-          <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Create New Project</h3>
-          
+        <div className="card-panel rounded-2xl p-5 sm:p-6 animate-fade-up">
+          <h3 className="section-title mb-4">Create New Project</h3>
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className={CONTROL_LABEL}>
@@ -397,63 +390,53 @@ const Timesheets = () => {
             />
           </div>
 
-          <div className="mt-6 flex gap-3">
-            <button
-              type="button"
-              onClick={createProject}
-              className="btn-primary inline-flex h-11 min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold"
-            >
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Button variant="primary" onClick={createProject}>
               Create Project
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => {
                 setShowNewProjectForm(false);
                 setProjectName("");
                 setSelectedClientId("");
                 setProjectDescription("");
               }}
-              className="btn-secondary inline-flex h-11 min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Pending Projects */}
-      <div className="mt-8">
-        <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
-            Pending Projects
-            <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
+      <section>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="section-title">
+            Pending Projects{" "}
+            <span className="ml-1 text-sm font-normal text-[var(--color-text-muted)]">
               ({pendingProjects.length})
             </span>
           </h3>
-          <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+          <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end">
             {totalPendingAmount > 0 && (
-              <div className="whitespace-nowrap px-4 py-2 bg-yellow-100 rounded-lg">
-                <p className="text-sm font-semibold text-yellow-800">
-                  Total Pending: ${totalPendingAmount.toFixed(2)}
+              <div className="card-panel rounded-xl px-4 py-2">
+                <p className="text-xs font-medium text-[var(--color-text-muted)]">Total Pending</p>
+                <p className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
+                  ${totalPendingAmount.toFixed(2)}
                 </p>
               </div>
             )}
             {pendingProjects.length > 0 && (
-              <button
-                onClick={() => exportAllProjects(false)}
-                className="w-full sm:w-auto h-9 px-3 text-sm font-semibold btn-primary flex items-center justify-center gap-2 rounded-lg"
-              >
-                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+              <Button variant="secondary" size="sm" onClick={() => exportAllProjects(false)}>
                 Export All
-              </button>
+              </Button>
             )}
           </div>
         </div>
 
         {pendingProjects.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-4 stagger-children">
             {pendingProjects.map((project) => (
               <ProjectCard
                 key={project.id}
@@ -478,38 +461,43 @@ const Timesheets = () => {
             ))}
           </div>
         ) : (
-          <div className="rounded-xl card-panel py-8 text-center">
-            <p className="text-sm font-medium text-[var(--color-text-muted)]">No pending projects</p>
-          </div>
+          <EmptyState compact title="No pending projects" description="Create a project to start logging hours." />
         )}
-      </div>
+      </section>
 
       {/* Paid Projects */}
-      <div className="mt-8">
-        <button
+      <section>
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => setShowPaidProjects(!showPaidProjects)}
-          className="mb-4 flex w-full flex-col gap-2 rounded-xl bg-[var(--color-surface-2)] border border-[var(--color-border)] p-4 text-left transition hover:-translate-y-[1px] card-panel-hover sm:flex-row sm:items-center sm:justify-between"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setShowPaidProjects(!showPaidProjects);
+            }
+          }}
+          className="card-panel row-hover mb-4 flex w-full cursor-pointer flex-col gap-2 rounded-xl p-4 text-left sm:flex-row sm:items-center sm:justify-between"
+          aria-expanded={showPaidProjects}
         >
-          <h3 className="text-xl font-bold text-[var(--color-text-primary)]">
-            Paid Projects
-            <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">
+          <h3 className="section-title">
+            Paid Projects{" "}
+            <span className="ml-1 text-sm font-normal text-[var(--color-text-muted)]">
               ({paidProjects.length})
             </span>
           </h3>
           <div className="flex flex-wrap items-center gap-2 justify-start sm:justify-end sm:gap-3">
             {paidProjects.length > 0 && (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   exportAllProjects(true);
                 }}
-                className="w-full sm:w-auto h-9 px-3 text-sm font-semibold btn-primary flex items-center justify-center gap-2 rounded-lg"
               >
-                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
                 Export All
-              </button>
+              </Button>
             )}
             <svg
               className={`h-5 w-5 shrink-0 text-[var(--color-text-muted)] transition-transform ${showPaidProjects ? "rotate-180" : ""}`}
@@ -520,12 +508,12 @@ const Timesheets = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
-        </button>
+        </div>
 
         {showPaidProjects && (
           <div>
             {paidProjects.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-4 stagger-children">
                 {paidProjects.map((project) => (
                   <ProjectCard
                     key={project.id}
@@ -550,14 +538,12 @@ const Timesheets = () => {
                 ))}
               </div>
             ) : (
-<p className="rounded-xl bg-[var(--color-surface-2)] py-4 text-center text-sm text-[var(--color-text-muted)]">
-              No paid projects yet
-              </p>
+              <EmptyState compact title="No paid projects yet" description="Projects marked as paid will show up here." />
             )}
           </div>
         )}
-      </div>
-    </>
+      </section>
+    </div>
   );
 };
 
@@ -633,108 +619,103 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   };
 
   return (
-    <div className="rounded-2xl card-panel p-4 shadow-lg transition hover:-translate-y-[1px] card-panel-hover sm:p-6">
+    <div className="card-panel card-panel-hover rounded-2xl p-5 sm:p-6">
       {/* Project Header */}
-      <div className="flex flex-col gap-2 mb-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
-            <h4 className="text-xl font-bold text-[var(--color-text-primary)] break-words">{project.projectName}</h4>
-            <span
-              className={`whitespace-nowrap px-3 py-1 text-xs font-semibold rounded-full ${
-                project.isPaid
-                  ? "bg-green-100 text-green-700"
-                  : "bg-yellow-100 text-yellow-700"
-              }`}
-            >
-              {project.isPaid ? "Paid" : "Pending"}
-            </span>
+          <div className="mb-2 flex flex-wrap items-center gap-2 sm:gap-3">
+            <h4 className="text-lg font-bold text-[var(--color-text-primary)] break-words sm:text-xl">{project.projectName}</h4>
+            <StatusBadge status={project.isPaid ? "PAID" : "PENDING"} />
           </div>
-          
+
           {project.client && (
             <p className="text-sm text-[var(--color-text-muted)] break-words">
               Client: {project.client.name} {project.client.company && `(${project.client.company})`}
             </p>
           )}
-          
+
           {project.description && (
             <p className="mt-1 text-sm text-[var(--color-text-muted)] break-words">{project.description}</p>
           )}
 
           {project.dateRange && (
             <p className="mt-2 text-sm font-medium text-[var(--color-text-secondary)]">
-              📅 {new Date(project.dateRange.startDate).toLocaleDateString()} - {new Date(project.dateRange.endDate).toLocaleDateString()}
+              {new Date(project.dateRange.startDate).toLocaleDateString()} – {new Date(project.dateRange.endDate).toLocaleDateString()}
             </p>
           )}
         </div>
 
         <div className="flex flex-wrap gap-2 justify-start shrink-0 sm:ml-4 sm:justify-end">
           <button
+            type="button"
             onClick={() => exportProjectToPDF(project)}
-            className="h-9 w-9 rounded-lg bg-[var(--color-surface-3)] p-2 text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-2)]"
+            className="btn-ghost h-9 w-9 rounded-lg p-2"
             title="Export PDF"
+            aria-label="Export PDF"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </button>
-          
+
           <button
+            type="button"
             onClick={() => markProjectPaid(project.id, !project.isPaid)}
-            className={`h-9 w-9 p-2 transition-colors rounded-lg ${
-              project.isPaid
-                ? "text-yellow-600 bg-yellow-50 hover:bg-yellow-100"
-                : "text-green-600 bg-green-50 hover:bg-green-100"
-            }`}
+            className="btn-ghost h-9 w-9 rounded-lg p-2"
             title={project.isPaid ? "Mark Unpaid" : "Mark Paid"}
+            aria-label={project.isPaid ? "Mark Unpaid" : "Mark Paid"}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </button>
-          
+
           <button
+            type="button"
             onClick={() => deleteProject(project.id)}
-            className="h-9 w-9 p-2 text-red-600 transition-colors rounded-lg bg-red-50 hover:bg-red-100"
+            className="h-9 w-9 rounded-lg border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] p-2 text-[var(--color-destructive-text)] transition hover:opacity-90"
             title="Delete Project"
+            aria-label="Delete Project"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
           </button>
         </div>
       </div>
 
-      {/* Project Summary: stacked on mobile so Total Pay has its own row and doesn't overflow */}
-      <div className="mb-4 grid grid-cols-1 gap-4 rounded-xl border-2 border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 sm:grid-cols-3">
-        <div>
+      {/* Project Summary: StatCard-like chips */}
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="card-panel rounded-xl p-4">
           <p className="text-xs text-[var(--color-text-muted)]">Entries</p>
-          <p className="text-lg font-bold text-[var(--color-text-primary)]">{project.entries.length}</p>
+          <p className="text-lg font-bold tabular-nums text-[var(--color-text-primary)]">{project.entries.length}</p>
         </div>
-        <div>
+        <div className="card-panel rounded-xl p-4">
           <p className="text-xs text-[var(--color-text-muted)]">Total Hours</p>
-          <p className="text-lg font-bold text-[var(--color-text-primary)]">{project.totalHours?.toFixed(1) || 0}h</p>
+          <p className="text-lg font-bold tabular-nums text-[var(--color-text-primary)]">{project.totalHours?.toFixed(1) || 0}h</p>
         </div>
-        <div className="min-w-0">
+        <div className="card-panel rounded-xl p-4 min-w-0">
           <p className="text-xs text-[var(--color-text-muted)]">Total Pay</p>
-          <p className="text-2xl font-bold text-[var(--color-text-primary)] break-all">
+          <p className="text-xl font-bold tabular-nums text-[var(--color-text-primary)] break-all">
             ${project.totalPay?.toFixed(2) || 0}
           </p>
         </div>
       </div>
 
       {/* Add Entry Button */}
-      <button
+      <Button
+        variant={activeProjectId === project.id ? "primary" : "secondary"}
         onClick={() => setActiveProjectId(activeProjectId === project.id ? null : project.id)}
-        className={activeProjectId === project.id ? "btn-primary w-full rounded-xl px-4 py-3 text-sm font-semibold mb-4" : "btn-secondary w-full rounded-xl px-4 py-3 text-sm font-semibold mb-4"}
+        className="mb-4 w-full"
       >
         {activeProjectId === project.id ? "Cancel" : "+ Add Entry"}
-      </button>
+      </Button>
 
       {/* Add Entry Form */}
       {activeProjectId === project.id && (
-        <div className="mb-4 rounded-xl card-panel p-4">
+        <div className="card-panel mb-4 rounded-xl p-4 animate-fade-up">
           <h5 className="mb-3 text-sm font-bold text-[var(--color-text-primary)]">New Entry</h5>
-          
+
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Date *</label>
@@ -745,7 +726,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 className="input-dark w-full rounded-lg px-3 py-2 text-sm min-h-[40px]"
               />
             </div>
-            
+
             <div>
               <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Hours *</label>
               <input
@@ -758,7 +739,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 className="input-dark w-full rounded-lg px-3 py-2 text-sm"
               />
             </div>
-            
+
             <div>
               <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Rate ($) *</label>
               <input
@@ -771,18 +752,18 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 className="input-dark w-full rounded-lg px-3 py-2 text-sm"
               />
             </div>
-            
+
             <div>
               <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Total</label>
               <input
                 type="text"
                 value={`$${(entryHours * entryRate).toFixed(2)}`}
                 disabled
-                className="input-dark w-full rounded-lg px-3 py-2 text-sm font-bold bg-[var(--color-surface-3)]"
+                className="input-dark w-full rounded-lg bg-[var(--color-surface-3)] px-3 py-2 text-sm font-bold tabular-nums"
               />
             </div>
           </div>
-          
+
           <div className="mt-3">
             <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Notes</label>
             <textarea
@@ -793,13 +774,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
               className="input-dark w-full rounded-lg px-3 py-2 text-sm min-h-[60px]"
             />
           </div>
-          
-          <button
-            onClick={() => addEntry(project.id)}
-            className="btn-primary w-full mt-3 rounded-lg px-4 py-2 text-sm font-semibold"
-          >
+
+          <Button variant="primary" onClick={() => addEntry(project.id)} className="mt-3 w-full">
             Add Entry
-          </button>
+          </Button>
         </div>
       )}
 
@@ -807,8 +785,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
       {project.entries.length > 0 && (
         <>
           <button
+            type="button"
             onClick={() => setShowEntries(!showEntries)}
-            className="mb-2 flex w-full items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-2 text-left transition hover:bg-[var(--color-surface-3)]"
+            className="card-panel row-hover mb-2 flex w-full items-center justify-between rounded-xl px-4 py-2.5 text-left"
+            aria-expanded={showEntries}
           >
             <span className="text-sm font-semibold text-[var(--color-text-primary)]">
               View Entries ({project.entries.length})
@@ -824,82 +804,102 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           </button>
 
           {showEntries && (
-            <div className="space-y-2">
-              {project.entries.map((entry) =>
-                editingEntryId === entry.id ? (
-                  <div key={entry.id} className="rounded-lg border-2 border-[var(--color-border-hover)] bg-[var(--color-surface-2)] p-3 space-y-2">
-                    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                      <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Date</label>
-                        <DatePicker value={editEntryDate} onChange={setEditEntryDate} placeholder="yyyy/mm/dd" className="input-dark w-full rounded-lg px-2 py-1.5 text-xs min-h-[34px]" />
-                      </div>
-                      <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Hours</label>
-                        <input type="number" step="0.5" min="0" value={editEntryHours || ""} onChange={(e) => setEditEntryHours(Number(e.target.value))} className="input-dark w-full rounded-lg px-2 py-1.5 text-xs" />
-                      </div>
-                      <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Rate ($)</label>
-                        <input type="number" step="0.01" min="0" value={editEntryRate || ""} onChange={(e) => setEditEntryRate(Number(e.target.value))} className="input-dark w-full rounded-lg px-2 py-1.5 text-xs" />
-                      </div>
-                      <div>
-                        <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Total</label>
-                        <input type="text" value={`$${(editEntryHours * editEntryRate).toFixed(2)}`} disabled className="input-dark w-full rounded-lg px-2 py-1.5 text-xs font-bold bg-[var(--color-surface-3)]" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Notes</label>
-                      <input type="text" value={editEntryNotes} onChange={(e) => setEditEntryNotes(e.target.value)} placeholder="Optional notes..." className="input-dark w-full rounded-lg px-2 py-1.5 text-xs" />
-                    </div>
-                    <div className="flex gap-2 pt-1">
-                      <button onClick={saveEditEntry} disabled={editEntrySaving} className="btn-primary px-3 py-1.5 text-xs rounded-lg font-semibold disabled:opacity-60">
-                        {editEntrySaving ? "Saving…" : "Save"}
-                      </button>
-                      <button onClick={() => setEditingEntryId(null)} className="btn-secondary px-3 py-1.5 text-xs rounded-lg font-semibold">Cancel</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    key={entry.id}
-                    className="flex items-center justify-between rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+            <div className="table-wrap max-h-[420px] overflow-y-auto">
+              <table className="table-modern">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Details</th>
+                    <th className="text-right">Amount</th>
+                    <th className="w-20" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {project.entries.map((entry) =>
+                    editingEntryId === entry.id ? (
+                      <tr key={entry.id}>
+                        <td colSpan={4} className="bg-[var(--color-surface-2)]">
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                              <div>
+                                <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Date</label>
+                                <DatePicker value={editEntryDate} onChange={setEditEntryDate} placeholder="yyyy/mm/dd" className="input-dark w-full rounded-lg px-2 py-1.5 text-xs min-h-[34px]" />
+                              </div>
+                              <div>
+                                <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Hours</label>
+                                <input type="number" step="0.5" min="0" value={editEntryHours || ""} onChange={(e) => setEditEntryHours(Number(e.target.value))} className="input-dark w-full rounded-lg px-2 py-1.5 text-xs" />
+                              </div>
+                              <div>
+                                <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Rate ($)</label>
+                                <input type="number" step="0.01" min="0" value={editEntryRate || ""} onChange={(e) => setEditEntryRate(Number(e.target.value))} className="input-dark w-full rounded-lg px-2 py-1.5 text-xs" />
+                              </div>
+                              <div>
+                                <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Total</label>
+                                <input type="text" value={`$${(editEntryHours * editEntryRate).toFixed(2)}`} disabled className="input-dark w-full rounded-lg bg-[var(--color-surface-3)] px-2 py-1.5 text-xs font-bold tabular-nums" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Notes</label>
+                              <input type="text" value={editEntryNotes} onChange={(e) => setEditEntryNotes(e.target.value)} placeholder="Optional notes..." className="input-dark w-full rounded-lg px-2 py-1.5 text-xs" />
+                            </div>
+                            <div className="flex gap-2 pt-1">
+                              <Button variant="primary" size="sm" loading={editEntrySaving} onClick={saveEditEntry}>
+                                {editEntrySaving ? "Saving…" : "Save"}
+                              </Button>
+                              <Button variant="secondary" size="sm" onClick={() => setEditingEntryId(null)}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={entry.id}>
+                        <td className="whitespace-nowrap font-medium text-[var(--color-text-primary)]">
                           {new Date(entry.date).toLocaleDateString()}
-                        </span>
-                        <span className="text-xs text-[var(--color-text-muted)]">
-                          {entry.hoursWorked}h × ${entry.hourlyRate}
-                        </span>
-                      </div>
-                      {entry.notes && (
-                        <p className="text-xs text-[var(--color-text-muted)]">{entry.notes}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-[var(--color-text-primary)]">
-                        ${entry.totalPay.toFixed(2)}
-                      </span>
-                      <button
-                        onClick={() => openEditEntry(entry)}
-                        className="p-1 text-[var(--color-text-muted)] transition-colors rounded hover:bg-[var(--color-surface-3)]"
-                        title="Edit entry"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => deleteEntry(entry.id)}
-                        className="p-1 text-red-600 transition-colors rounded bg-red-50 hover:bg-red-100"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                )
-              )}
+                        </td>
+                        <td>
+                          <span className="tabular-nums text-xs text-[var(--color-text-muted)]">
+                            {entry.hoursWorked}h × ${entry.hourlyRate}
+                          </span>
+                          {entry.notes && (
+                            <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">{entry.notes}</p>
+                          )}
+                        </td>
+                        <td className="whitespace-nowrap text-right font-bold tabular-nums text-[var(--color-text-primary)]">
+                          ${entry.totalPay.toFixed(2)}
+                        </td>
+                        <td>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openEditEntry(entry)}
+                              className="rounded-lg p-1.5 text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                              title="Edit entry"
+                              aria-label="Edit entry"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteEntry(entry.id)}
+                              className="rounded-lg p-1.5 text-[var(--color-destructive-text)] transition-colors hover:bg-[var(--color-destructive-bg)]"
+                              title="Delete entry"
+                              aria-label="Delete entry"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
         </>
