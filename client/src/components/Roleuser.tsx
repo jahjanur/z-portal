@@ -139,16 +139,18 @@ const fetchAll = async () => {
   const pendingTasks = tasks.filter(t => t.status?.toUpperCase() === "PENDING").length;
   const completionRate = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
+  // Overdue = unpaid and past its due date. Pending and Overdue are mutually
+  // exclusive so the summary never counts the same invoice twice.
+  const isInvoiceOverdue = (i: Invoice) =>
+    i.status?.toUpperCase() !== "PAID" && !!i.dueDate && new Date(i.dueDate) < new Date();
   const paidInvoices = invoices.filter(i => i.status?.toUpperCase() === "PAID");
-  const pendingInvoices = invoices.filter(i => i.status?.toUpperCase() === "PENDING");
+  const overdueInvoices = invoices.filter(isInvoiceOverdue);
+  const pendingInvoices = invoices.filter(
+    i => i.status?.toUpperCase() === "PENDING" && !isInvoiceOverdue(i)
+  );
   const totalPaid = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
   const totalPending = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
   const totalInvoiced = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const overdueInvoices = invoices.filter(i => {
-    if (i.status?.toUpperCase() === "PAID") return false;
-    if (!i.dueDate) return false;
-    return new Date(i.dueDate) < new Date();
-  });
   const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0);
 
   const activeDomains = domains.filter(d => d.isActive);
