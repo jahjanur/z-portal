@@ -64,3 +64,30 @@ export const timeAgo = (dateStr?: string | null): string => {
   if (days < 30) return `${days}d ago`;
   return new Date(dateStr).toLocaleDateString();
 };
+
+interface RevenueInvoice {
+  status?: string | null;
+  amount: number;
+}
+
+/**
+ * Revenue rollup for invoice dashboards.
+ *  - paid       = invoices marked PAID
+ *  - pending    = OUTSTANDING, i.e. everything not paid (PENDING, OVERDUE, …)
+ *  - revenue    = paid + pending = sum of every invoice (always reconciles)
+ * Treating "outstanding" as "not paid" keeps OVERDUE-status invoices in the
+ * totals and matches the server's EraSphere analytics.
+ */
+export function computeInvoiceRevenue(invoices: RevenueInvoice[]): {
+  totalPaid: number;
+  totalPending: number;
+  totalRevenue: number;
+} {
+  const totalPaid = invoices
+    .filter((i) => (i.status ?? "").toUpperCase() === "PAID")
+    .reduce((sum, i) => sum + i.amount, 0);
+  const totalPending = invoices
+    .filter((i) => (i.status ?? "").toUpperCase() !== "PAID")
+    .reduce((sum, i) => sum + i.amount, 0);
+  return { totalPaid, totalPending, totalRevenue: totalPaid + totalPending };
+}

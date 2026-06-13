@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDate, formatCurrency, getDaysUntilDue, getStatusColor, timeAgo } from "../utils";
+import { formatDate, formatCurrency, getDaysUntilDue, getStatusColor, timeAgo, computeInvoiceRevenue } from "../utils";
 
 const DAY = 1000 * 60 * 60 * 24;
 const MIN = 1000 * 60;
@@ -88,5 +88,34 @@ describe("timeAgo", () => {
     const out = timeAgo(new Date(Date.now() - 45 * DAY).toISOString());
     expect(out).not.toMatch(/ago/);
     expect(out).not.toBe("");
+  });
+});
+
+describe("computeInvoiceRevenue", () => {
+  it("returns zeros for an empty list", () => {
+    expect(computeInvoiceRevenue([])).toEqual({ totalPaid: 0, totalPending: 0, totalRevenue: 0 });
+  });
+
+  it("counts every unpaid invoice (incl. OVERDUE) as outstanding and reconciles", () => {
+    const r = computeInvoiceRevenue([
+      { status: "PAID", amount: 50 },
+      { status: "PENDING", amount: 100 },
+      { status: "OVERDUE", amount: 200 },
+    ]);
+    expect(r.totalPaid).toBe(50);
+    expect(r.totalPending).toBe(300); // pending + overdue
+    expect(r.totalRevenue).toBe(350);
+    expect(r.totalPaid + r.totalPending).toBe(r.totalRevenue);
+  });
+
+  it("is case-insensitive and treats null/unknown status as outstanding", () => {
+    const r = computeInvoiceRevenue([
+      { status: "paid", amount: 10 },
+      { status: null, amount: 5 },
+      { status: "SENT", amount: 7 },
+    ]);
+    expect(r.totalPaid).toBe(10);
+    expect(r.totalPending).toBe(12);
+    expect(r.totalRevenue).toBe(22);
   });
 });

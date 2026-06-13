@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api";
-import { formatCurrency, formatDate } from "../utils";
+import { formatCurrency, formatDate, computeInvoiceRevenue } from "../utils";
 import {
   BarChart,
   Bar,
@@ -201,9 +201,9 @@ export default function HomePage() {
     (u) => u.role === "CLIENT" && u.referredById == null && u.profileStatus === "INCOMPLETE"
   ).length;
 
-  const totalPaid = filteredInvoices.filter((i) => i.status === "PAID").reduce((sum, i) => sum + i.amount, 0);
-  const totalPending = filteredInvoices.filter((i) => i.status === "PENDING").reduce((sum, i) => sum + i.amount, 0);
-  const totalRevenue = totalPaid + totalPending;
+  // Outstanding (pending) = not paid, so paid + pending = total and it stays
+  // consistent with the server's EraSphere stats merged in below.
+  const { totalPaid, totalPending, totalRevenue } = computeInvoiceRevenue(filteredInvoices);
 
   const completedTasks = filteredTasks.filter((t) => t.status === "COMPLETED").length;
   const activeTasks = filteredTasks.filter((t) => t.status === "IN_PROGRESS").length;
