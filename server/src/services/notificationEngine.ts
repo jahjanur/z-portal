@@ -233,6 +233,28 @@ export async function emit(eventType: EventTypeValue, payload: EmitPayload): Pro
   // Remove the actor from notifications (don't notify yourself)
   if (payload.actorId) allIds.delete(payload.actorId);
 
+  // Channel isolation for thread-scoped task events: an internal (worker-channel)
+  // notification must never reach the client, and a client-channel one must never
+  // reach the task's workers. The routing matrix is channel-unaware, so enforce it
+  // here as a safety net regardless of which resolver added a recipient.
+  if (
+    payload.threadType &&
+    payload.taskId &&
+    (eventType === EventType.TASK_COMMENT_ADDED || eventType === EventType.TASK_FILE_UPLOADED)
+  ) {
+    const task = await prisma.task.findUnique({
+      where: { id: payload.taskId },
+      select: { clientId: true, workers: { select: { userId: true } } },
+    });
+    if (task) {
+      if (payload.threadType === "internal") {
+        if (task.clientId != null) allIds.delete(task.clientId);
+      } else if (payload.threadType === "client") {
+        task.workers.forEach((w) => allIds.delete(w.userId));
+      }
+    }
+  }
+
   if (allIds.size === 0) return;
 
   // Load preferences for all recipients
