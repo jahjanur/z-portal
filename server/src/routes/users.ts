@@ -161,7 +161,8 @@ router.get("/erasphere/admin-analytics", verifyJWT, verifyAdmin, async (req: any
 
     const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
     const paidRevenue = invoices.filter((inv) => inv.status === "PAID").reduce((sum, inv) => sum + inv.amount, 0);
-    const pendingRevenue = invoices.filter((inv) => inv.status === "PENDING").reduce((sum, inv) => sum + inv.amount, 0);
+    // Outstanding = anything not paid (PENDING, OVERDUE, …) so paid + pending = total.
+    const pendingRevenue = invoices.filter((inv) => inv.status !== "PAID").reduce((sum, inv) => sum + inv.amount, 0);
 
     res.json({
       clients: erasphereClients,
@@ -227,8 +228,9 @@ router.get("/erasphere/analytics", verifyJWT, async (req: any, res) => {
     const paidRevenue = invoices
       .filter((inv) => inv.status === "PAID")
       .reduce((sum, inv) => sum + inv.amount, 0);
+    // Outstanding = anything not paid (PENDING, OVERDUE, …) so paid + pending = total.
     const pendingRevenue = invoices
-      .filter((inv) => inv.status === "PENDING")
+      .filter((inv) => inv.status !== "PAID")
       .reduce((sum, inv) => sum + inv.amount, 0);
 
     res.json({
