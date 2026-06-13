@@ -49,19 +49,35 @@ router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
 });
 
 // POST /api/projects - Create new project
-router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req, res) => {
+router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
     const { name, description, clientId, startDate, endDate } = req.body;
+    const { role, userId } = req.user;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: "Project name is required" });
+    }
+
+    const clientIdNum = clientId != null && clientId !== "" ? Number(clientId) : null;
+
+    // Validate the client (if provided) and scope EraSphere to referred clients.
+    if (clientIdNum !== null) {
+      const client = await prisma.user.findUnique({ where: { id: clientIdNum }, select: { role: true, referredById: true } });
+      if (!client || client.role !== "CLIENT") {
+        return res.status(400).json({ error: "Invalid client ID" });
+      }
+      if (role === "ERASPHERE" && client.referredById !== userId) {
+        return res.status(403).json({ error: "Not authorized to create a project for this client" });
+      }
+    } else if (role === "ERASPHERE") {
+      return res.status(400).json({ error: "A referred client is required" });
     }
 
     const project = await prisma.project.create({
       data: {
         name: name.trim(),
         description: description?.trim() || null,
-        clientId: clientId ? Number(clientId) : null,
+        clientId: clientIdNum,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
       },
