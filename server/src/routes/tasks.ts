@@ -670,15 +670,21 @@ router.post("/:id/files", verifyJWT, upload.single("file"), async (req: any, res
 // post task comment
 router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) => {
   try {
-    const { taskId, fileId } = req.params;
-    const { content, visibleToClient: visibleToClientBody } = req.body;
+    const taskIdNum = parseInt(req.params.taskId, 10);
+    const fileIdNum = parseInt(req.params.fileId, 10);
+    if (isNaN(taskIdNum) || isNaN(fileIdNum)) {
+      return res.status(400).json({ error: "Invalid task or file id" });
+    }
+    const { content } = req.body;
     const { role, userId: authUserId } = req.user;
-    const visibleToClient = role === "CLIENT" ? true : (visibleToClientBody === true || visibleToClientBody === "true");
+    if (!content || typeof content !== "string" || !content.trim()) {
+      return res.status(400).json({ error: "Comment content is required" });
+    }
 
     const file = await prisma.taskFile.findFirst({
       where: {
-        id: parseInt(fileId),
-        taskId: parseInt(taskId)
+        id: fileIdNum,
+        taskId: taskIdNum
       }
     });
 
@@ -687,27 +693,51 @@ router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) 
     }
 
     const task = await prisma.task.findUnique({
-      where: { id: parseInt(taskId) },
-      include: { workers: true }
+      where: { id: taskIdNum },
+      include: { workers: { select: { userId: true } } }
     });
 
     if (!task) {
       return res.status(404).json({ error: "Task not found" });
     }
 
-    const canComment = task.workers.some((tw) => tw.userId === authUserId);
-    if (role === "WORKER" && !canComment) {
-      return res.status(403).json({ error: "Not authorized to comment on this task" });
-    }
-    if (role === "CLIENT" && task.clientId !== authUserId) {
+    // Authorize access to the task by role.
+    if (role === "WORKER") {
+      if (!task.workers.some((tw) => tw.userId === authUserId)) {
+        return res.status(403).json({ error: "Not authorized to comment on this task" });
+      }
+    } else if (role === "CLIENT") {
+      if (Number(task.clientId) !== authUserId) {
+        return res.status(403).json({ error: "Not authorized to comment on this task" });
+      }
+    } else if (role === "ERASPHERE") {
+      const referred = await prisma.user.findMany({
+        where: { role: "CLIENT", referredById: authUserId },
+        select: { id: true },
+      });
+      if (task.clientId === null || !referred.some((c) => c.id === task.clientId)) {
+        return res.status(403).json({ error: "Not authorized to comment on this task" });
+      }
+    } else if (role !== "ADMIN") {
       return res.status(403).json({ error: "Not authorized to comment on this task" });
     }
 
+    // Channel isolation: a comment may only be posted on a file in the commenter's
+    // channel, and it inherits that file's channel. Internal files are worker/admin;
+    // client-channel files are client/erasphere/admin.
+    if ((role === "CLIENT" || role === "ERASPHERE") && !file.visibleToClient) {
+      return res.status(403).json({ error: "Not authorized to access this file" });
+    }
+    if (role === "WORKER" && file.visibleToClient) {
+      return res.status(403).json({ error: "Not authorized to access this file" });
+    }
+    const visibleToClient = file.visibleToClient;
+
     const comment = await prisma.fileComment.create({
       data: {
-        fileId: parseInt(fileId),
+        fileId: fileIdNum,
         userId: authUserId,
-        content,
+        content: content.trim(),
         visibleToClient,
       },
       include: {
@@ -727,8 +757,8 @@ router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) 
     await emit(EventType.TASK_COMMENT_ADDED, {
       title: "New comment on file",
       message: `${commenterName} commented on a file in task "${task.title}"`,
-      link: `/tasks/${taskId}?highlightFileComment=${comment.id}`,
-      taskId: parseInt(taskId),
+      link: `/tasks/${taskIdNum}?highlightFileComment=${comment.id}`,
+      taskId: taskIdNum,
       actorId: authUserId,
       actorRole: authorRole,
       threadType: visibleToClient ? "client" : "internal",
@@ -772,6 +802,15 @@ router.post("/:id/comments", verifyJWT, async (req: any, res) => {
     }
     if (role === "CLIENT" && Number(task.clientId) !== authUserId) {
       return res.status(403).json({ error: "Not authorized to comment on this task" });
+    }
+    if (role === "ERASPHERE") {
+      const referred = await prisma.user.findMany({
+        where: { role: "CLIENT", referredById: authUserId },
+        select: { id: true },
+      });
+      if (task.clientId === null || !referred.some((c) => c.id === task.clientId)) {
+        return res.status(403).json({ error: "Not authorized to comment on this task" });
+      }
     }
 
     const visibleToClient = role === "CLIENT" ? true : (visibleToClientBody === true || visibleToClientBody === "true");
