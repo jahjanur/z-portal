@@ -9,11 +9,11 @@ const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const nodemailer_1 = __importDefault(require("nodemailer"));
-const notifications_1 = require("../services/notifications");
-const notificationStore_1 = require("../services/notificationStore");
+const notificationEngine_1 = require("../services/notificationEngine");
 const prisma_1 = __importDefault(require("../lib/prisma"));
+const uploadsPath_1 = require("../lib/uploadsPath");
 const router = (0, express_1.Router)();
-const invoicesDir = "uploads/invoices";
+const invoicesDir = path_1.default.join(uploadsPath_1.uploadsDir, "invoices");
 if (!fs_1.default.existsSync(invoicesDir)) {
     fs_1.default.mkdirSync(invoicesDir, { recursive: true });
 }
@@ -102,6 +102,22 @@ router.get("/", auth_1.verifyJWT, async (req, res) => {
                 orderBy: { createdAt: 'desc' }
             });
         }
+        else if (role === "ERASPHERE") {
+            const referredClientIds = await prisma_1.default.user.findMany({
+                where: { referredById: userId, role: "CLIENT" },
+                select: { id: true },
+            }).then((users) => users.map((u) => u.id));
+            invoices = referredClientIds.length
+                ? await prisma_1.default.invoice.findMany({
+                    where: { clientId: { in: referredClientIds } },
+                    include: {
+                        client: { select: clientSelectWithContact },
+                        lineItems: { orderBy: { sortOrder: 'asc' } },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                })
+                : [];
+        }
         else {
             return res.status(403).json({ error: "Invalid role" });
         }
@@ -165,10 +181,11 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
         let taxAmount = null;
         let taxRateNum = null;
         if (hasLineItems) {
-            subtotal = lineItems.reduce((sum, li) => sum + Number(li.quantity) * Number(li.unitPrice), 0);
+            const sub = lineItems.reduce((sum, li) => sum + Number(li.quantity) * Number(li.unitPrice), 0);
+            subtotal = sub;
             taxRateNum = taxRate != null && taxRate !== "" ? parseFloat(String(taxRate)) : null;
-            taxAmount = taxRateNum != null ? subtotal * (taxRateNum / 100) : 0;
-            totalAmount = subtotal + (taxAmount || 0);
+            taxAmount = taxRateNum != null ? sub * (taxRateNum / 100) : 0;
+            totalAmount = sub + (taxAmount || 0);
         }
         else {
             if (amount == null || amount === "") {
@@ -224,8 +241,13 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
                 lineItems: { orderBy: { sortOrder: 'asc' } },
             }
         });
-        // In-app notification for the client
-        await (0, notificationStore_1.createNotification)(Number(clientId), "INVOICE_CREATED", "New Invoice", `Invoice ${invoiceNumber} for $${totalAmount.toFixed(2)} has been created`, "/dashboard");
+        await (0, notificationEngine_1.emit)(notificationEngine_1.EventType.INVOICE_CREATED, {
+            title: "New Invoice",
+            message: `Invoice ${invoiceNumber} for ${totalAmount.toFixed(2)} € has been created`,
+            link: "/dashboard",
+            invoiceId: invoice.id,
+            clientId: Number(clientId),
+        });
         if (sendEmail === 'true') {
             try {
                 const attachments = [];
@@ -272,9 +294,6 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
             catch (emailError) {
                 console.error("❌ Error sending payment request email:", emailError);
             }
-        }
-        else {
-            await (0, notifications_1.notifyNewInvoice)(invoiceWithLines ?? invoice, { email: client.email, name: client.name });
         }
         res.status(201).json(invoiceWithLines ?? invoice);
     }
@@ -443,18 +462,14 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
                 lineItems: { orderBy: { sortOrder: 'asc' } },
             }
         });
-        if (status === 'PAID' && existingInvoice.status !== 'PAID') {
-            await (0, notifications_1.notifyInvoicePaid)(result, {
-                email: result.client.email,
-                name: result.client.name
+        if (status === "PAID" && existingInvoice.status !== "PAID") {
+            await (0, notificationEngine_1.emit)(notificationEngine_1.EventType.INVOICE_PAID, {
+                title: "Invoice Paid",
+                message: `Invoice ${result.invoiceNumber} (${result.amount.toFixed(2)} €) has been marked as paid`,
+                link: "/dashboard",
+                invoiceId: result.id,
+                clientId: result.clientId,
             });
-            // Notify client that invoice is paid
-            await (0, notificationStore_1.createNotification)(result.clientId, "INVOICE_PAID", "Invoice Paid", `Invoice ${result.invoiceNumber} has been marked as paid`, "/dashboard");
-            // Notify admins
-            const admins = await prisma_1.default.user.findMany({ where: { role: "ADMIN" } });
-            for (const admin of admins) {
-                await (0, notificationStore_1.createNotification)(admin.id, "INVOICE_PAID", "Invoice Paid", `Invoice ${result.invoiceNumber} ($${result.amount.toFixed(2)}) has been paid`, "/admin/invoices");
-            }
         }
         res.json(result ?? updatedInvoice);
     }

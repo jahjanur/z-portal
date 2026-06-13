@@ -12,11 +12,12 @@ const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const auth_1 = require("../middleware/auth");
 const notifications_1 = require("../services/notifications");
-const notificationStore_1 = require("../services/notificationStore");
+const notificationEngine_1 = require("../services/notificationEngine");
 const prisma_1 = __importDefault(require("../lib/prisma"));
+const uploadsPath_1 = require("../lib/uploadsPath");
 const router = (0, express_1.Router)();
 const SALT_ROUNDS = 10;
-const filesDir = "uploads/files";
+const filesDir = path_1.default.join(uploadsPath_1.uploadsDir, "files");
 if (!fs_1.default.existsSync(filesDir)) {
     fs_1.default.mkdirSync(filesDir, { recursive: true });
 }
@@ -362,7 +363,7 @@ router.get("/:id", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, async (req, 
 // create user (admin can create any role; EraSphere can create CLIENT only)
 router.post("/", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, async (req, res) => {
     try {
-        const { email, password, role, name, company, logo, colorHex, postalAddress, domainName } = req.body;
+        const { email, password, role, name, company, logo, colorHex, postalAddress, domainName, domainExpiry, hostingPlan, hostingExpiry, } = req.body;
         if (!email || !password || !role || !name) {
             return res.status(400).json({ error: "Email, password, role, and name are required" });
         }
@@ -425,24 +426,25 @@ router.post("/", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, async (req, re
             },
         });
         if (reqRole === "ERASPHERE" && roleNormalized === "CLIENT") {
-            try {
-                const partner = await prisma_1.default.user.findUnique({
-                    where: { id: req.user.userId },
-                    select: { name: true },
-                });
-                await (0, notificationStore_1.notifyAdmins)("ERASPHERE_NEW_CLIENT", "EraSphere added a client", `${partner?.name ?? "EraSphere partner"} added client: ${newUser.name} (${newUser.email})`, "/admin/clients");
-            }
-            catch (err) {
-                console.error("Failed to notify admins of new EraSphere client:", err);
-            }
+            const partner = await prisma_1.default.user.findUnique({ where: { id: req.user.userId }, select: { name: true } });
+            (0, notificationEngine_1.emit)(notificationEngine_1.EventType.ERASPHERE_NEW_CLIENT, {
+                title: "EraSphere added a client",
+                message: `${partner?.name ?? "EraSphere partner"} added client: ${newUser.name} (${newUser.email})`,
+                link: "/admin/clients",
+                clientId: newUser.id,
+                actorId: req.user.userId,
+            }).catch((err) => console.error("Failed to emit ERASPHERE_NEW_CLIENT:", err));
         }
         if (roleNormalized === "CLIENT" && domainName) {
             try {
+                const expirationDate = domainExpiry ? new Date(domainExpiry + "T12:00:00") : null;
+                const isValidExpiry = expirationDate && !isNaN(expirationDate.getTime());
                 await prisma_1.default.domain.create({
                     data: {
                         clientId: newUser.id,
                         domainName,
                         isPrimary: true,
+                        expirationDate: isValidExpiry ? expirationDate : null,
                     }
                 });
                 console.log(`✅ Domain ${domainName} created for client ${newUser.id}`);
@@ -459,6 +461,24 @@ router.post("/", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, async (req, re
             const emailBody = isEraSphere
                 ? 'You have been invited as an EraSphere Partner. Please complete your company profile by clicking the link below:'
                 : 'Please complete your company profile by clicking the link below:';
+            const hasDomainInfo = domainName || domainExpiry || hostingPlan || hostingExpiry;
+            const formatDateForEmail = (d) => {
+                const date = new Date(d);
+                return isNaN(date.getTime()) ? d : date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+            };
+            const domainSection = hasDomainInfo
+                ? `
+          <div style="margin-top: 20px; padding: 16px; background: #f5f5f5; border-radius: 8px;">
+            <p style="margin: 0 0 10px 0; font-weight: 600;">Domain & Hosting details (from your client page):</p>
+            <ul style="margin: 0; padding-left: 20px;">
+              ${domainName ? `<li><strong>Domain:</strong> ${domainName}</li>` : ""}
+              ${domainExpiry ? `<li><strong>Domain expiry:</strong> ${formatDateForEmail(domainExpiry)}</li>` : ""}
+              ${hostingPlan ? `<li><strong>Hosting plan:</strong> ${hostingPlan}</li>` : ""}
+              ${hostingExpiry ? `<li><strong>Hosting expiry:</strong> ${formatDateForEmail(hostingExpiry)}</li>` : ""}
+            </ul>
+          </div>
+        `
+                : "";
             try {
                 await transporter.sendMail({
                     from: process.env.SMTP_USER,
@@ -467,6 +487,7 @@ router.post("/", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, async (req, re
                     html: `
             <h2>${emailHeading}</h2>
             <p>${emailBody}</p>
+            ${domainSection}
             <a href="${inviteLink}" style="display: inline-block; padding: 10px 20px; background-color: #5B4FFF; color: white; text-decoration: none; border-radius: 5px;">Complete Profile</a>
             <p>This link will expire in 7 days.</p>
           `,
@@ -575,10 +596,48 @@ router.post("/complete-profile", uploadFile.array("files", 10), async (req, res)
         res.status(500).json({ error: "Failed to complete profile" });
     }
 });
-// delete user
+// delete user (and all related data to avoid FK violations)
 router.delete("/:id", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
     try {
-        await prisma_1.default.user.delete({ where: { id: Number(req.params.id) } });
+        const id = Number(req.params.id);
+        const user = await prisma_1.default.user.findUnique({ where: { id }, select: { id: true, role: true } });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        await prisma_1.default.$transaction(async (tx) => {
+            // 1. Comments and activity by this user (worker/any role)
+            await tx.fileComment.deleteMany({ where: { userId: id } });
+            await tx.taskComment.deleteMany({ where: { userId: id } });
+            await tx.invite.deleteMany({ where: { invitedById: id } });
+            if (user.role === "CLIENT") {
+                // 2. Tasks for this client: files, comments, workers, then tasks
+                const clientTaskIds = (await tx.task.findMany({ where: { clientId: id }, select: { id: true } })).map((t) => t.id);
+                if (clientTaskIds.length > 0) {
+                    await tx.fileComment.deleteMany({ where: { file: { taskId: { in: clientTaskIds } } } });
+                    await tx.taskComment.deleteMany({ where: { taskId: { in: clientTaskIds } } });
+                    await tx.taskWorker.deleteMany({ where: { taskId: { in: clientTaskIds } } });
+                    await tx.taskFile.deleteMany({ where: { taskId: { in: clientTaskIds } } });
+                    await tx.task.deleteMany({ where: { id: { in: clientTaskIds } } });
+                }
+                // 3. Invoices (line items cascade in DB or delete explicitly)
+                const invoiceIds = (await tx.invoice.findMany({ where: { clientId: id }, select: { id: true } })).map((i) => i.id);
+                if (invoiceIds.length > 0) {
+                    await tx.invoiceLineItem.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+                    await tx.invoice.deleteMany({ where: { clientId: id } });
+                }
+                // 4. Domains, unlink projects/timesheet projects
+                await tx.domain.deleteMany({ where: { clientId: id } });
+                await tx.project.updateMany({ where: { clientId: id }, data: { clientId: null } });
+                await tx.timesheetProject.updateMany({ where: { clientId: id }, data: { clientId: null } });
+            }
+            // 5. If EraSphere: unlink referred clients so we can delete this user
+            await tx.user.updateMany({ where: { referredById: id }, data: { referredById: null } });
+            // 6. Notifications and preferences (may already cascade via schema; safe to delete explicitly)
+            await tx.notification.deleteMany({ where: { userId: id } });
+            await tx.notificationPreference.deleteMany({ where: { userId: id } });
+            // 7. Finally delete the user
+            await tx.user.delete({ where: { id } });
+        });
         res.json({ success: true });
     }
     catch (error) {
@@ -589,12 +648,22 @@ router.delete("/:id", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => 
 // get clients
 router.get("/clients/list", auth_1.verifyJWT, async (req, res) => {
     try {
-        const { role } = req.user;
+        const { role, userId } = req.user;
         if (role !== "ADMIN" && role !== "WORKER" && role !== "ERASPHERE") {
             return res.status(403).json({ error: "Not authorized" });
         }
+        let clientFilter = { role: "CLIENT" };
+        if (role === "WORKER") {
+            // Workers may only see clients from tasks they are assigned to
+            const assignedTasks = await prisma_1.default.taskWorker.findMany({
+                where: { userId },
+                select: { task: { select: { clientId: true } } },
+            });
+            const clientIds = [...new Set(assignedTasks.map((tw) => tw.task.clientId).filter((id) => id !== null))];
+            clientFilter = { role: "CLIENT", id: { in: clientIds } };
+        }
         const clients = await prisma_1.default.user.findMany({
-            where: { role: "CLIENT" },
+            where: clientFilter,
             select: {
                 id: true,
                 name: true,

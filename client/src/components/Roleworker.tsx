@@ -20,12 +20,6 @@ interface Task {
   client?: Client;
 }
 
-const colors = {
-  primary: "rgba(255,255,255,0.12)",
-  accent: "#FFA726",
-  dark: "#1A1A2E",
-  light: "#F8F9FA",
-};
 
 const RoleWorker: React.FC = () => {
   const navigate = useNavigate();

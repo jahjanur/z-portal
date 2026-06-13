@@ -47,7 +47,7 @@ describe("Task Routes", () => {
         .set("Authorization", `Bearer ${token}`)
         .send({ title: "Test Task", clientId: 1 });
       expect(res.status).toBe(403);
-      expect(res.body.error).toBe("Only admins can create tasks");
+      expect(res.body.error).toBe("Only admins or EraSphere can create tasks");
     });
 
     it("returns 403 for client role", async () => {
@@ -57,7 +57,7 @@ describe("Task Routes", () => {
         .set("Authorization", `Bearer ${token}`)
         .send({ title: "Test Task", clientId: 3 });
       expect(res.status).toBe(403);
-      expect(res.body.error).toBe("Only admins can create tasks");
+      expect(res.body.error).toBe("Only admins or EraSphere can create tasks");
     });
 
     it("returns 400 when title is missing", async () => {
@@ -107,7 +107,7 @@ describe("Task Routes", () => {
         .delete("/tasks/1")
         .set("Authorization", `Bearer ${token}`);
       expect(res.status).toBe(403);
-      expect(res.body.error).toBe("Only admins can delete tasks");
+      expect(res.body.error).toBe("Only admins or EraSphere can delete tasks");
     });
   });
 });

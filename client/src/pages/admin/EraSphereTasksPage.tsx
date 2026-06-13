@@ -1,7 +1,6 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useAdmin } from "../../contexts/AdminContext";
 import TasksList from "../../components/admin/TasksList";
-import type { Task } from "../../contexts/AdminContext";
 
 const colors = { primary: "" };
 

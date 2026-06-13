@@ -541,6 +541,7 @@ const Timesheets = () => {
                     entryNotes={entryNotes}
                     setEntryNotes={setEntryNotes}
                     addEntry={addEntry}
+                    editEntry={editEntry}
                     deleteEntry={deleteEntry}
                     deleteProject={deleteProject}
                     markProjectPaid={markProjectPaid}

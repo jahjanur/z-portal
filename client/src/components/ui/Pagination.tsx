@@ -6,6 +6,9 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
+const NAV_BTN =
+  "inline-flex h-10 min-w-[40px] items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-3)] hover:border-[var(--color-border-hover)] disabled:cursor-not-allowed disabled:opacity-40";
+
 const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPageChange }) => {
   if (totalPages <= 1) return null;
 
@@ -23,39 +26,58 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
   }
 
   return (
-    <div className="mt-4 flex items-center justify-center gap-1">
+    <nav className="mt-5 flex items-center justify-center gap-1.5" aria-label="Pagination">
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-3)] disabled:cursor-not-allowed disabled:opacity-40"
+        className={NAV_BTN}
+        aria-label="Previous page"
       >
-        Prev
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
       </button>
-      {pages.map((p, i) =>
-        p === "..." ? (
-          <span key={`ellipsis-${i}`} className="px-2 text-sm text-[var(--color-text-muted)]">...</span>
-        ) : (
-          <button
-            key={p}
-            onClick={() => onPageChange(p)}
-            className={`min-w-[36px] rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-              p === currentPage
-                ? "border-[var(--color-tab-active-border)] bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
-                : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-3)]"
-            }`}
-          >
-            {p}
-          </button>
-        )
-      )}
+
+      {/* Mobile: compact "x of y" indicator */}
+      <span className="px-2 text-sm font-medium text-[var(--color-text-secondary)] sm:hidden">
+        {currentPage} / {totalPages}
+      </span>
+
+      {/* Desktop: page numbers */}
+      <div className="hidden items-center gap-1.5 sm:flex">
+        {pages.map((p, i) =>
+          p === "..." ? (
+            <span key={`ellipsis-${i}`} className="px-1.5 text-sm text-[var(--color-text-muted)]">
+              …
+            </span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => onPageChange(p)}
+              aria-current={p === currentPage ? "page" : undefined}
+              className={`inline-flex h-10 min-w-[40px] items-center justify-center rounded-xl border px-3 text-sm font-semibold transition-colors ${
+                p === currentPage
+                  ? "border-transparent bg-[var(--color-nav-active-bg)] text-[var(--color-nav-active-text)] shadow-elev-sm"
+                  : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-3)] hover:border-[var(--color-border-hover)]"
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+      </div>
+
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-3)] disabled:cursor-not-allowed disabled:opacity-40"
+        className={NAV_BTN}
+        aria-label="Next page"
       >
-        Next
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
       </button>
-    </div>
+    </nav>
   );
 };
 

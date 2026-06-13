@@ -8,7 +8,9 @@ const path_1 = __importDefault(require("path"));
 // .env is also preloaded by "npm run dev" via node -r dotenv/config so it's set before Prisma is used
 dotenv_1.default.config();
 if (process.env.NODE_ENV === "production") {
-    dotenv_1.default.config({ path: ".env.production", override: true });
+    // Load from server/.env.production so it works regardless of cwd (e.g. in Docker)
+    const productionEnv = path_1.default.join(__dirname, "..", ".env.production");
+    dotenv_1.default.config({ path: productionEnv, override: true });
 }
 if (!process.env.DATABASE_URL) {
     console.error("DATABASE_URL is not set. Create server/.env from server/.env.example and set DATABASE_URL.");
@@ -21,7 +23,7 @@ if (process.env.NODE_ENV === "production") {
     const buildPath = path_1.default.join(__dirname, "client");
     const express = require("express");
     app_1.default.use(express.static(buildPath));
-    app_1.default.get("*", (req, res) => res.sendFile(path_1.default.join(buildPath, "index.html")));
+    app_1.default.get("/{*path}", (req, res) => res.sendFile(path_1.default.join(buildPath, "index.html")));
 }
 const PORT = process.env.PORT || 4001;
 app_1.default.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));

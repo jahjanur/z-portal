@@ -32,7 +32,7 @@ interface TasksListProps {
 
 const PAGE_SIZE = 10;
 
-const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
+const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"all" | "grouped">("all");
   const [filter, setFilter] = useState<"all" | "withProject" | "standalone">("all");
@@ -40,7 +40,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
   const [page, setPage] = useState(1);
   const effectiveViewMode = filter === "withProject" ? "grouped" : viewMode;
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = () => {
     return "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)] border border-[var(--color-border-hover)]";
   };
 
@@ -118,7 +118,7 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete, colors }) => {
                 {task.title}
               </h4>
               <span 
-                className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusColor(task.status)} whitespace-nowrap`}
+                className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusColor()} whitespace-nowrap`}
                 role="status"
                 aria-label={`Status: ${getStatusLabel(task.status)}`}
               >

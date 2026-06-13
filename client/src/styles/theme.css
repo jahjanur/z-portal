@@ -80,6 +80,26 @@
   /* Zulbera-style pattern (subtle grid + vignette) */
   --pattern-line: rgba(255, 255, 255, 0.10);
   --pattern-glow: rgba(0, 0, 0, 0.35);
+  /* Semantic status (additive — used by badges/alerts; brand stays monochrome) */
+  --color-success-bg: rgba(34, 197, 94, 0.12);
+  --color-success-text: rgb(134, 239, 172);
+  --color-success-border: rgba(34, 197, 94, 0.25);
+  --color-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-warning-text: rgb(252, 211, 77);
+  --color-warning-border: rgba(245, 158, 11, 0.25);
+  --color-info-bg: rgba(59, 130, 246, 0.12);
+  --color-info-text: rgb(147, 197, 253);
+  --color-info-border: rgba(59, 130, 246, 0.25);
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.45);
+  /* Scrollbar */
+  --color-scrollbar: rgba(255, 255, 255, 0.16);
+  --color-scrollbar-hover: rgba(255, 255, 255, 0.28);
+  /* Skeleton shimmer */
+  --color-skeleton-base: rgba(255, 255, 255, 0.06);
+  --color-skeleton-highlight: rgba(255, 255, 255, 0.12);
 }
 
 /* ---------------------------------------------------------------------------
@@ -158,6 +178,26 @@
   /* Zulbera-style pattern (subtle grid + vignette) */
   --pattern-line: rgba(0, 0, 0, 0.10);
   --pattern-glow: rgba(15, 23, 42, 0.05);
+  /* Semantic status (additive) */
+  --color-success-bg: rgba(34, 197, 94, 0.1);
+  --color-success-text: #15803d;
+  --color-success-border: rgba(34, 197, 94, 0.3);
+  --color-warning-bg: rgba(245, 158, 11, 0.1);
+  --color-warning-text: #b45309;
+  --color-warning-border: rgba(245, 158, 11, 0.3);
+  --color-info-bg: rgba(59, 130, 246, 0.1);
+  --color-info-text: #1d4ed8;
+  --color-info-border: rgba(59, 130, 246, 0.3);
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 12px 40px rgba(15, 23, 42, 0.12);
+  /* Scrollbar */
+  --color-scrollbar: rgba(15, 23, 42, 0.2);
+  --color-scrollbar-hover: rgba(15, 23, 42, 0.35);
+  /* Skeleton shimmer */
+  --color-skeleton-base: rgba(15, 23, 42, 0.06);
+  --color-skeleton-highlight: rgba(15, 23, 42, 0.12);
 }
 
 /* Default (no data-theme yet): use dark so no flash before script runs */
@@ -220,4 +260,20 @@ html:not([data-theme]) {
   --color-vignette: rgba(0, 0, 0, 0.35);
   --pattern-line: rgba(255, 255, 255, 0.10);
   --pattern-glow: rgba(0, 0, 0, 0.35);
+  --color-success-bg: rgba(34, 197, 94, 0.12);
+  --color-success-text: rgb(134, 239, 172);
+  --color-success-border: rgba(34, 197, 94, 0.25);
+  --color-warning-bg: rgba(245, 158, 11, 0.12);
+  --color-warning-text: rgb(252, 211, 77);
+  --color-warning-border: rgba(245, 158, 11, 0.25);
+  --color-info-bg: rgba(59, 130, 246, 0.12);
+  --color-info-text: rgb(147, 197, 253);
+  --color-info-border: rgba(59, 130, 246, 0.25);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --color-scrollbar: rgba(255, 255, 255, 0.16);
+  --color-scrollbar-hover: rgba(255, 255, 255, 0.28);
+  --color-skeleton-base: rgba(255, 255, 255, 0.06);
+  --color-skeleton-highlight: rgba(255, 255, 255, 0.12);
 }
