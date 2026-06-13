@@ -6,6 +6,7 @@ import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
 import Pagination from "../components/ui/Pagination";
 import { SkeletonRows } from "../components/ui/Skeleton";
+import { timeAgo } from "../utils";
 
 interface NotificationItem {
   id: number;
@@ -15,18 +16,6 @@ interface NotificationItem {
   read: boolean;
   link?: string | null;
   createdAt: string;
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString();
 }
 
 export default function NotificationsPage() {

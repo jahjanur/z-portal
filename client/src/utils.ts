@@ -43,3 +43,24 @@ export const getDaysUntilDue = (dueDate?: string | null) => {
   );
   return diff;
 };
+
+/**
+ * Relative "time ago" label for timestamps (notifications, activity feeds).
+ * Falls back to an absolute date past 30 days. Returns "" for an invalid date
+ * and "just now" for a future timestamp.
+ */
+export const timeAgo = (dateStr?: string | null): string => {
+  if (!dateStr) return "";
+  const t = new Date(dateStr).getTime();
+  if (isNaN(t)) return "";
+  const diff = Date.now() - t;
+  if (diff < 0) return "just now";
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+};

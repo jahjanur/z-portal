@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { formatDate, formatCurrency, getDaysUntilDue, getStatusColor } from "../utils";
+import { formatDate, formatCurrency, getDaysUntilDue, getStatusColor, timeAgo } from "../utils";
 
 const DAY = 1000 * 60 * 60 * 24;
+const MIN = 1000 * 60;
+const HOUR = MIN * 60;
 
 describe("formatDate", () => {
   it("returns 'N/A' for null/undefined/empty", () => {
@@ -60,5 +62,31 @@ describe("getStatusColor", () => {
     expect(getStatusColor("COMPLETED")).toContain("var(--color-surface-3)");
     expect(getStatusColor(null)).toContain("var(--color-surface-3)");
     expect(getStatusColor("anything")).toContain("text-[var(--color-text-secondary)]");
+  });
+});
+
+describe("timeAgo", () => {
+  it("returns '' for nullish or unparseable input", () => {
+    expect(timeAgo(null)).toBe("");
+    expect(timeAgo(undefined)).toBe("");
+    expect(timeAgo("")).toBe("");
+    expect(timeAgo("not-a-date")).toBe("");
+  });
+
+  it("returns 'just now' for very recent or future timestamps", () => {
+    expect(timeAgo(new Date(Date.now() - 10 * 1000).toISOString())).toBe("just now");
+    expect(timeAgo(new Date(Date.now() + 60 * 1000).toISOString())).toBe("just now");
+  });
+
+  it("formats minutes, hours and days", () => {
+    expect(timeAgo(new Date(Date.now() - 5 * MIN).toISOString())).toBe("5m ago");
+    expect(timeAgo(new Date(Date.now() - 2 * HOUR).toISOString())).toBe("2h ago");
+    expect(timeAgo(new Date(Date.now() - 3 * DAY).toISOString())).toBe("3d ago");
+  });
+
+  it("falls back to an absolute date past 30 days (no 'ago')", () => {
+    const out = timeAgo(new Date(Date.now() - 45 * DAY).toISOString());
+    expect(out).not.toMatch(/ago/);
+    expect(out).not.toBe("");
   });
 });
