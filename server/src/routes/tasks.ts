@@ -1074,8 +1074,9 @@ router.patch("/:taskId/files/:fileId/review", verifyJWT, verifyAdmin, async (req
     if (taskFile.uploadedBy !== adminId) {
       recipientNotifications.push({ userId: taskFile.uploadedBy, message: uploaderMessage });
     }
-    // Notify the task client (separate message)
-    if (taskFile.task.clientId && taskFile.task.clientId !== adminId) {
+    // Notify the task client ONLY for client-channel files. Internal (worker-channel)
+    // files are not visible to the client, so a review of one must not leak to them.
+    if (taskFile.visibleToClient && taskFile.task.clientId && taskFile.task.clientId !== adminId) {
       recipientNotifications.push({ userId: taskFile.task.clientId, message: clientMessage });
     }
 

@@ -44,6 +44,9 @@ Thumbs.db
 # Uploads (keep structure but ignore files)
 server/uploads/*
 !server/uploads/.gitkeep
+# Test-run upload residue: uploadsDir resolves to src/uploads when tests run
+# from source (vs dist/uploads in production). Never commit this.
+server/src/uploads/
 
 # Temporary files
 *.tmp
