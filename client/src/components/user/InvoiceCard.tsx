@@ -40,10 +40,10 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
             <h3 className="text-lg font-semibold tracking-tight text-[var(--color-text-primary)]">
               Invoice #{invoice.invoiceNumber}
             </h3>
-            <StatusBadge
-              status={invoice.status}
-              tone={isOverdue ? "danger" : undefined}
-            />
+            {/* Show an explicit "Overdue" label (red) for past-due invoices —
+                a raw status of "Pending" tinted red is confusing. A stored
+                OVERDUE status also renders correctly via this fallback. */}
+            <StatusBadge status={isOverdue ? "OVERDUE" : invoice.status} />
           </div>
           {invoice.description && (
             <p className="mt-1.5 text-sm text-[var(--color-text-muted)]">{invoice.description}</p>

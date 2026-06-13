@@ -1,5 +1,6 @@
 import React from "react";
 import StatusBadge from "../ui/StatusBadge";
+import { isInvoiceOverdue } from "../../utils";
 
 interface Invoice {
   id: number;
@@ -39,7 +40,7 @@ const RecentInvoiceCard: React.FC<RecentInvoiceCardProps> = ({
           <p className="text-base font-bold tabular-nums text-[var(--color-text-primary)]">
             {formatCurrency(invoice.amount)}
           </p>
-          <StatusBadge status={invoice.status} />
+          <StatusBadge status={isInvoiceOverdue(invoice) ? "OVERDUE" : invoice.status} />
         </div>
       </div>
     </div>
