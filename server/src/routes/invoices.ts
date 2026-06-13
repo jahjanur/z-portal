@@ -282,7 +282,7 @@ router.post("/", verifyJWT, uploadInvoice.single("file"), async (req: any, res) 
 
     await emit(EventType.INVOICE_CREATED, {
       title: "New Invoice",
-      message: `Invoice ${invoiceNumber} for ${totalAmount.toFixed(2)} € has been created`,
+      message: `Invoice ${invoiceNumber} for $${totalAmount.toFixed(2)} has been created`,
       link: "/dashboard",
       invoiceId: invoice.id,
       clientId: Number(clientId),
@@ -516,7 +516,7 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
     if (status === "PAID" && existingInvoice.status !== "PAID") {
       await emit(EventType.INVOICE_PAID, {
         title: "Invoice Paid",
-        message: `Invoice ${result!.invoiceNumber} (${result!.amount.toFixed(2)} €) has been marked as paid`,
+        message: `Invoice ${result!.invoiceNumber} ($${result!.amount.toFixed(2)}) has been marked as paid`,
         link: "/dashboard",
         invoiceId: result!.id,
         clientId: result!.clientId,
