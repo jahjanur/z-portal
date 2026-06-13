@@ -174,6 +174,15 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
       }
     } else if (role === "CLIENT" && invoice.clientId !== userId) {
       return res.status(403).json({ error: "Not authorized to view this invoice" });
+    } else if (role === "ERASPHERE") {
+      // Partners may only view invoices of clients they referred.
+      const referred = await prisma.user.findMany({
+        where: { referredById: userId, role: "CLIENT" },
+        select: { id: true },
+      });
+      if (!referred.some((c) => c.id === invoice.clientId)) {
+        return res.status(403).json({ error: "Not authorized to view this invoice" });
+      }
     }
 
     res.json(invoice);
