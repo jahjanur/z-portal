@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatDate, formatCurrency, getDaysUntilDue, getStatusColor, timeAgo, computeInvoiceRevenue } from "../utils";
+import { formatDate, formatCurrency, getDaysUntilDue, getStatusColor, timeAgo, computeInvoiceRevenue, isInvoiceOverdue } from "../utils";
 
 const DAY = 1000 * 60 * 60 * 24;
 const MIN = 1000 * 60;
@@ -117,5 +117,28 @@ describe("computeInvoiceRevenue", () => {
     expect(r.totalPaid).toBe(10);
     expect(r.totalPending).toBe(12);
     expect(r.totalRevenue).toBe(22);
+  });
+});
+
+describe("isInvoiceOverdue", () => {
+  const past = new Date(Date.now() - 3 * DAY).toISOString();
+  const future = new Date(Date.now() + 3 * DAY).toISOString();
+
+  it("is never overdue when paid", () => {
+    expect(isInvoiceOverdue({ status: "PAID", dueDate: past })).toBe(false);
+  });
+
+  it("is overdue when explicitly marked OVERDUE, regardless of due date", () => {
+    expect(isInvoiceOverdue({ status: "OVERDUE", dueDate: future })).toBe(true);
+    expect(isInvoiceOverdue({ status: "OVERDUE", dueDate: null })).toBe(true);
+  });
+
+  it("is overdue when unpaid and past due", () => {
+    expect(isInvoiceOverdue({ status: "PENDING", dueDate: past })).toBe(true);
+  });
+
+  it("is not overdue when unpaid but not yet due (or no due date)", () => {
+    expect(isInvoiceOverdue({ status: "PENDING", dueDate: future })).toBe(false);
+    expect(isInvoiceOverdue({ status: "PENDING", dueDate: null })).toBe(false);
   });
 });

@@ -16,7 +16,7 @@ import Button from "./ui/Button";
 import SectionCard from "./ui/SectionCard";
 import { SkeletonDashboard } from "./ui/Skeleton";
 import { useNotifications } from "../hooks/useNotifications";
-import { getStatusColor, formatDate, formatCurrency, getDaysUntilDue } from "../utils";
+import { getStatusColor, formatDate, formatCurrency, getDaysUntilDue, isInvoiceOverdue } from "../utils";
 
 interface Worker {
   id: number;
@@ -139,10 +139,8 @@ const fetchAll = async () => {
   const pendingTasks = tasks.filter(t => t.status?.toUpperCase() === "PENDING").length;
   const completionRate = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
 
-  // Overdue = unpaid and past its due date. Pending and Overdue are mutually
-  // exclusive so the summary never counts the same invoice twice.
-  const isInvoiceOverdue = (i: Invoice) =>
-    i.status?.toUpperCase() !== "PAID" && !!i.dueDate && new Date(i.dueDate) < new Date();
+  // Pending and Overdue are mutually exclusive so the summary never counts the
+  // same invoice twice (isInvoiceOverdue also catches admin-flagged OVERDUE).
   const paidInvoices = invoices.filter(i => i.status?.toUpperCase() === "PAID");
   const overdueInvoices = invoices.filter(isInvoiceOverdue);
   const pendingInvoices = invoices.filter(
@@ -175,7 +173,7 @@ const fetchAll = async () => {
     if (statusFilter === "ALL") {
       matchesStatus = true;
     } else if (statusFilter === "OVERDUE") {
-      matchesStatus = invoice.status?.toUpperCase() !== "PAID" && !!invoice.dueDate && new Date(invoice.dueDate) < new Date();
+      matchesStatus = isInvoiceOverdue(invoice);
     } else {
       matchesStatus = invoice.status?.toUpperCase() === statusFilter;
     }

@@ -65,6 +65,18 @@ export const timeAgo = (dateStr?: string | null): string => {
   return new Date(dateStr).toLocaleDateString();
 };
 
+/**
+ * Whether an invoice is overdue: unpaid AND either explicitly marked OVERDUE
+ * (admins can set that status) or past its due date. Used for the "overdue"
+ * alerts/badges so an admin-flagged overdue invoice is never missed.
+ */
+export function isInvoiceOverdue(invoice: { status?: string | null; dueDate?: string | null }): boolean {
+  const status = (invoice.status ?? "").toUpperCase();
+  if (status === "PAID") return false;
+  if (status === "OVERDUE") return true;
+  return !!invoice.dueDate && new Date(invoice.dueDate) < new Date();
+}
+
 interface RevenueInvoice {
   status?: string | null;
   amount: number;

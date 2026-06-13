@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
-import { formatCurrency, formatDate, computeInvoiceRevenue } from "../../utils";
+import { formatCurrency, formatDate, computeInvoiceRevenue, isInvoiceOverdue } from "../../utils";
 import {
   AreaChart,
   Area,
@@ -187,9 +187,7 @@ export default function ZulberaAnalyticsPage() {
     ? Math.round((adminOwnTasks.filter((t) => t.status === "COMPLETED").length / adminOwnTasks.length) * 100)
     : 0;
 
-  const overdueInvoices = adminOwnInvoices.filter(
-    (i) => i.status === "PENDING" && i.dueDate && new Date(i.dueDate) < new Date()
-  );
+  const overdueInvoices = adminOwnInvoices.filter(isInvoiceOverdue);
   const overdueTasks = adminOwnTasks.filter(
     (t) => t.status !== "COMPLETED" && t.dueDate && new Date(t.dueDate) < new Date()
   );
