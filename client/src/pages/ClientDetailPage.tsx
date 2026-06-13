@@ -35,7 +35,7 @@ interface Domain {
   id: number;
   domainName: string;
   domainRegistrar?: string;
-  domainExpiry?: string;
+  expirationDate?: string;
   hostingProvider?: string;
   hostingPlan?: string;
   hostingExpiry?: string;
@@ -757,7 +757,7 @@ const fetchAllFiles = async () => {
               ) : (
                 <div className="space-y-6 stagger-children">
                   {domains.map((domain) => {
-                    const domainDays = domain.domainExpiry ? getDaysUntilExpiry(domain.domainExpiry) : null;
+                    const domainDays = domain.expirationDate ? getDaysUntilExpiry(domain.expirationDate) : null;
                     const hostingDays = domain.hostingExpiry ? getDaysUntilExpiry(domain.hostingExpiry) : null;
                     const sslDays = domain.sslExpiry ? getDaysUntilExpiry(domain.sslExpiry) : null;
 
@@ -814,7 +814,7 @@ const fetchAllFiles = async () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                             </svg>,
                             domainDays,
-                            domain.domainExpiry
+                            domain.expirationDate
                           )}
                           {renderExpiryCard(
                             "Hosting",
