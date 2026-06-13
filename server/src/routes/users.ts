@@ -349,6 +349,9 @@ router.post("/:id/resend-invite", verifyJWT, verifyAdmin, async (req, res) => {
 router.get("/:id", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
     const requestedId = Number(req.params.id);
+    if (!Number.isInteger(requestedId)) {
+      return res.status(400).json({ error: "Invalid user ID" });
+    }
     const user = await prisma.user.findUnique({
       where: { id: requestedId },
       select: {

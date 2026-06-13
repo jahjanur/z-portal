@@ -297,7 +297,10 @@ router.delete("/entries/:id", verifyJWT, verifyAdmin, async (req, res) => {
       message: "Entry deleted successfully",
       entry,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ message: "Entry not found" });
+    }
     console.error("❌ Error deleting entry:", error);
     res.status(500).json({
       message: "Failed to delete entry",
@@ -326,7 +329,10 @@ router.delete("/projects/:id", verifyJWT, verifyAdmin, async (req, res) => {
       message: "Project deleted successfully",
       project,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ message: "Project not found" });
+    }
     console.error("❌ Error deleting project:", error);
     res.status(500).json({
       message: "Failed to delete project",
@@ -368,7 +374,10 @@ router.patch("/projects/:id/mark-paid", verifyJWT, verifyAdmin, async (req, res)
       message: "Project marked as paid",
       project,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ message: "Project not found" });
+    }
     console.error("❌ Error marking project as paid:", error);
     res.status(500).json({
       message: "Failed to mark project as paid",
@@ -410,7 +419,10 @@ router.patch("/projects/:id/mark-unpaid", verifyJWT, verifyAdmin, async (req, re
       message: "Project marked as unpaid",
       project,
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ message: "Project not found" });
+    }
     console.error("❌ Error marking project as unpaid:", error);
     res.status(500).json({
       message: "Failed to mark project as unpaid",

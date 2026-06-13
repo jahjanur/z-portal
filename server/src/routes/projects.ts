@@ -125,7 +125,10 @@ router.patch("/:id", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) =>
     });
 
     res.json(project);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ error: "Project not found" });
+    }
     console.error("Error updating project:", error);
     res.status(500).json({ error: "Failed to update project" });
   }
@@ -200,7 +203,10 @@ router.patch("/:id/status", verifyJWT, verifyAdminOrEraSphere, async (req: any, 
     });
 
     res.json(project);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ error: "Project not found" });
+    }
     console.error("Error updating project status:", error);
     res.status(500).json({ error: "Failed to update project status" });
   }

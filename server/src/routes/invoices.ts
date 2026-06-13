@@ -137,6 +137,9 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
   try {
     const { role, userId } = req.user;
     const invoiceId = Number(req.params.id);
+    if (!Number.isInteger(invoiceId)) {
+      return res.status(400).json({ error: "Invalid invoice ID" });
+    }
 
     const invoice = await prisma.invoice.findUnique({
       where: { id: invoiceId },

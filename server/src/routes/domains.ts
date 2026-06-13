@@ -294,12 +294,20 @@ router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
 // delete domain
 router.delete("/:id", verifyJWT, verifyAdmin, async (req, res) => {
   try {
+    const domainId = Number(req.params.id);
+    if (!Number.isInteger(domainId)) {
+      return res.status(400).json({ error: "Invalid domain ID" });
+    }
+
     await prisma.domain.delete({
-      where: { id: Number(req.params.id) }
+      where: { id: domainId }
     });
-    
+
     res.json({ success: true, message: "Domain deleted successfully" });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.code === "P2025") {
+      return res.status(404).json({ error: "Domain not found" });
+    }
     console.error("Error deleting domain:", error);
     res.status(500).json({ error: "Failed to delete domain" });
   }
