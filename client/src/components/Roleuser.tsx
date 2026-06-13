@@ -57,7 +57,7 @@ interface Invoice {
 interface Domain {
   id: number;
   domainName: string;
-  domainExpiry?: string | null;
+  expirationDate?: string | null;
   hostingPlan?: string | null;
   hostingExpiry?: string | null;
   isPrimary: boolean;
@@ -664,13 +664,13 @@ const fetchAll = async () => {
                     <span><strong>Plan:</strong> {primaryDomain.hostingPlan}</span>
                   </div>
                 )}
-                {primaryDomain.domainExpiry && (
+                {primaryDomain.expirationDate && (
                   <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-secondary)]">
                     <svg className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    <span><strong>Domain expires:</strong> {formatDate(primaryDomain.domainExpiry)}</span>
-                    {expiryBadge(primaryDomain.domainExpiry)}
+                    <span><strong>Domain expires:</strong> {formatDate(primaryDomain.expirationDate)}</span>
+                    {expiryBadge(primaryDomain.expirationDate)}
                   </div>
                 )}
                 {primaryDomain.hostingExpiry && (
@@ -740,13 +740,13 @@ const fetchAll = async () => {
                             </div>
                           )}
 
-                          {domain.domainExpiry && (
+                          {domain.expirationDate && (
                             <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-secondary)]">
                               <svg className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
-                              <span>Domain: {formatDate(domain.domainExpiry)}</span>
-                              {expiryBadge(domain.domainExpiry)}
+                              <span>Domain: {formatDate(domain.expirationDate)}</span>
+                              {expiryBadge(domain.expirationDate)}
                             </div>
                           )}
 
@@ -800,7 +800,7 @@ const fetchAll = async () => {
               />
               <StatCard
                 label="Expiring Soon"
-                value={domains.filter(d => isDomainExpiringSoon(d.domainExpiry) || isDomainExpiringSoon(d.hostingExpiry)).length}
+                value={domains.filter(d => isDomainExpiringSoon(d.expirationDate) || isDomainExpiringSoon(d.hostingExpiry)).length}
                 hint="Within 30 days"
                 tone="warning"
                 icon={
@@ -811,7 +811,7 @@ const fetchAll = async () => {
               />
               <StatCard
                 label="Expired"
-                value={domains.filter(d => isDomainExpired(d.domainExpiry) || isDomainExpired(d.hostingExpiry)).length}
+                value={domains.filter(d => isDomainExpired(d.expirationDate) || isDomainExpired(d.hostingExpiry)).length}
                 hint="Needs renewal"
                 tone="danger"
                 icon={
