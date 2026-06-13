@@ -20,6 +20,16 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+/** Client ids referred by an EraSphere partner. Used to scope a partner's
+ *  access to only the tasks/clients they brought in. */
+async function getReferredClientIds(userId: number): Promise<number[]> {
+  const rows = await prisma.user.findMany({
+    where: { role: "CLIENT", referredById: userId },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
+
 // get all tasks
 router.get("/", verifyJWT, async (req: any, res) => {
   try {
@@ -452,6 +462,12 @@ router.patch("/:id/status", verifyJWT, async (req: any, res) => {
     }
     if (role !== "ADMIN" && role !== "WORKER" && role !== "ERASPHERE") {
       return res.status(403).json({ error: "Not authorized to update this task" });
+    }
+    if (role === "ERASPHERE") {
+      const referredIds = await getReferredClientIds(userId);
+      if (existingTask.clientId === null || !referredIds.includes(existingTask.clientId)) {
+        return res.status(403).json({ error: "Not authorized to update this task" });
+      }
     }
 
     const updatedTask = await prisma.task.update({
@@ -935,6 +951,12 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
     if (role === "CLIENT") {
       return res.status(403).json({ error: "Clients cannot update tasks" });
     }
+    if (role === "ERASPHERE") {
+      const referredIds = await getReferredClientIds(userId);
+      if (existingTask.clientId === null || !referredIds.includes(existingTask.clientId)) {
+        return res.status(403).json({ error: "Not authorized to update this task" });
+      }
+    }
 
     const { title, description, status, dueDate, workerIds, clientId, projectId } = req.body;
     const updateData: any = {};
@@ -945,9 +967,10 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
     if (projectId !== undefined) updateData.projectId = projectId;
 
-    if (role === "ADMIN" || role === "ERASPHERE") {
+    // Reassigning the owning client or the worker roster is admin-only.
+    if (role === "ADMIN") {
       if (clientId !== undefined) updateData.clientId = clientId;
-      if (role === "ADMIN" && workerIds !== undefined && Array.isArray(workerIds)) {
+      if (workerIds !== undefined && Array.isArray(workerIds)) {
         await prisma.taskWorker.deleteMany({ where: { taskId } });
         if (workerIds.length > 0) {
           await prisma.taskWorker.createMany({
@@ -1040,12 +1063,28 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
 // delete task
 router.delete("/:id", verifyJWT, async (req: any, res) => {
   try {
-    const { role } = req.user;
+    const { role, userId } = req.user;
     if (role !== "ADMIN" && role !== "ERASPHERE") {
       return res.status(403).json({ error: "Only admins or EraSphere can delete tasks" });
     }
 
-    await prisma.task.delete({ where: { id: Number(req.params.id) } });
+    const taskId = Number(req.params.id);
+    if (!Number.isInteger(taskId)) {
+      return res.status(400).json({ error: "Invalid task id" });
+    }
+
+    const task = await prisma.task.findUnique({ where: { id: taskId }, select: { clientId: true } });
+    if (!task) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+    if (role === "ERASPHERE") {
+      const referredIds = await getReferredClientIds(userId);
+      if (task.clientId === null || !referredIds.includes(task.clientId)) {
+        return res.status(403).json({ error: "Not authorized to delete this task" });
+      }
+    }
+
+    await prisma.task.delete({ where: { id: taskId } });
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting task:", error);
