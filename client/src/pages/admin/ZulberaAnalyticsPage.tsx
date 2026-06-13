@@ -404,7 +404,7 @@ export default function ZulberaAnalyticsPage() {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text-primary)" strokeOpacity={0.1} />
                   <XAxis dataKey="period" tick={axisTick} />
-                  <YAxis tick={axisTick} tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`} />
+                  <YAxis tick={axisTick} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
                   <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
                   <Legend wrapperStyle={legendWrapperStyle} />
                   <Area type="monotone" dataKey="paid" stroke={colors.success} fillOpacity={1} fill="url(#zulberaPaid)" name="Paid" />

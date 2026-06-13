@@ -10,8 +10,9 @@ const ERASPHERE_NAV = [
   { path: "/admin/erasphere/tasks", label: "Tasks", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
 ];
 
-function formatEuro(amount: number): string {
-  return `${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+function formatRevenue(amount: number): string {
+  // Invoice-derived revenue is shown in USD everywhere else in the app.
+  return `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function EraSphereOverviewCard() {
@@ -33,7 +34,7 @@ function EraSphereOverviewCard() {
     { label: "Partners", value: String(data.partners), href: "/admin/erasphere/partners" },
     { label: "Referred clients", value: String(data.referredClients), href: "/admin/erasphere/clients" },
     { label: "Active tasks", value: String(data.activeTasks), href: "/admin/erasphere/tasks" },
-    { label: "Total revenue", value: formatEuro(data.totalRevenue), href: "/admin/erasphere/analytics" },
+    { label: "Total revenue", value: formatRevenue(data.totalRevenue), href: "/admin/erasphere/analytics" },
   ];
 
   return (
@@ -58,7 +59,7 @@ function EraSphereOverviewCard() {
             className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-3 py-2 text-xs font-medium text-[var(--color-warning-text)] transition hover:brightness-110"
           >
             <span>Pending revenue</span>
-            <span className="font-semibold tabular-nums">{formatEuro(data.pendingRevenue)}</span>
+            <span className="font-semibold tabular-nums">{formatRevenue(data.pendingRevenue)}</span>
           </Link>
         )}
       </div>
