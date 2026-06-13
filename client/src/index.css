@@ -5,20 +5,41 @@
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   Global: theme-aware body and grid (tokens from theme.css)
-   Prevent horizontal scroll on mobile; viewport stays within screen width.
+   Brand display font (Panchang) — already part of brand assets (PDFs/logos).
+   Used sparingly for page titles and hero numbers.
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Panchang';
+  src: url('./assets/fonts/Panchang-Semibold.otf') format('opentype');
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Panchang';
+  src: url('./assets/fonts/Panchang-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+   Global: theme-aware body, smooth defaults, no horizontal scroll
    --------------------------------------------------------------------------- */
 html {
   overflow-x: hidden;
   max-width: 100%;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background-color: var(--color-bg);
   color: var(--color-text-primary);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
   max-width: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
@@ -26,10 +47,41 @@ body {
   max-width: 100%;
 }
 
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Modern thin scrollbars (theme-aware)
+   --------------------------------------------------------------------------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-scrollbar);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-scrollbar-hover);
+}
+
 /* ---------------------------------------------------------------------------
    Zulbera-style background pattern (theme-aware grid + vignette)
    Applied on App.tsx root wrapper. Content (main) uses z-10 so it sits above.
-   Inner pages must NOT use full-page opaque bg or they will hide the grid.
    --------------------------------------------------------------------------- */
 .bg-app-grid {
   background-color: var(--color-bg);
@@ -37,8 +89,6 @@ body {
   min-height: 100vh;
   width: 100%;
 }
-
-/* Grid: thin lines via CSS gradients, fixed so it doesn’t scroll */
 .bg-app-grid::before {
   content: "";
   position: fixed;
@@ -50,9 +100,10 @@ body {
   background-size: 48px 48px;
   background-position: 0 0;
   z-index: 0;
+  opacity: 0.45;
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 0%, transparent 75%);
 }
-
-/* Soft vignette overlay to keep focus on content */
 .bg-app-grid::after {
   content: "";
   position: fixed;
@@ -70,6 +121,36 @@ body {
 .surface-1 { background-color: var(--color-surface-1); }
 .surface-2 { background-color: var(--color-surface-2); }
 .surface-3 { background-color: var(--color-surface-3); }
+
+/* ---------------------------------------------------------------------------
+   Typography rhythm
+   --------------------------------------------------------------------------- */
+.font-display {
+  font-family: 'Panchang', 'Inter', sans-serif;
+  letter-spacing: -0.01em;
+}
+.page-title {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+@media (min-width: 640px) {
+  .page-title { font-size: 1.875rem; }
+}
+.page-subtitle {
+  margin-top: 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+.section-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
 
 /* ---------------------------------------------------------------------------
    Form inputs: theme-aware (labels, placeholders, focus)
@@ -93,6 +174,7 @@ select {
   background-color: var(--color-input-bg);
   border: 1px solid var(--color-input-border);
   border-radius: 0.75rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 input::placeholder,
 textarea::placeholder {
@@ -109,8 +191,15 @@ textarea:focus,
 select:focus {
   outline: none;
   border-color: var(--color-border-focus);
-  box-shadow: 0 0 0 2px var(--color-focus-ring);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
+/* Checkbox / radio: don't inherit the boxy input look */
+input[type="checkbox"],
+input[type="radio"] {
+  border-radius: 0.25rem;
+  accent-color: var(--color-text-primary);
+}
+input[type="radio"] { border-radius: 9999px; }
 
 /* ---------------------------------------------------------------------------
    Date / time inputs: modern look (mobile + desktop)
@@ -125,10 +214,8 @@ input[type="week"] {
   min-height: 2.75rem;
   font-size: 0.9375rem;
   letter-spacing: 0.01em;
-  transition: border-color 0.2s, box-shadow 0.2s;
   cursor: pointer;
 }
-/* Native picker popup: match theme (dark/light) */
 [data-theme="dark"] input[type="date"],
 [data-theme="dark"] input[type="datetime-local"],
 [data-theme="dark"] input[type="time"],
@@ -142,15 +229,6 @@ input[type="week"] {
 [data-theme="light"] input[type="month"],
 [data-theme="light"] input[type="week"] {
   color-scheme: light;
-}
-input[type="date"]:focus,
-input[type="datetime-local"]:focus,
-input[type="time"]:focus,
-input[type="month"]:focus,
-input[type="week"]:focus {
-  outline: none;
-  border-color: var(--color-border-focus);
-  box-shadow: 0 0 0 2px var(--color-focus-ring);
 }
 @media (max-width: 640px) {
   input[type="date"],
@@ -174,68 +252,88 @@ form label {
   color: var(--color-text-secondary);
 }
 
+/* iOS: prevent zoom-on-focus by keeping inputs >= 16px on small screens */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 1rem; }
+}
+
 /* ---------------------------------------------------------------------------
    Design system: glass card, input-dark, buttons (token-based)
    --------------------------------------------------------------------------- */
-
-/* Glass card: theme-aware panel with border and blur */
 .glass-card {
   background-color: var(--color-surface-2);
   border: 1px solid var(--color-border);
   border-radius: 1rem;
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-/* Theme-aware input (used where control classes are not) */
 .input-dark {
   color: var(--color-text-primary);
   background-color: var(--color-input-bg);
   border: 1px solid var(--color-input-border);
   border-radius: 0.75rem;
 }
-.input-dark::placeholder {
-  color: var(--color-placeholder);
-}
-.input-dark:hover {
-  border-color: var(--color-border-hover);
-}
+.input-dark::placeholder { color: var(--color-placeholder); }
+.input-dark:hover { border-color: var(--color-border-hover); }
 .input-dark:focus {
   outline: none;
   border-color: var(--color-border-focus);
-  box-shadow: 0 0 0 2px var(--color-focus-ring);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 
-/* Primary button */
+/* Buttons — refined micro-interactions, same brand palette */
+.btn-primary,
+.btn-secondary,
+.btn-ghost,
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  user-select: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+.btn-primary:active,
+.btn-secondary:active,
+.btn-ghost:active,
+.btn-danger:active {
+  transform: scale(0.98);
+}
+
 .btn-primary {
-  background-color: var(--color-btn-primary-bg);
-  color: var(--color-btn-primary-text);
-  border: 1px solid var(--color-btn-primary-border);
+  background-color: var(--color-nav-active-bg);
+  color: var(--color-nav-active-text);
+  border: 1px solid var(--color-nav-active-bg);
   border-radius: 0.75rem;
   font-weight: 600;
   font-size: 0.875rem;
-  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 .btn-primary:hover {
-  background-color: var(--color-btn-primary-hover-bg);
-  border-color: var(--color-btn-primary-hover-border);
+  opacity: 0.88;
+  box-shadow: var(--shadow-md);
 }
 .btn-primary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-focus-ring);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
-/* Secondary button */
 .btn-secondary {
   background-color: var(--color-btn-secondary-bg);
   color: var(--color-btn-secondary-text);
   border: 1px solid var(--color-btn-secondary-border);
   border-radius: 0.75rem;
   font-weight: 600;
-  transition: background-color 0.2s, border-color 0.2s;
+  font-size: 0.875rem;
 }
 .btn-secondary:hover {
   background-color: var(--color-btn-secondary-hover-bg);
@@ -243,61 +341,219 @@ form label {
 }
 .btn-secondary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-focus-ring);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
-.btn-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Ghost button */
 .btn-ghost {
   background-color: var(--color-btn-ghost-bg);
   color: var(--color-btn-ghost-text);
-  border: 1px solid var(--color-btn-ghost-border);
-  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.625rem;
   font-weight: 500;
-  transition: background-color 0.2s, border-color 0.2s;
+  font-size: 0.875rem;
 }
 .btn-ghost:hover {
   background-color: var(--color-btn-ghost-hover-bg);
   border-color: var(--color-btn-ghost-hover-border);
+  color: var(--color-text-primary);
 }
 .btn-ghost:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-focus-ring);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
 }
-.btn-ghost:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Theme-aware card/panel: solid background (no transparency) for readability */
+.btn-danger {
+  background-color: var(--color-destructive-bg);
+  color: var(--color-destructive-text);
+  border: 1px solid var(--color-destructive-border);
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.btn-danger:hover { filter: brightness(1.15); }
+.btn-danger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+.btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Cards */
 .card-panel {
   background-color: var(--color-panel-solid);
   border: 1px solid var(--color-border);
   border-radius: 1rem;
-  box-shadow: var(--color-card-shadow);
+  box-shadow: var(--shadow-sm);
+}
+.card-panel-hover {
+  transition: border-color 0.15s ease, background-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.15s ease;
 }
 .card-panel-hover:hover {
   border-color: var(--color-border-hover);
-  background-color: var(--color-surface-3);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
+
+/* Interactive list row */
+.row-hover {
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.row-hover:hover {
+  background-color: var(--color-surface-2);
+  border-color: var(--color-border-hover);
+}
+
+/* ---------------------------------------------------------------------------
+   Badges (semantic, centralized)
+   --------------------------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  white-space: nowrap;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border-hover);
+  background-color: var(--color-surface-3);
+  color: var(--color-text-secondary);
+  padding: 0.1875rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+.badge-success {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: var(--color-success-border);
+}
+.badge-warning {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border-color: var(--color-warning-border);
+}
+.badge-danger {
+  background-color: var(--color-destructive-bg);
+  color: var(--color-destructive-text);
+  border-color: var(--color-destructive-border);
+}
+.badge-info {
+  background-color: var(--color-info-bg);
+  color: var(--color-info-text);
+  border-color: var(--color-info-border);
+}
+
+/* ---------------------------------------------------------------------------
+   Tables: modern data table + mobile fallback
+   Usage: wrap <table class="table-modern"> in <div class="table-wrap">
+   --------------------------------------------------------------------------- */
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-panel-solid);
+  -webkit-overflow-scrolling: touch;
+}
+.table-modern {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.table-modern thead th {
+  position: sticky;
+  top: 0;
+  background-color: var(--color-panel-solid);
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  z-index: 1;
+}
+.table-modern tbody td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  vertical-align: middle;
+}
+.table-modern tbody tr:last-child td { border-bottom: none; }
+.table-modern tbody tr {
+  transition: background-color 0.12s ease;
+}
+.table-modern tbody tr:hover {
+  background-color: var(--color-surface-2);
+}
+
+/* ---------------------------------------------------------------------------
+   Skeleton loading
+   --------------------------------------------------------------------------- */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  background-color: var(--color-skeleton-base);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-skeleton-highlight),
+    transparent
+  );
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-sweep {
+  100% { transform: translateX(100%); }
+}
+
+/* ---------------------------------------------------------------------------
+   Motion: page/card entrance
+   --------------------------------------------------------------------------- */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.35s ease-out both;
+}
+.stagger-children > * {
+  animation: fade-up 0.35s ease-out both;
+}
+.stagger-children > *:nth-child(2) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(n + 7) { animation-delay: 0.3s; }
+
+/* ---------------------------------------------------------------------------
+   Mobile ergonomics
+   --------------------------------------------------------------------------- */
+.tap-target { min-height: 44px; min-width: 44px; }
+@media (max-width: 640px) {
+  button, a.btn-primary, a.btn-secondary { min-height: 44px; }
+}
+
+/* Safe-area padding for devices with notches */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
 
 /* Comment highlight when opened from notification (glow for ~3s) */
 .comment-highlight-glow {
   animation: comment-glow 3s ease-out;
 }
 @keyframes comment-glow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
-  }
-  25% {
-    box-shadow: 0 0 24px 6px rgba(59, 130, 246, 0.4);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-  }
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6); }
+  25% { box-shadow: 0 0 24px 6px rgba(59, 130, 246, 0.4); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
 }
 
 .text-theme-primary { color: var(--color-text-primary); }

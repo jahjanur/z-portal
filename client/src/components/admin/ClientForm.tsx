@@ -10,7 +10,7 @@ interface ClientFormProps {
   hideDomainAndHosting?: boolean;
 }
 
-const ClientForm: React.FC<ClientFormProps> = ({ onSubmit, onInviteSent, colors, hideDomainAndHosting = false }) => {
+const ClientForm: React.FC<ClientFormProps> = ({ onInviteSent, hideDomainAndHosting = false }) => {
   const [formData, setFormData] = useState({
     name: "",
     company: "",

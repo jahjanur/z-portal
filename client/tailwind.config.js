@@ -4,7 +4,13 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        display: ["Panchang", "Inter", "sans-serif"],
+      },
+      boxShadow: {
+        "elev-sm": "var(--shadow-sm)",
+        "elev-md": "var(--shadow-md)",
+        "elev-lg": "var(--shadow-lg)",
       },
       colors: {
         app: "var(--color-bg)",
@@ -50,11 +56,31 @@ export default {
           "0%": { backgroundPosition: "0% 50%" },
           "100%": { backgroundPosition: "200% 50%" },
         },
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(8px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
+        "scale-in": {
+          from: { opacity: "0", transform: "scale(0.97)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
+        "slide-up": {
+          from: { transform: "translateY(100%)" },
+          to: { transform: "translateY(0)" },
+        },
       },
       animation: {
         "gradient-shimmer": "gradient-shimmer 4s linear infinite",
         float: "float 4s ease-in-out infinite",
         "border-glow": "gradient-shimmer 6s linear infinite",
+        "fade-up": "fade-up 0.35s ease-out both",
+        "fade-in": "fade-in 0.2s ease-out both",
+        "scale-in": "scale-in 0.2s ease-out both",
+        "slide-up": "slide-up 0.25s ease-out both",
       },
     },
   },

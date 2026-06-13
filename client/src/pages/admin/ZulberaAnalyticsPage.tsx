@@ -149,7 +149,6 @@ export default function ZulberaAnalyticsPage() {
   const { invoices: filteredInvoices, tasks: filteredTasks } = getFilteredData();
 
   const totalClients = adminOwnClientIds.length;
-  const totalWorkers = users.filter((u) => u.role === "WORKER").length;
   const incompleteProfiles = users.filter(
     (u) => u.role === "CLIENT" && u.referredById == null && u.profileStatus === "INCOMPLETE"
   ).length;

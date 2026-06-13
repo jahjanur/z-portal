@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
 
@@ -179,7 +179,7 @@ export default function EraSphereAnalyticsAdminPage() {
     );
   }
 
-  if (error || !data) {
+  if (error || !data || !stats) {
     return (
       <div className="mx-auto max-w-[1400px] w-full min-w-0">
         <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Analytics</h2>

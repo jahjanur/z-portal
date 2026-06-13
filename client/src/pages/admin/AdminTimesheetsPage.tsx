@@ -1,4 +1,3 @@
-import React from "react";
 import Timesheet from "../../components/Timesheet";
 
 export default function AdminTimesheetsPage() {

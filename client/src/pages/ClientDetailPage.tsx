@@ -3,14 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import API, { getFileUrl } from "../api";
 import Modal from "../components/ui/Modal";
 
-const colors = {
-  primary: "#374151",
-  accent: "#FFA726",
-  success: "#10B981",
-  warning: "#F59E0B",
-  danger: "#EF4444",
-};
-
 interface Task {
   id: number;
   title: string;
@@ -441,7 +433,11 @@ const fetchAllFiles = async () => {
         {/* Tabs */}
         <div className="mb-6">
           <div className="flex w-fit gap-2 rounded-xl border border-white/10 bg-white/5 p-1">
-            {(["overview", "tasks", "invoices", ...(isEraSphere ? [] : ["hosting"])] as const).map((tab) => (
+            {((isEraSphere
+              ? (["overview", "tasks", "invoices"] as const)
+              : (["overview", "tasks", "invoices", "hosting"] as const)) as ReadonlyArray<
+              "overview" | "tasks" | "invoices" | "hosting"
+            >).map((tab) => (
               <button
                 key={tab}
                 type="button"

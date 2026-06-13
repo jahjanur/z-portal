@@ -8,10 +8,6 @@ import ClientStatusView from "../components/taskdetail/ClientStatusView";
 import FileViewer from "../components/FileViewer";
 import WorkerMultiSelect from "../components/ui/WorkerMultiSelect";
 
-const colors = {
-  primary: "rgba(255,255,255,0.12)",
-};
-
 interface User {
   id: number;
   name: string;
@@ -105,7 +101,6 @@ const TaskDetailPage: React.FC = () => {
 
   const currentUserId = parseInt(localStorage.getItem("userId") || "0");
   const currentUserRole = localStorage.getItem("role") || "";
-  const isAdminOrWorker = currentUserRole === "ADMIN" || currentUserRole === "WORKER";
   const isAdmin = currentUserRole === "ADMIN" || currentUserRole === "ERASPHERE";
 
   // localStorage-based last-seen timestamps for channel dot indicators (admin only)

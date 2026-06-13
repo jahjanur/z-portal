@@ -1,4 +1,3 @@
-import React from "react";
 import { useAdmin } from "../../contexts/AdminContext";
 import DomainForm from "../../components/admin/DomainForm";
 import DomainsList from "../../components/admin/DomainsList";

@@ -16,7 +16,8 @@ function verifyJWT(req, res, next) {
     jsonwebtoken_1.default.verify(token, JWT_SECRET, (err, decoded) => {
         if (err)
             return res.status(403).json({ message: "Forbidden" });
-        req.user = { userId: decoded.userId, role: decoded.role };
+        const role = typeof decoded?.role === "string" ? decoded.role.toUpperCase() : decoded?.role;
+        req.user = { userId: decoded.userId, role };
         next();
     });
 }
