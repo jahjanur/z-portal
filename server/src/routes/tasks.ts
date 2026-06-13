@@ -26,6 +26,10 @@ router.get("/", verifyJWT, async (req: any, res) => {
     const { role, userId } = req.user;
     let tasks;
 
+    // Optional ?clientId= filter (used by the admin/EraSphere client detail page).
+    const clientIdQ = Number(req.query.clientId);
+    const filterClientId = Number.isInteger(clientIdQ) ? clientIdQ : null;
+
     const workersInclude = {
           workers: {
             include: {
@@ -42,6 +46,7 @@ router.get("/", verifyJWT, async (req: any, res) => {
         };
     if (role === "ADMIN") {
       tasks = await prisma.task.findMany({
+        where: filterClientId !== null ? { clientId: filterClientId } : undefined,
         include: {
           client: {
             select: {
@@ -70,8 +75,13 @@ router.get("/", verifyJWT, async (req: any, res) => {
         where: { role: "CLIENT", referredById: userId },
         select: { id: true },
       }).then((rows) => rows.map((r) => r.id));
+      // If a clientId filter is given, only honor it when that client is referred by this partner.
+      const scopedIds =
+        filterClientId !== null
+          ? referredClientIds.filter((cid) => cid === filterClientId)
+          : referredClientIds;
       tasks = await prisma.task.findMany({
-        where: { clientId: { in: referredClientIds } },
+        where: { clientId: { in: scopedIds } },
         include: {
           client: {
             select: {

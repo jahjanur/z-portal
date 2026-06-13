@@ -74,9 +74,14 @@ router.get("/", verifyJWT, async (req: any, res) => {
     const { role, userId } = req.user;
     let invoices;
 
+    // Optional ?clientId= filter (admin/EraSphere client detail page).
+    const clientIdQ = Number(req.query.clientId);
+    const filterClientId = Number.isInteger(clientIdQ) ? clientIdQ : null;
+
     if (role === "ADMIN") {
-      invoices = await prisma.invoice.findMany({ 
-        include: { 
+      invoices = await prisma.invoice.findMany({
+        where: filterClientId !== null ? { clientId: filterClientId } : undefined,
+        include: {
           client: { select: clientSelectWithContact },
           lineItems: { orderBy: { sortOrder: 'asc' } },
         },
@@ -111,9 +116,13 @@ router.get("/", verifyJWT, async (req: any, res) => {
         where: { referredById: userId, role: "CLIENT" },
         select: { id: true },
       }).then((users) => users.map((u) => u.id));
-      invoices = referredClientIds.length
+      const scopedIds =
+        filterClientId !== null
+          ? referredClientIds.filter((cid) => cid === filterClientId)
+          : referredClientIds;
+      invoices = scopedIds.length
         ? await prisma.invoice.findMany({
-            where: { clientId: { in: referredClientIds } },
+            where: { clientId: { in: scopedIds } },
             include: {
               client: { select: clientSelectWithContact },
               lineItems: { orderBy: { sortOrder: 'asc' } },
