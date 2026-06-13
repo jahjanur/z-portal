@@ -4,16 +4,24 @@ import RoleUser from "../components/Roleuser";
 import RoleWorker from "../components/Roleworker";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
 
-const Dashboard: React.FC = () => {
-  const [role, setRole] = useState<string | null>(null);
+/** Read the current role synchronously from storage (single source of truth). */
+const readRole = (): string | null => localStorage.getItem("role");
 
+const Dashboard: React.FC = () => {
+  // Initialise synchronously so the correct role view renders on first paint —
+  // avoids a skeleton flash and a stale/null role right after login.
+  const [role, setRole] = useState<string | null>(readRole);
+
+  // Keep role in sync if it changes in another tab or after a re-login.
   useEffect(() => {
-    const storedRole = localStorage.getItem("role");
-    if (storedRole) setRole(storedRole);
+    const sync = () => setRole(readRole());
+    sync();
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
   }, []);
 
   let content: React.ReactNode;
-  if (!role) {
+  if (role === null) {
     content = <SkeletonDashboard />;
   } else if (role === "WORKER") {
     content = <RoleWorker />;

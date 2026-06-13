@@ -13,6 +13,7 @@ import PageHeader from "./ui/PageHeader";
 import StatCard from "./ui/StatCard";
 import EmptyState from "./ui/EmptyState";
 import Button from "./ui/Button";
+import SectionCard from "./ui/SectionCard";
 import { SkeletonDashboard } from "./ui/Skeleton";
 import { useNotifications } from "../hooks/useNotifications";
 import { getStatusColor, formatDate, formatCurrency, getDaysUntilDue } from "../utils";
@@ -314,110 +315,117 @@ const fetchAll = async () => {
           {/* Invoice Summary + Notifications Row */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* Invoice Summary */}
-            <div className="card-panel p-5 sm:p-6">
-              <h3 className="section-title mb-4">Invoice Summary</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] px-4 py-3">
-                  <span className="badge badge-success">Paid</span>
-                  <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
-                    {formatCurrency(totalPaid)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] px-4 py-3">
-                  <span className="badge badge-warning">Pending</span>
-                  <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
-                    {formatCurrency(totalPending)}
-                  </span>
-                </div>
-                {overdueInvoices.length > 0 && (
-                  <div className="flex items-center justify-between rounded-xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] px-4 py-3">
-                    <span className="badge badge-danger">Overdue ({overdueInvoices.length})</span>
-                    <span className="text-sm font-bold tabular-nums text-[var(--color-destructive-text)]">
-                      {formatCurrency(totalOverdue)}
-                    </span>
-                  </div>
-                )}
+            <SectionCard title="Invoice Summary" bodyClassName="space-y-3">
+              <div className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] px-4 py-3">
+                <span className="badge badge-success">Paid</span>
+                <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
+                  {formatCurrency(totalPaid)}
+                </span>
               </div>
-            </div>
+              <div className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] px-4 py-3">
+                <span className="badge badge-warning">Pending</span>
+                <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
+                  {formatCurrency(totalPending)}
+                </span>
+              </div>
+              {overdueInvoices.length > 0 && (
+                <div className="flex items-center justify-between rounded-xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] px-4 py-3">
+                  <span className="badge badge-danger">Overdue ({overdueInvoices.length})</span>
+                  <span className="text-sm font-bold tabular-nums text-[var(--color-destructive-text)]">
+                    {formatCurrency(totalOverdue)}
+                  </span>
+                </div>
+              )}
+            </SectionCard>
 
             {/* Recent Notifications */}
-            <div className="card-panel p-5 sm:p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className="section-title">Recent Notifications</h3>
-                {unreadCount > 0 && (
-                  <span className="badge badge-danger">{unreadCount} unread</span>
-                )}
-              </div>
-              <div className="space-y-2">
-                {notifications.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-[var(--color-text-muted)]">No notifications yet</p>
-                ) : (
-                  notifications.slice(0, 5).map((n) => (
-                    <button
-                      key={n.id}
-                      type="button"
-                      onClick={() => { if (!n.read) markRead(n.id); }}
-                      className={`row-hover flex w-full items-start gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left ${
-                        !n.read ? "bg-[var(--color-surface-2)]" : ""
-                      }`}
-                    >
-                      {!n.read && (
-                        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--color-info-text)]" />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className={`text-sm ${!n.read ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
-                          {n.title}
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-[var(--color-text-muted)]">{n.message}</p>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
+            <SectionCard
+              title="Recent Notifications"
+              bodyClassName="space-y-2"
+              headerRight={unreadCount > 0 ? <span className="badge badge-danger">{unreadCount} unread</span> : undefined}
+            >
+              {notifications.length === 0 ? (
+                <p className="py-6 text-center text-sm text-[var(--color-text-muted)]">No notifications yet</p>
+              ) : (
+                notifications.slice(0, 5).map((n) => (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => { if (!n.read) markRead(n.id); }}
+                    className={`row-hover flex w-full items-start gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left ${
+                      !n.read ? "bg-[var(--color-surface-2)]" : ""
+                    }`}
+                  >
+                    {!n.read && (
+                      <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--color-info-text)]" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm ${!n.read ? "font-semibold text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`}>
+                        {n.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-[var(--color-text-muted)]">{n.message}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </SectionCard>
           </div>
 
           {/* Progress Chart */}
-          <div className="card-panel p-5 sm:p-6">
-            <h3 className="section-title mb-4">Project Progress</h3>
-            <div className="space-y-4">
-              <ProgressBar label="Completed" current={completedTasks} total={tasks.length} />
-              <ProgressBar label="In Progress" current={inProgressTasks} total={tasks.length} />
-              <ProgressBar label="Pending" current={pendingTasks} total={tasks.length} />
-            </div>
-          </div>
+          <SectionCard title="Project Progress" bodyClassName="space-y-4">
+            <ProgressBar label="Completed" current={completedTasks} total={tasks.length} />
+            <ProgressBar label="In Progress" current={inProgressTasks} total={tasks.length} />
+            <ProgressBar label="Pending" current={pendingTasks} total={tasks.length} />
+          </SectionCard>
 
           {/* Recent Activity */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="card-panel p-5 sm:p-6">
-              <h3 className="section-title mb-4">Recent Projects</h3>
-              <div className="space-y-3">
-                {tasks.slice(0, 3).map((task) => (
+            <SectionCard
+              title="Recent Projects"
+              bodyClassName="space-y-3"
+              footer={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setSearchParams({ tab: "tasks" })}
+                >
+                  View All Projects
+                </Button>
+              }
+            >
+              {tasks.length === 0 ? (
+                <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">No projects yet</p>
+              ) : (
+                tasks.slice(0, 3).map((task) => (
                   <RecentProjectCard
                     key={task.id}
                     task={task}
                     onClick={() => navigate(`/tasks/${task.id}`)}
                     getStatusColor={getStatusColor}
                   />
-                ))}
-                {tasks.length === 0 && (
-                  <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">No projects yet</p>
-                )}
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="mt-4 w-full"
-                onClick={() => setSearchParams({ tab: "tasks" })}
-              >
-                View All Projects
-              </Button>
-            </div>
+                ))
+              )}
+            </SectionCard>
 
-            <div className="card-panel p-5 sm:p-6">
-              <h3 className="section-title mb-4">Recent Invoices</h3>
-              <div className="space-y-3">
-                {invoices.slice(0, 3).map((invoice) => (
+            <SectionCard
+              title="Recent Invoices"
+              bodyClassName="space-y-3"
+              footer={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setSearchParams({ tab: "invoices" })}
+                >
+                  View All Invoices
+                </Button>
+              }
+            >
+              {invoices.length === 0 ? (
+                <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">No invoices yet</p>
+              ) : (
+                invoices.slice(0, 3).map((invoice) => (
                   <RecentInvoiceCard
                     key={invoice.id}
                     invoice={invoice}
@@ -426,20 +434,9 @@ const fetchAll = async () => {
                     formatDate={formatDate}
                     primaryColor="var(--color-text-primary)"
                   />
-                ))}
-                {invoices.length === 0 && (
-                  <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">No invoices yet</p>
-                )}
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="mt-4 w-full"
-                onClick={() => setSearchParams({ tab: "invoices" })}
-              >
-                View All Invoices
-              </Button>
-            </div>
+                ))
+              )}
+            </SectionCard>
           </div>
         </div>
       )}
@@ -603,22 +600,20 @@ const fetchAll = async () => {
             />
           ) : (
             <>
-              <div className="card-panel p-5 sm:p-6">
-                <div className="mb-5 flex items-center justify-between gap-3">
-                  <h2 className="section-title">All Project Files</h2>
-                  <span className="badge shrink-0">{allFiles.length} files</span>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 stagger-children">
-                  {allFiles.map((file) => (
-                    <FileCard
-                      key={file.id}
-                      file={file}
-                      formatDate={formatDate}
-                      primaryColor="var(--color-text-primary)"
-                    />
-                  ))}
-                </div>
-              </div>
+              <SectionCard
+                title="All Project Files"
+                headerRight={<span className="badge">{allFiles.length} files</span>}
+                bodyClassName="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 stagger-children"
+              >
+                {allFiles.map((file) => (
+                  <FileCard
+                    key={file.id}
+                    file={file}
+                    formatDate={formatDate}
+                    primaryColor="var(--color-text-primary)"
+                  />
+                ))}
+              </SectionCard>
 
               {/* Files by Section */}
               <FilesBySection files={allFiles} primaryColor="var(--color-text-primary)" />
@@ -708,14 +703,12 @@ const fetchAll = async () => {
               }
             />
           ) : (
-            <div className="card-panel p-5 sm:p-6">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <h2 className="section-title">All Domains</h2>
-                <span className="badge shrink-0">{filteredDomains.length} domains</span>
-              </div>
-
-              <div className="space-y-4 stagger-children">
-                {filteredDomains.map((domain) => (
+            <SectionCard
+              title="All Domains"
+              headerRight={<span className="badge">{filteredDomains.length} domains</span>}
+              bodyClassName="space-y-4 stagger-children"
+            >
+              {filteredDomains.map((domain) => (
                   <div
                     key={domain.id}
                     className={`card-panel card-panel-hover p-5 ${
@@ -789,8 +782,7 @@ const fetchAll = async () => {
                     </div>
                   </div>
                 ))}
-              </div>
-            </div>
+            </SectionCard>
           )}
 
           {/* Domain Stats */}

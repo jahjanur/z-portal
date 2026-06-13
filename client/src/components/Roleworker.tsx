@@ -6,6 +6,8 @@ import StatCard from "./ui/StatCard";
 import StatusBadge from "./ui/StatusBadge";
 import EmptyState from "./ui/EmptyState";
 import Button from "./ui/Button";
+import SectionCard from "./ui/SectionCard";
+import TaskListRow from "./ui/TaskListRow";
 import { SkeletonDashboard } from "./ui/Skeleton";
 import ProgressBar from "./user/ProgressBar";
 
@@ -208,103 +210,88 @@ const RoleWorker: React.FC = () => {
           </div>
 
           {/* Task Progress */}
-          <div className="card-panel p-5 sm:p-6">
-            <h3 className="section-title mb-4">Task Progress</h3>
-            <div className="space-y-4">
-              <ProgressBar label="Completed" current={completedTasks} total={tasks.length} />
-              <ProgressBar label="In Progress" current={inProgressTasks} total={tasks.length} />
-              <ProgressBar label="Pending" current={pendingTasks} total={tasks.length} />
-            </div>
-          </div>
+          <SectionCard title="Task Progress" bodyClassName="space-y-4">
+            <ProgressBar label="Completed" current={completedTasks} total={tasks.length} />
+            <ProgressBar label="In Progress" current={inProgressTasks} total={tasks.length} />
+            <ProgressBar label="Pending" current={pendingTasks} total={tasks.length} />
+          </SectionCard>
 
           {/* Recent & Priority Tasks */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {/* Overdue Tasks */}
             {overdueTasks > 0 && (
-              <div className="card-panel border-[var(--color-destructive-border)] p-5 sm:p-6">
-                <div className="mb-4 flex items-center gap-2">
-                  <svg className="h-5 w-5 text-[var(--color-destructive-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <SectionCard
+                title="Overdue Tasks"
+                tone="danger"
+                bodyClassName="space-y-3"
+                icon={
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  <h3 className="section-title">Overdue Tasks</h3>
-                </div>
-                <div className="space-y-3">
-                  {tasks
-                    .filter(t => {
-                      const days = getDaysUntilDue(t.dueDate);
-                      return days !== null && days < 0 && t.status?.toUpperCase() !== "COMPLETED";
-                    })
-                    .slice(0, 5)
-                    .map((task) => {
-                      const daysUntil = getDaysUntilDue(task.dueDate);
-
-                      return (
-                        <div
-                          key={task.id}
-                          onClick={() => navigate(`/tasks/${task.id}`)}
-                          className="card-panel card-panel-hover cursor-pointer border-[var(--color-destructive-border)] p-4"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <h4 className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{task.title}</h4>
-                              <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">{task.client?.name || "No client"}</p>
-                              <span className="badge badge-danger mt-2">
-                                Overdue by {Math.abs(daysUntil!)} days
-                              </span>
-                            </div>
-                            <StatusBadge status={task.status} className="shrink-0" />
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
+                }
+              >
+                {tasks
+                  .filter(t => {
+                    const days = getDaysUntilDue(t.dueDate);
+                    return days !== null && days < 0 && t.status?.toUpperCase() !== "COMPLETED";
+                  })
+                  .slice(0, 5)
+                  .map((task) => {
+                    const daysUntil = getDaysUntilDue(task.dueDate);
+                    return (
+                      <TaskListRow
+                        key={task.id}
+                        title={task.title}
+                        subtitle={task.client?.name || "No client"}
+                        status={task.status}
+                        danger
+                        onClick={() => navigate(`/tasks/${task.id}`)}
+                        badge={<span className="badge badge-danger">Overdue by {Math.abs(daysUntil!)} days</span>}
+                      />
+                    );
+                  })}
+              </SectionCard>
             )}
 
             {/* Recent Tasks */}
-            <div className="card-panel p-5 sm:p-6">
-              <h3 className="section-title mb-4">Recent Tasks</h3>
-              <div className="space-y-3">
-                {tasks.slice(0, 5).map((task) => {
+            <SectionCard
+              title="Recent Tasks"
+              bodyClassName="space-y-3"
+              footer={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setSearchParams({ tab: "tasks" })}
+                >
+                  View All Tasks
+                </Button>
+              }
+            >
+              {tasks.length === 0 ? (
+                <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">No tasks yet</p>
+              ) : (
+                tasks.slice(0, 5).map((task) => {
                   const daysUntil = getDaysUntilDue(task.dueDate);
                   const isOverdue = daysUntil !== null && daysUntil < 0 && task.status?.toUpperCase() !== "COMPLETED";
-
                   return (
-                    <div
+                    <TaskListRow
                       key={task.id}
+                      title={task.title}
+                      subtitle={task.client?.name || "No client"}
+                      status={task.status}
+                      danger={isOverdue}
                       onClick={() => navigate(`/tasks/${task.id}`)}
-                      className={`card-panel card-panel-hover cursor-pointer p-4 ${
-                        isOverdue ? "border-[var(--color-destructive-border)]" : ""
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <h4 className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{task.title}</h4>
-                          <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">{task.client?.name || "No client"}</p>
-                          {isOverdue && (
-                            <span className="badge badge-danger mt-2">
-                              Overdue by {Math.abs(daysUntil!)} days
-                            </span>
-                          )}
-                        </div>
-                        <StatusBadge status={task.status} className="shrink-0" />
-                      </div>
-                    </div>
+                      badge={
+                        isOverdue ? (
+                          <span className="badge badge-danger">Overdue by {Math.abs(daysUntil!)} days</span>
+                        ) : undefined
+                      }
+                    />
                   );
-                })}
-                {tasks.length === 0 && (
-                  <p className="py-8 text-center text-sm text-[var(--color-text-muted)]">No tasks yet</p>
-                )}
-              </div>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="mt-4 w-full"
-                onClick={() => setSearchParams({ tab: "tasks" })}
-              >
-                View All Tasks
-              </Button>
-            </div>
+                })
+              )}
+            </SectionCard>
           </div>
         </div>
       )}
