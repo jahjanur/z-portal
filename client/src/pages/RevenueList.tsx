@@ -7,6 +7,7 @@ import EmptyState from "../components/ui/EmptyState";
 import StatusBadge from "../components/ui/StatusBadge";
 import StatCard from "../components/ui/StatCard";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
+import { computeInvoiceRevenue } from "../utils";
 
 interface Invoice {
   id: number;
@@ -83,9 +84,11 @@ export default function RevenueList() {
     return sortOrder === "asc" ? -comparison : comparison;
   });
 
-  const totalRevenue = filteredInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const paidRevenue = filteredInvoices.filter(i => i.status === "PAID").reduce((sum, i) => sum + i.amount, 0);
-  const pendingRevenue = filteredInvoices.filter(i => i.status === "PENDING").reduce((sum, i) => sum + i.amount, 0);
+  // Outstanding (pending) = anything not paid, so Paid + Pending = Total Revenue
+  // and it agrees with the per-client breakdown below (which buckets non-PAID as
+  // pending). Using status === "PENDING" would drop OVERDUE-status invoices.
+  const { totalRevenue, totalPaid: paidRevenue, totalPending: pendingRevenue } =
+    computeInvoiceRevenue(filteredInvoices);
 
   const revenueByClient = filteredInvoices.reduce((acc, inv) => {
     const clientId = inv.client?.id || 0;
@@ -164,7 +167,7 @@ export default function RevenueList() {
             label="Pending"
             value={formatCurrency(pendingRevenue)}
             tone="warning"
-            hint={`${filteredInvoices.filter(i => i.status === "PENDING").length} invoices`}
+            hint={`${filteredInvoices.filter(i => i.status !== "PAID").length} invoices`}
             icon={
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2} aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
