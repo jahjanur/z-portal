@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../hooks/useNotifications";
+import Button from "./ui/Button";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -91,7 +92,7 @@ export default function NotificationDropdown() {
           />
         </svg>
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          <span className="absolute -top-1 -right-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] px-1 text-[10px] font-bold text-[var(--color-destructive-text)]">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -102,28 +103,29 @@ export default function NotificationDropdown() {
         createPortal(
           <div
             data-notification-dropdown
-            className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-xl w-80 max-w-[calc(100vw-24px)]"
+            className="animate-scale-in w-80 max-w-[calc(100vw-24px)] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel-solid)] shadow-elev-lg"
             style={dropdownStyle}
           >
-            {/* Header: title, Clear all, X */}
+            {/* Header: title, Mark all read, X */}
             <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-4 py-3">
               <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
                 Notifications
               </h3>
               <div className="flex items-center gap-1">
                 {notifications.length > 0 && (
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleClearAll}
-                    className="text-xs font-medium text-[var(--color-btn-primary-bg)] hover:underline whitespace-nowrap"
+                    className="whitespace-nowrap"
                   >
-                    Clear all
-                  </button>
+                    Mark all read
+                  </Button>
                 )}
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)] transition"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
                   aria-label="Close notifications"
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -136,8 +138,18 @@ export default function NotificationDropdown() {
             {/* List */}
             <div className="max-h-80 overflow-y-auto">
               {notifications.length === 0 ? (
-                <div className="py-8 text-center text-sm text-[var(--color-text-muted)]">
-                  No notifications yet
+                <div className="flex flex-col items-center justify-center px-6 py-8 text-center">
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-muted)]">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5} aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">
+                    You're all caught up
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+                    No notifications yet
+                  </p>
                 </div>
               ) : (
                 notifications.map((n) => {
@@ -153,13 +165,11 @@ export default function NotificationDropdown() {
                         setOpen(false);
                         if (n.link && n.link.startsWith("/") && !n.link.includes("://")) navigate(n.link);
                       }}
-                      className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-2)] ${
-                        !n.read ? "bg-[var(--color-surface-2)]/50" : ""
-                      }`}
+                      className="row-hover flex w-full items-start gap-3 px-4 py-3 text-left"
                     >
                       <div className="mt-0.5 shrink-0">
                         <svg
-                          className={`h-5 w-5 ${!n.read ? "text-[var(--color-btn-primary-bg)]" : "text-[var(--color-text-muted)]"}`}
+                          className={`h-5 w-5 ${!n.read ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-muted)]"}`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -186,7 +196,10 @@ export default function NotificationDropdown() {
                         </p>
                       </div>
                       {!n.read && (
-                        <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[var(--color-btn-primary-bg)]" />
+                        <span
+                          className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[var(--color-info-text)]"
+                          aria-hidden="true"
+                        />
                       )}
                     </button>
                   );
@@ -195,17 +208,18 @@ export default function NotificationDropdown() {
             </div>
 
             {/* View all link */}
-            <div className="border-t border-[var(--color-border)] px-4 py-2.5 text-center">
-              <button
-                type="button"
+            <div className="border-t border-[var(--color-border)] p-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
                 onClick={() => {
                   navigate("/notifications");
                   setOpen(false);
                 }}
-                className="text-xs font-medium text-[var(--color-btn-primary-bg)] hover:underline"
               >
                 View all notifications
-              </button>
+              </Button>
             </div>
           </div>,
           document.body

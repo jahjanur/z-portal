@@ -1,4 +1,5 @@
 import React from "react";
+import Button from "../ui/Button";
 
 interface AdminStatusControlsProps {
   currentStatus: string;
@@ -12,32 +13,20 @@ const AdminStatusControls: React.FC<AdminStatusControlsProps> = ({
   onApproveCompletion,
 }) => {
   return (
-    <div className="flex flex-wrap gap-2 mt-6">
-      <button
-        onClick={() => onStatusChange("PENDING")}
-        className="px-4 py-2 text-sm font-semibold transition-colors border rounded-lg bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-      >
+    <div className="mt-6 flex flex-wrap items-center gap-2">
+      <Button variant="secondary" size="sm" onClick={() => onStatusChange("PENDING")}>
         Mark as Pending
-      </button>
-      <button
-        onClick={() => onStatusChange("IN_PROGRESS")}
-        className="px-4 py-2 text-sm font-semibold text-blue-700 transition-colors border border-blue-200 rounded-lg bg-blue-50 hover:bg-blue-100"
-      >
+      </Button>
+      <Button variant="secondary" size="sm" onClick={() => onStatusChange("IN_PROGRESS")}>
         Mark as In Progress
-      </button>
-      <button
-        onClick={() => onStatusChange("COMPLETED")}
-        className="px-4 py-2 text-sm font-semibold text-green-700 transition-colors border border-green-200 rounded-lg bg-green-50 hover:bg-green-100"
-      >
+      </Button>
+      <Button variant="secondary" size="sm" onClick={() => onStatusChange("COMPLETED")}>
         Mark as Completed
-      </button>
+      </Button>
       {currentStatus === "PENDING_APPROVAL" && (
-        <button
-          onClick={onApproveCompletion}
-          className="btn-primary px-4 py-2 text-sm font-semibold"
-        >
+        <Button variant="primary" size="sm" onClick={onApproveCompletion}>
           ✓ Approve Completion
-        </button>
+        </Button>
       )}
     </div>
   );

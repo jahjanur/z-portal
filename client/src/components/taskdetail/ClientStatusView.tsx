@@ -1,4 +1,5 @@
 import React from "react";
+import StatusBadge from "../ui/StatusBadge";
 
 interface ClientStatusViewProps {
   currentStatus: string;
@@ -22,10 +23,10 @@ const ClientStatusView: React.FC<ClientStatusViewProps> = ({ currentStatus }) =>
 
   const getProgressColor = () => {
     const progress = getProgress();
-    if (progress === 100) return "#10B981";
-    if (progress >= 60) return "#3B82F6";
-    if (progress >= 20) return "#F59E0B";
-    return "#6B7280";
+    if (progress === 100) return "var(--color-success-text)";
+    if (progress >= 60) return "var(--color-info-text)";
+    if (progress >= 20) return "var(--color-warning-text)";
+    return "var(--color-text-muted)";
   };
 
   const getStatusLabel = () => {
@@ -47,27 +48,30 @@ const ClientStatusView: React.FC<ClientStatusViewProps> = ({ currentStatus }) =>
   const color = getProgressColor();
 
   return (
-    <div className="card-panel mt-6 rounded-lg p-6 shadow-lg">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Project Progress</h3>
-        <span className="text-2xl font-bold" style={{ color }}>
+    <div className="card-panel mt-6 p-5 sm:p-6">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="section-title text-sm">Project Progress</h3>
+        <span className="text-2xl font-bold tracking-tight" style={{ color }}>
           {progress}%
         </span>
       </div>
-      
-      <div className="w-full h-4 mb-3 overflow-hidden bg-[var(--color-surface-3)] rounded-full">
+
+      <div className="mb-3 h-3 w-full overflow-hidden rounded-full bg-[var(--color-surface-3)]">
         <div
-          className="h-full transition-all duration-500 rounded-full"
+          className="h-full rounded-full transition-all duration-500"
           style={{ width: `${progress}%`, backgroundColor: color }}
         ></div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div 
-          className="w-2 h-2 rounded-full animate-pulse" 
-          style={{ backgroundColor: color }}
-        ></div>
-        <p className="text-sm font-medium text-[var(--color-text-secondary)]">{getStatusLabel()}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div
+            className="h-2 w-2 animate-pulse rounded-full"
+            style={{ backgroundColor: color }}
+          ></div>
+          <p className="text-sm font-medium text-[var(--color-text-secondary)]">{getStatusLabel()}</p>
+        </div>
+        <StatusBadge status={currentStatus} />
       </div>
     </div>
   );

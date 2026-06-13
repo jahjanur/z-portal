@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import API from "../api";
+import PageHeader from "../components/ui/PageHeader";
+import Button from "../components/ui/Button";
+import { SkeletonRows } from "../components/ui/Skeleton";
 
 interface Preference {
   eventType: string;
@@ -39,6 +42,42 @@ const EVENT_TYPE_LABELS: Record<string, { label: string; category: string }> = {
   ERASPHERE_NEW_TASK: { label: "EraSphere partner added task", category: "EraSphere" },
   ERASPHERE_REFERRED_ACCEPTED: { label: "Referred client accepted invite", category: "EraSphere" },
 };
+
+/** Modern switch built on top of the original checkbox input (handlers untouched). */
+function ToggleSwitch({
+  label,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label className={`flex items-center gap-2 ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+      <span className="text-xs text-[var(--color-text-muted)]">{label}</span>
+      <span className="relative inline-flex shrink-0">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          disabled={disabled}
+          className="peer sr-only"
+        />
+        <span
+          className="h-5 w-9 rounded-full border border-[var(--color-border-hover)] bg-[var(--color-surface-3)] transition-colors peer-checked:border-[var(--color-nav-active-bg)] peer-checked:bg-[var(--color-nav-active-bg)] peer-disabled:opacity-50 peer-focus-visible:ring-2 peer-focus-visible:ring-[var(--color-focus-ring)]"
+          aria-hidden="true"
+        />
+        <span
+          className="pointer-events-none absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-[var(--color-text-muted)] transition-transform peer-checked:translate-x-4 peer-checked:bg-[var(--color-nav-active-text)]"
+          aria-hidden="true"
+        />
+      </span>
+    </label>
+  );
+}
 
 export default function NotificationPreferencesPage() {
   const [prefs, setPrefs] = useState<Preference[]>([]);
@@ -86,9 +125,14 @@ export default function NotificationPreferencesPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12">
-        <h1 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Notification Preferences</h1>
-        <div className="rounded-2xl card-panel p-8 text-center text-[var(--color-text-muted)]">Loading...</div>
+      <div className="mx-auto max-w-5xl px-4 pt-24 pb-12 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          <PageHeader
+            title="Notification Preferences"
+            subtitle="Choose which notifications you receive in-app and via email."
+          />
+          <SkeletonRows rows={5} />
+        </div>
       </div>
     );
   }
@@ -96,61 +140,66 @@ export default function NotificationPreferencesPage() {
   const categories = [...new Set(prefs.map((p) => EVENT_TYPE_LABELS[p.eventType]?.category).filter(Boolean))] as string[];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
-      <h1 className="mb-2 text-2xl font-bold text-[var(--color-text-primary)]">Notification Preferences</h1>
-      <p className="mb-8 text-sm text-[var(--color-text-muted)]">
-        Choose which notifications you receive in-app and via email.
-        {saving && <span className="ml-2 text-xs text-amber-400">Saving...</span>}
-      </p>
-
+    <div className="mx-auto max-w-5xl px-4 pt-24 pb-12 sm:px-6 lg:px-8">
       <div className="space-y-6">
-        {categories.map((category) => {
-          const categoryPrefs = prefs.filter((p) => EVENT_TYPE_LABELS[p.eventType]?.category === category);
-          if (categoryPrefs.length === 0) return null;
+        <PageHeader
+          title="Notification Preferences"
+          subtitle="Choose which notifications you receive in-app and via email."
+          actions={
+            saving ? (
+              <Button variant="ghost" size="sm" loading>
+                Saving
+              </Button>
+            ) : undefined
+          }
+        />
 
-          return (
-            <div key={category} className="rounded-2xl card-panel p-5 shadow-xl">
-              <h3 className="mb-4 text-sm font-bold text-[var(--color-text-primary)] uppercase tracking-wider">{category}</h3>
-              <div className="space-y-1">
-                {categoryPrefs.map((pref) => {
-                  const meta = EVENT_TYPE_LABELS[pref.eventType];
-                  return (
-                    <div key={pref.eventType} className="flex items-center justify-between gap-4 rounded-lg px-3 py-2.5 hover:bg-[var(--color-surface-3)] transition">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-[var(--color-text-primary)]">{meta?.label || pref.eventType}</p>
-                        {pref.critical && (
-                          <p className="text-xs text-amber-400 mt-0.5">Required for admins — at least one channel must stay enabled</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 shrink-0">
-                        <label className="flex items-center gap-1.5 cursor-pointer">
-                          <span className="text-xs text-[var(--color-text-muted)]">In-app</span>
-                          <input
-                            type="checkbox"
+        <div className="space-y-6 stagger-children">
+          {categories.map((category) => {
+            const categoryPrefs = prefs.filter((p) => EVENT_TYPE_LABELS[p.eventType]?.category === category);
+            if (categoryPrefs.length === 0) return null;
+
+            return (
+              <section key={category} className="card-panel p-5 sm:p-6">
+                <h3 className="section-title mb-4">{category}</h3>
+                <div className="space-y-1">
+                  {categoryPrefs.map((pref) => {
+                    const meta = EVENT_TYPE_LABELS[pref.eventType];
+                    return (
+                      <div
+                        key={pref.eventType}
+                        className="row-hover flex items-center justify-between gap-4 rounded-xl px-3 py-2.5"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-[var(--color-text-primary)]">{meta?.label || pref.eventType}</p>
+                          {pref.critical && (
+                            <p className="mt-0.5 text-xs text-[var(--color-warning-text)]">
+                              Required for admins — at least one channel must stay enabled
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-4">
+                          <ToggleSwitch
+                            label="In-app"
                             checked={pref.inAppEnabled}
                             onChange={(e) => handleToggle(pref.eventType, "inAppEnabled", e.target.checked)}
                             disabled={pref.critical && pref.inAppEnabled && !pref.emailEnabled}
-                            className="h-4 w-4 rounded accent-[#5B4FFF]"
                           />
-                        </label>
-                        <label className="flex items-center gap-1.5 cursor-pointer">
-                          <span className="text-xs text-[var(--color-text-muted)]">Email</span>
-                          <input
-                            type="checkbox"
+                          <ToggleSwitch
+                            label="Email"
                             checked={pref.emailEnabled}
                             onChange={(e) => handleToggle(pref.eventType, "emailEnabled", e.target.checked)}
                             disabled={pref.critical && pref.emailEnabled && !pref.inAppEnabled}
-                            className="h-4 w-4 rounded accent-[#5B4FFF]"
                           />
-                        </label>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import API from "../../api";
+import Button from "../ui/Button";
+import { CONTROL_INPUT, CONTROL_LABEL } from "../ui/controls";
 
 interface WorkerFormProps {
   onInviteSent?: () => void;
@@ -52,26 +54,26 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onInviteSent }) => {
   };
 
   return (
-    <div className="mb-6 rounded-xl card-panel p-5">
-      <h3 className="mb-1 text-sm font-semibold text-[var(--color-text-primary)]">Invite Worker</h3>
-      <p className="mb-4 text-xs text-[var(--color-text-muted)]">
+    <div className="card-panel mb-6 p-5 sm:p-6">
+      <h3 className="section-title">Invite Worker</h3>
+      <p className="mb-4 text-sm text-[var(--color-text-muted)]">
         Send an invite email so the worker can set their own password and join the team.
       </p>
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Full Name *</label>
+            <label className={CONTROL_LABEL}>Full Name *</label>
             <input
               placeholder="e.g., John Doe"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               disabled={isSubmitting}
               required
-              className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${CONTROL_INPUT} disabled:cursor-not-allowed disabled:opacity-50`}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Email Address *</label>
+            <label className={CONTROL_LABEL}>Email Address *</label>
             <input
               type="email"
               placeholder="e.g., john@example.com"
@@ -79,18 +81,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({ onInviteSent }) => {
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               disabled={isSubmitting}
               required
-              className="input-dark h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+              className={`${CONTROL_INPUT} disabled:cursor-not-allowed disabled:opacity-50`}
             />
           </div>
-          <div className="flex items-end">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn-primary h-11 w-full rounded-xl px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isSubmitting ? "Sending..." : "Send Invite"}
-            </button>
-          </div>
+        </div>
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button type="submit" variant="primary" loading={isSubmitting} className="w-full sm:w-auto">
+            {isSubmitting ? "Sending..." : "Send Invite"}
+          </Button>
         </div>
       </form>
     </div>

@@ -19,6 +19,22 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import {
+  CircleDollarSign,
+  Users,
+  CheckCircle2,
+  AlertTriangle,
+  Plus,
+  ClipboardList,
+  FileText,
+  ChevronRight,
+  UserRound,
+} from "lucide-react";
+import PageHeader from "../../components/ui/PageHeader";
+import StatCard from "../../components/ui/StatCard";
+import StatusBadge from "../../components/ui/StatusBadge";
+import EmptyState from "../../components/ui/EmptyState";
+import { SkeletonDashboard } from "../../components/ui/Skeleton";
 
 interface User {
   id: number;
@@ -69,7 +85,14 @@ const colors = {
   info: "#3B82F6",
 };
 
-const cardClass = "rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel-solid)] shadow-[var(--color-card-shadow)]";
+const axisTick = { fill: "var(--color-text-muted)", fontSize: 12 };
+const tooltipContentStyle = {
+  background: "var(--color-panel-solid)",
+  border: "1px solid var(--color-border)",
+  borderRadius: 12,
+};
+const tooltipLabelStyle = { color: "var(--color-text-primary)" };
+const legendWrapperStyle = { color: "var(--color-text-muted)", fontSize: 12 };
 
 export default function ZulberaAnalyticsPage() {
   const navigate = useNavigate();
@@ -279,308 +302,311 @@ export default function ZulberaAnalyticsPage() {
   if (loading) {
     return (
       <div className="mx-auto max-w-[1400px] w-full min-w-0">
-        <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">Zulbera Analytics</h2>
-        <div className="flex min-h-[300px] items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex gap-2">
-              <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-80" />
-              <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-60" style={{ animationDelay: "0.1s" }} />
-              <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-40" style={{ animationDelay: "0.2s" }} />
-            </div>
-            <span className="text-[var(--color-text-muted)]">Loading...</span>
-          </div>
-        </div>
+        <SkeletonDashboard />
       </div>
     );
   }
 
+  const revenueByPeriod = getRevenueByPeriod();
+  const topClients = getTopClientsByRevenue();
+  const workerPerformance = getWorkerPerformance();
+  const recentInvoices = adminOwnInvoices
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
+  const totalAttention =
+    overdueInvoices.length + overdueTasks.length + pendingApproval + incompleteProfiles + totalDomainAlerts;
+
   return (
-    <div className="mx-auto max-w-[1400px] w-full min-w-0">
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">Zulbera Analytics</h2>
-          <p className="mt-1 text-sm text-[var(--color-text-muted)]">Your workspace: clients, tasks, revenue, and alerts</p>
-        </div>
-        <div className="flex gap-2">
-          {(["week", "month", "year"] as const).map((range) => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`px-4 py-2 text-sm font-semibold rounded-full transition-all ${
-                timeRange === range
-                  ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
-                  : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
-              }`}
-            >
-              {range.charAt(0).toUpperCase() + range.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1400px] w-full min-w-0 space-y-6">
+      <PageHeader
+        title="Zulbera Analytics"
+        subtitle={`Your workspace — clients, tasks, revenue, and alerts over the past ${timeRange}`}
+        actions={
+          <div className="flex gap-2">
+            {(["week", "month", "year"] as const).map((range) => (
+              <button
+                key={range}
+                onClick={() => setTimeRange(range)}
+                className={`px-4 py-2 text-sm font-semibold rounded-full transition-all ${
+                  timeRange === range
+                    ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] border border-[var(--color-tab-active-border)]"
+                    : "text-[var(--color-tab-inactive-text)] border border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] hover:bg-[var(--color-tab-inactive-hover-bg)] hover:text-[var(--color-tab-inactive-hover-text)]"
+                }`}
+              >
+                {range.charAt(0).toUpperCase() + range.slice(1)}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {/* Key metrics — Zulbera only */}
-      <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <div
-          className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-[var(--color-border-hover)] ${cardClass}`}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 stagger-children">
+        <StatCard
+          label="Total Revenue"
+          value={formatCurrency(totalRevenue)}
+          tone="success"
+          icon={<CircleDollarSign className="h-5 w-5" />}
           onClick={() => navigate("/admin/zulbera/invoices")}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Total Revenue</p>
-            <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-              <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-[var(--color-text-primary)]">{formatCurrency(totalRevenue)}</p>
-          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            <span className="font-semibold text-green-400">{formatCurrency(totalPaid)}</span> paid •
-            <span className="font-semibold text-amber-400"> {formatCurrency(totalPending)}</span> pending
-          </p>
-        </div>
-
-        <div
-          className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-[var(--color-border-hover)] ${cardClass}`}
+          hint={
+            <>
+              <span className="font-semibold text-[var(--color-success-text)]">{formatCurrency(totalPaid)}</span> paid
+              {" · "}
+              <span className="font-semibold text-[var(--color-warning-text)]">{formatCurrency(totalPending)}</span> pending
+            </>
+          }
+        />
+        <StatCard
+          label="Active Clients"
+          value={totalClients}
+          tone="info"
+          icon={<Users className="h-5 w-5" />}
           onClick={() => navigate("/admin/zulbera/clients")}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Active Clients</p>
-            <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-              <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-[var(--color-text-primary)]">{totalClients}</p>
-          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            {incompleteProfiles > 0 ? (
-              <span className="font-semibold text-red-400">{incompleteProfiles} incomplete profiles</span>
+          hint={
+            incompleteProfiles > 0 ? (
+              <span className="font-semibold text-[var(--color-destructive-text)]">{incompleteProfiles} incomplete profiles</span>
             ) : (
-              <span className="text-green-400">All profiles complete</span>
-            )}
-          </p>
-        </div>
-
-        <div
-          className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-[var(--color-border-hover)] ${cardClass}`}
+              <span className="text-[var(--color-success-text)]">All profiles complete</span>
+            )
+          }
+        />
+        <StatCard
+          label="Task Completion"
+          value={`${taskCompletionRate}%`}
+          tone="success"
+          icon={<CheckCircle2 className="h-5 w-5" />}
           onClick={() => navigate("/admin/zulbera/tasks")}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Task Completion</p>
-            <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-              <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-green-400">{taskCompletionRate}%</p>
-          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            {adminOwnTasks.filter((t) => t.status === "COMPLETED").length} of {adminOwnTasks.length} tasks completed
-          </p>
-        </div>
-
-        <div
-          className={`relative p-6 overflow-hidden transition-all cursor-pointer hover:border-[var(--color-border-hover)] ${cardClass}`}
+          hint={`${adminOwnTasks.filter((t) => t.status === "COMPLETED").length} of ${adminOwnTasks.length} tasks completed`}
+        />
+        <StatCard
+          label="Attention Needed"
+          value={totalAttention}
+          tone={totalAttention > 0 ? "danger" : "success"}
+          icon={<AlertTriangle className="h-5 w-5" />}
           onClick={() => navigate("/alerts")}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-sm font-semibold text-[var(--color-text-muted)] uppercase tracking-wide">Attention Needed</p>
-            <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-              <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-red-400">
-            {overdueInvoices.length + overdueTasks.length + pendingApproval + incompleteProfiles + totalDomainAlerts}
-          </p>
-          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            {overdueTasks.length} tasks • {overdueInvoices.length} invoices • {pendingApproval} approvals • {incompleteProfiles} profiles • {totalDomainAlerts} domains
-          </p>
-        </div>
+          hint={`${overdueTasks.length} tasks · ${overdueInvoices.length} invoices · ${pendingApproval} approvals · ${incompleteProfiles} profiles · ${totalDomainAlerts} domains`}
+        />
       </div>
 
       {/* Charts */}
-      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className={`p-6 lg:col-span-2 min-w-0 overflow-hidden ${cardClass}`}>
-          <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Revenue Trend</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={getRevenueByPeriod()}>
-              <defs>
-                <linearGradient id="zulberaPaid" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={colors.success} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={colors.success} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="zulberaPending" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={colors.warning} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={colors.warning} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis dataKey="period" tick={{ fill: "#9ca3af" }} />
-              <YAxis tick={{ fill: "#9ca3af" }} tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ backgroundColor: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} labelStyle={{ color: "#fff" }} />
-              <Legend wrapperStyle={{ color: "#fff" }} />
-              <Area type="monotone" dataKey="paid" stroke={colors.success} fillOpacity={1} fill="url(#zulberaPaid)" name="Paid" />
-              <Area type="monotone" dataKey="pending" stroke={colors.warning} fillOpacity={1} fill="url(#zulberaPending)" name="Pending" />
-            </AreaChart>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="card-panel p-5 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden">
+          <h3 className="section-title mb-4">Revenue Trend</h3>
+          {revenueByPeriod.length > 0 ? (
+            <div className="h-[240px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenueByPeriod}>
+                  <defs>
+                    <linearGradient id="zulberaPaid" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={colors.success} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={colors.success} stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="zulberaPending" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={colors.warning} stopOpacity={0.3} />
+                      <stop offset="95%" stopColor={colors.warning} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text-primary)" strokeOpacity={0.1} />
+                  <XAxis dataKey="period" tick={axisTick} />
+                  <YAxis tick={axisTick} tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
+                  <Legend wrapperStyle={legendWrapperStyle} />
+                  <Area type="monotone" dataKey="paid" stroke={colors.success} fillOpacity={1} fill="url(#zulberaPaid)" name="Paid" />
+                  <Area type="monotone" dataKey="pending" stroke={colors.warning} fillOpacity={1} fill="url(#zulberaPending)" name="Pending" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState
+              compact
+              icon={<CircleDollarSign className="h-6 w-6" />}
+              title="No revenue data"
+              description="No invoices were created in the selected period."
+            />
+          )}
+        </div>
+
+        <div className="card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
+          <h3 className="section-title mb-4">Task Status</h3>
+          {taskDistribution.length > 0 ? (
+            <div className="h-[240px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={taskDistribution} cx="50%" cy="50%" labelLine={false} label outerRadius={80} fill="#8884d8" dataKey="value">
+                    {taskDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
+                  <Legend wrapperStyle={legendWrapperStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState
+              compact
+              icon={<ClipboardList className="h-6 w-6" />}
+              title="No task data"
+              description="No tasks found for the selected period."
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
+          <h3 className="section-title mb-4">Top Clients by Revenue</h3>
+          {topClients.length > 0 ? (
+            <div className="h-[240px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topClients} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text-primary)" strokeOpacity={0.1} />
+                  <XAxis type="number" tick={axisTick} tickFormatter={(v) => formatCurrency(v)} />
+                  <YAxis dataKey="name" type="category" width={100} tick={axisTick} />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
+                  <Bar dataKey="amount" fill="rgba(255,255,255,0.6)" radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState
+              compact
+              icon={<Users className="h-6 w-6" />}
+              title="No client revenue data"
+              description="Revenue by client appears once invoices exist for this period."
+            />
+          )}
+        </div>
+
+        <div className="card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
+          <h3 className="section-title mb-4">Worker Performance</h3>
+          {workerPerformance.length > 0 ? (
+            <div className="h-[240px] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={workerPerformance}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text-primary)" strokeOpacity={0.1} />
+                  <XAxis dataKey="name" tick={axisTick} />
+                  <YAxis tick={axisTick} />
+                  <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
+                  <Legend wrapperStyle={legendWrapperStyle} />
+                  <Bar dataKey="completed" fill={colors.success} name="Completed" />
+                  <Bar dataKey="total" fill={colors.info} name="Total Tasks" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState
+              compact
+              icon={<UserRound className="h-6 w-6" />}
+              title="No worker data"
+              description="Performance appears once tasks are assigned in this period."
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
+        <h3 className="section-title mb-4">Task Completion Trend</h3>
+        <div className="h-[240px] sm:h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={getTaskCompletionTrend()}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text-primary)" strokeOpacity={0.1} />
+              <XAxis dataKey="date" tick={axisTick} />
+              <YAxis yAxisId="left" tick={axisTick} />
+              <YAxis yAxisId="right" orientation="right" tick={axisTick} tickFormatter={(v) => `${v}%`} />
+              <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
+              <Legend wrapperStyle={legendWrapperStyle} />
+              <Line yAxisId="left" type="monotone" dataKey="completed" stroke={colors.success} strokeWidth={2} name="Completed" />
+              <Line yAxisId="left" type="monotone" dataKey="total" stroke={colors.info} strokeWidth={2} name="Total" />
+              <Line yAxisId="right" type="monotone" dataKey="rate" stroke="rgba(255,255,255,0.7)" strokeWidth={2} name="Rate %" />
+            </LineChart>
           </ResponsiveContainer>
         </div>
-
-        <div className={`p-6 min-w-0 overflow-hidden ${cardClass}`}>
-          <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Task Status</h3>
-          {taskDistribution.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={taskDistribution} cx="50%" cy="50%" labelLine={false} label outerRadius={80} fill="#8884d8" dataKey="value">
-                  {taskDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ backgroundColor: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} />
-                <Legend wrapperStyle={{ color: "#fff" }} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-64 text-[var(--color-text-muted)]">No task data</div>
-          )}
-        </div>
-      </div>
-
-      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className={`p-6 min-w-0 overflow-hidden ${cardClass}`}>
-          <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Top Clients by Revenue</h3>
-          {getTopClientsByRevenue().length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={getTopClientsByRevenue()} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis type="number" tick={{ fill: "#9ca3af" }} tickFormatter={(v) => formatCurrency(v)} />
-                <YAxis dataKey="name" type="category" width={100} tick={{ fill: "#9ca3af" }} />
-                <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={{ backgroundColor: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} />
-                <Bar dataKey="amount" fill="rgba(255,255,255,0.6)" radius={[0, 8, 8, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-64 text-[var(--color-text-muted)]">No client revenue data</div>
-          )}
-        </div>
-
-        <div className={`p-6 min-w-0 overflow-hidden ${cardClass}`}>
-          <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Worker Performance</h3>
-          {getWorkerPerformance().length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={getWorkerPerformance()}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                <XAxis dataKey="name" tick={{ fill: "#9ca3af" }} />
-                <YAxis tick={{ fill: "#9ca3af" }} />
-                <Tooltip contentStyle={{ backgroundColor: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} />
-                <Legend wrapperStyle={{ color: "#fff" }} />
-                <Bar dataKey="completed" fill={colors.success} name="Completed" />
-                <Bar dataKey="total" fill={colors.info} name="Total Tasks" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-64 text-[var(--color-text-muted)]">No worker data</div>
-          )}
-        </div>
-      </div>
-
-      <div className={`p-6 mb-8 min-w-0 overflow-hidden ${cardClass}`}>
-        <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Task Completion Trend</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={getTaskCompletionTrend()}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-            <XAxis dataKey="date" tick={{ fill: "#9ca3af" }} />
-            <YAxis yAxisId="left" tick={{ fill: "#9ca3af" }} />
-            <YAxis yAxisId="right" orientation="right" tick={{ fill: "#9ca3af" }} tickFormatter={(v) => `${v}%`} />
-            <Tooltip contentStyle={{ backgroundColor: "#2a2a2a", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px" }} />
-            <Legend wrapperStyle={{ color: "#fff" }} />
-            <Line yAxisId="left" type="monotone" dataKey="completed" stroke={colors.success} strokeWidth={2} name="Completed" />
-            <Line yAxisId="left" type="monotone" dataKey="total" stroke={colors.info} strokeWidth={2} name="Total" />
-            <Line yAxisId="right" type="monotone" dataKey="rate" stroke="rgba(255,255,255,0.7)" strokeWidth={2} name="Rate %" />
-          </LineChart>
-        </ResponsiveContainer>
       </div>
 
       {/* Quick actions + Recent */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className={`p-6 ${cardClass}`}>
-          <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Quick Actions</h3>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="card-panel p-5 sm:p-6">
+          <h3 className="section-title mb-4">Quick Actions</h3>
           <div className="space-y-3">
             <button
               onClick={() => navigate("/admin/zulbera/clients")}
-              className="flex items-center justify-between w-full p-4 text-left transition-all border border-[var(--color-border)] rounded-xl hover:border-[var(--color-border-hover)] bg-[var(--color-surface-2)]"
+              className="row-hover flex w-full items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 text-left transition-all"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-                  <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                </div>
-                <div>
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]">
+                  <Plus className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
                   <p className="font-semibold text-[var(--color-text-primary)]">Create New Client</p>
                   <p className="text-sm text-[var(--color-text-muted)]">Add a new client</p>
                 </div>
               </div>
-              <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <ChevronRight className="h-5 w-5 shrink-0 text-[var(--color-text-muted)]" />
             </button>
             <button
               onClick={() => navigate("/admin/zulbera/tasks")}
-              className="flex items-center justify-between w-full p-4 text-left transition-all border border-[var(--color-border)] rounded-xl hover:border-[var(--color-border-hover)] bg-[var(--color-surface-2)]"
+              className="row-hover flex w-full items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 text-left transition-all"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-                  <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                </div>
-                <div>
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]">
+                  <ClipboardList className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
                   <p className="font-semibold text-[var(--color-text-primary)]">Create New Task</p>
                   <p className="text-sm text-[var(--color-text-muted)]">Assign a task</p>
                 </div>
               </div>
-              <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <ChevronRight className="h-5 w-5 shrink-0 text-[var(--color-text-muted)]" />
             </button>
             <button
               onClick={() => navigate("/admin/zulbera/invoices")}
-              className="flex items-center justify-between w-full p-4 text-left transition-all border border-[var(--color-border)] rounded-xl hover:border-[var(--color-border-hover)] bg-[var(--color-surface-2)]"
+              className="row-hover flex w-full items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 text-left transition-all"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[var(--color-surface-3)]">
-                  <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                </div>
-                <div>
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-text)]">
+                  <FileText className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
                   <p className="font-semibold text-[var(--color-text-primary)]">Generate Invoice</p>
                   <p className="text-sm text-[var(--color-text-muted)]">Create and send an invoice</p>
                 </div>
               </div>
-              <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              <ChevronRight className="h-5 w-5 shrink-0 text-[var(--color-text-muted)]" />
             </button>
           </div>
         </div>
 
-        <div className={`p-6 ${cardClass}`}>
-          <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">Recent Invoices</h3>
-          <div className="space-y-3">
-            {adminOwnInvoices
-              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-              .slice(0, 5)
-              .map((inv) => (
+        <div className="card-panel p-5 sm:p-6">
+          <h3 className="section-title mb-4">Recent Invoices</h3>
+          {recentInvoices.length > 0 ? (
+            <div className="space-y-3">
+              {recentInvoices.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-start gap-3 p-3 transition-all border border-[var(--color-border)] rounded-xl cursor-pointer hover:border-[var(--color-border-hover)] bg-[var(--color-surface-2)]"
+                  className="row-hover flex cursor-pointer flex-col gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3 transition-all sm:flex-row sm:items-center sm:justify-between"
                   onClick={() => navigate("/admin/zulbera/invoices")}
                 >
-                  <div className={`p-2 rounded-lg ${inv.status === "PAID" ? "bg-green-500/20" : "bg-amber-500/20"}`}>
-                    <svg className={`w-4 h-4 ${inv.status === "PAID" ? "text-green-400" : "text-amber-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">
+                      Invoice #{inv.invoiceNumber} — {inv.client?.name ?? "Unknown"}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {formatCurrency(inv.amount)} · {formatDate(inv.createdAt)}
+                    </p>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-[var(--color-text-primary)]">Invoice #{inv.invoiceNumber} — {inv.client?.name ?? "Unknown"}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">{formatCurrency(inv.amount)} • {inv.status}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">{formatDate(inv.createdAt)}</p>
-                  </div>
+                  <StatusBadge status={inv.status} className="shrink-0 self-start sm:self-center" />
                 </div>
               ))}
-            {adminOwnInvoices.length === 0 && <p className="py-8 text-sm text-center text-[var(--color-text-muted)]">No recent invoices</p>}
-          </div>
+            </div>
+          ) : (
+            <EmptyState
+              compact
+              icon={<FileText className="h-6 w-6" />}
+              title="No recent invoices"
+              description="New invoices will show up here."
+            />
+          )}
         </div>
       </div>
     </div>

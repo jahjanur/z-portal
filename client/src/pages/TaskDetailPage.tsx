@@ -7,6 +7,10 @@ import WorkerStatusControls from "../components/taskdetail/WorkerStatusControls"
 import ClientStatusView from "../components/taskdetail/ClientStatusView";
 import FileViewer from "../components/FileViewer";
 import WorkerMultiSelect from "../components/ui/WorkerMultiSelect";
+import Button from "../components/ui/Button";
+import StatusBadge from "../components/ui/StatusBadge";
+import EmptyState from "../components/ui/EmptyState";
+import { SkeletonDashboard } from "../components/ui/Skeleton";
 
 interface User {
   id: number;
@@ -63,6 +67,9 @@ interface Task {
   comments: TaskComment[];
 }
 
+const roleTone = (role?: string): "info" | "neutral" | "success" =>
+  role === "ADMIN" || role === "ERASPHERE" ? "info" : role === "WORKER" ? "neutral" : "success";
+
 const TaskDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -72,13 +79,13 @@ const TaskDetailPage: React.FC = () => {
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [newComment, setNewComment] = useState("");
   const [addingComment, setAddingComment] = useState(false);
-  
+
   const [fileComments, setFileComments] = useState<{ [fileId: number]: string }>({});
   const [addingFileComment, setAddingFileComment] = useState<{ [fileId: number]: boolean }>({});
-  
+
   const [uploadingFile, setUploadingFile] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileSection, setFileSection] = useState("");
@@ -239,16 +246,16 @@ const TaskDetailPage: React.FC = () => {
     if (!confirm("Request admin approval to mark this task as completed?")) {
       return;
     }
-    
+
     try {
       await API.patch(`/tasks/${id}/status`, { status: "PENDING_APPROVAL" });
-      
+
       await API.post(`/tasks/${id}/comments`, {
         userId: currentUserId,
         content: "🔔 Worker has requested completion approval for this task.",
         visibleToClient: false,
       });
-      
+
       fetchTask();
       toast.success("Completion request submitted! Waiting for admin approval.");
     } catch (err) {
@@ -261,7 +268,7 @@ const TaskDetailPage: React.FC = () => {
     if (!confirm("Approve this task as completed?")) {
       return;
     }
-    
+
     try {
       await API.patch(`/tasks/${id}/status`, { status: "COMPLETED" });
       await API.post(`/tasks/${id}/comments`, {
@@ -406,14 +413,9 @@ const TaskDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-app">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-2">
-            <div className="h-3 w-3 animate-bounce rounded-full bg-[var(--color-text-muted)]"></div>
-            <div className="h-3 w-3 animate-bounce rounded-full bg-[var(--color-text-muted)] opacity-80" style={{ animationDelay: "0.1s" }}></div>
-            <div className="h-3 w-3 animate-bounce rounded-full bg-[var(--color-text-muted)] opacity-60" style={{ animationDelay: "0.2s" }}></div>
-          </div>
-          <span className="text-lg font-medium text-[var(--color-text-muted)]">Loading task...</span>
+      <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-app py-24">
+        <div className="mx-auto max-w-7xl min-w-0 px-4">
+          <SkeletonDashboard />
         </div>
       </div>
     );
@@ -421,42 +423,20 @@ const TaskDetailPage: React.FC = () => {
 
   if (error || !task) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-app">
-        <div className="max-w-md rounded-xl border border-red-500/20 bg-red-500/10 p-6">
-          <p className="mb-2 text-lg font-semibold text-red-800">Error:</p>
-          <p className="text-red-600">{error || "Task not found"}</p>
-          <button
-            onClick={() => navigate("/dashboard")}
-            className="btn-primary mt-4 px-4 py-2 text-sm font-semibold rounded-lg"
-          >
+      <div className="flex min-h-screen items-center justify-center bg-app px-4">
+        <div className="w-full max-w-md rounded-2xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] p-6 shadow-elev-sm">
+          <p className="mb-1 text-lg font-semibold text-[var(--color-destructive-text)]">Something went wrong</p>
+          <p className="text-sm text-[var(--color-destructive-text)] opacity-90">{error || "Task not found"}</p>
+          <Button variant="secondary" size="sm" className="mt-5" onClick={() => navigate("/dashboard")}>
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
             Back to Dashboard
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-      case "IN_PROGRESS":
-      case "PENDING_APPROVAL":
-      case "PENDING":
-      default:
-        return "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)] border border-[var(--color-border-hover)]";
-    }
-  };
-
-  const getStatusDisplay = (status: string) => {
-    switch (status) {
-      case "PENDING_APPROVAL":
-        return "Pending Approval";
-      case "IN_PROGRESS":
-        return "In Progress";
-      default:
-        return status;
-    }
-  };
 
   const visibleFiles = task.files.filter((f) => {
     if (!isAdmin) return true; // worker/client: backend already filtered to their channel
@@ -497,38 +477,37 @@ const TaskDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-app py-24">
-      <div className="mx-auto max-w-7xl min-w-0 px-4">
+      <div className="mx-auto max-w-7xl min-w-0 space-y-6 px-4">
         {/* Back Button */}
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="mb-6 flex items-center gap-2 text-[var(--color-text-secondary)] transition-colors hover:text-[var(--color-text-primary)]"
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Back to Dashboard
-        </button>
+        </Button>
 
         {/* Header */}
-        <div className="mb-8 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-6 shadow-lg shadow-[var(--color-card-shadow)] backdrop-blur-md">
-          <div className="mb-4 flex items-start justify-between">
-            <div className="flex-1">
-              <h1 className="mb-2 text-3xl font-bold text-[var(--color-text-primary)]">{task.title}</h1>
-              <p className="text-[var(--color-text-secondary)]">{task.description || "No description provided"}</p>
+        <div className="card-panel animate-fade-up p-5 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <h1 className="page-title mb-2">{task.title}</h1>
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                {task.description || "No description provided"}
+              </p>
             </div>
-            <span className={`rounded-full border px-4 py-2 text-sm font-semibold ${getStatusColor(task.status)}`}>
-              {getStatusDisplay(task.status)}
-            </span>
+            <StatusBadge status={task.status} className="shrink-0 self-start" />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div>
-              <p className="text-sm font-semibold text-[var(--color-text-muted)]">Client</p>
-              <p className="text-[var(--color-text-primary)]">{task.client?.name ?? "Client removed"}</p>
-              <p className="text-sm text-[var(--color-text-muted)]">{task.client?.email ?? ""}</p>
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Client</p>
+              <p className="mt-1 text-sm font-medium text-[var(--color-text-primary)]">
+                {task.client?.name ?? "Client removed"}
+              </p>
+              <p className="truncate text-xs text-[var(--color-text-muted)]">{task.client?.email ?? ""}</p>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-[var(--color-text-muted)]">Assigned Workers</p>
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Assigned Workers</p>
               {currentUserRole === "ADMIN" ? (
                 <div className="mt-1">
                   <WorkerMultiSelect
@@ -545,20 +524,20 @@ const TaskDetailPage: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  <p className="text-[var(--color-text-primary)]">
+                  <p className="mt-1 text-sm font-medium text-[var(--color-text-primary)]">
                     {task.workers?.length ? task.workers.map((tw) => tw.user.name).join(", ") : "Unassigned"}
                   </p>
                   {task.workers?.length ? (
-                    <p className="text-sm text-[var(--color-text-muted)]">
+                    <p className="truncate text-xs text-[var(--color-text-muted)]">
                       {task.workers.map((tw) => tw.user.email).join(", ")}
                     </p>
                   ) : null}
                 </>
               )}
             </div>
-            <div>
-              <p className="text-sm font-semibold text-[var(--color-text-muted)]">Due Date</p>
-              <p className="text-[var(--color-text-primary)]">
+            <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Due Date</p>
+              <p className="mt-1 text-sm font-medium text-[var(--color-text-primary)]">
                 {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "No deadline"}
               </p>
             </div>
@@ -583,21 +562,18 @@ const TaskDetailPage: React.FC = () => {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Files Section */}
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-6 shadow-lg shadow-[var(--color-card-shadow)] backdrop-blur-md">
+          <div className="card-panel min-w-0 p-5 sm:p-6">
             {/* Header row */}
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="section-title">
                 Files & Screenshots
-                {refreshing && <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">Refreshing...</span>}
+                {refreshing && (
+                  <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">Refreshing...</span>
+                )}
               </h2>
-              <button
-                type="button"
-                onClick={fetchTask}
-                disabled={refreshing}
-                className="flex items-center gap-1.5 rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
-              >
+              <Button variant="ghost" size="sm" onClick={fetchTask} disabled={refreshing}>
                 ↻ Refresh
-              </button>
+              </Button>
             </div>
 
             {/* Channel tabs — admin only; worker/client see their channel directly */}
@@ -617,9 +593,9 @@ const TaskDetailPage: React.FC = () => {
                         : "border-[var(--color-tab-inactive-border)] bg-[var(--color-tab-inactive-bg)] text-[var(--color-tab-inactive-text)] hover:bg-[var(--color-tab-inactive-hover-bg)]"
                     }`}
                   >
-                    {/* Red dot: unseen activity from client/worker */}
+                    {/* Dot: unseen activity from client/worker */}
                     {hasUnseen[key] && activeChannel !== key && (
-                      <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--color-surface-2)] bg-red-500" />
+                      <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--color-panel-solid)] bg-[var(--color-destructive-text)]" />
                     )}
                     <span>{label}</span>
                     {count > 0 && (
@@ -672,22 +648,25 @@ const TaskDetailPage: React.FC = () => {
                   onChange={(e) => setFileCaption(e.target.value)}
                   className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
                 />
-                <button
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="w-full"
                   onClick={uploadFile}
+                  loading={uploadingFile}
                   disabled={uploadingFile || !selectedFile}
-                  className="btn-primary w-full px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {uploadingFile ? "Uploading..." : "Upload File"}
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Files List with Individual Comments */}
             {Object.keys(filesBySection).length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-4 stagger-children">
                 {Object.entries(filesBySection).map(([section, files]) => (
                   <div key={section} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
-                    <h4 className="mb-3 text-sm font-bold text-[var(--color-text-muted)]">{section}</h4>
+                    <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">{section}</h4>
                     <div className="space-y-4">
                       {files.map((file) => {
                         const rs = file.reviewStatus ?? "PENDING";
@@ -700,16 +679,16 @@ const TaskDetailPage: React.FC = () => {
                         const cardBorder =
                           currentUserRole === "WORKER" && needsAction
                             ? rs === "NEEDS_REVISION"
-                              ? "border-amber-500/60"
-                              : "border-red-500/60"
+                              ? "border-[var(--color-warning-border)]"
+                              : "border-[var(--color-destructive-border)]"
                             : "border-[var(--color-border)]";
 
                         return (
-                        <div key={file.id} className={`rounded-lg border bg-[var(--color-surface-2)] p-4 ${cardBorder}`}>
+                        <div key={file.id} className={`rounded-xl border bg-[var(--color-surface-1)] p-4 ${cardBorder}`}>
                           {/* File Header */}
-                          <div className="mb-3 flex items-start justify-between">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-[var(--color-text-primary)]">{file.fileName}</p>
+                          <div className="mb-3 flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <p className="break-words font-medium text-[var(--color-text-primary)]">{file.fileName}</p>
                               {file.caption && (
                                 <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{file.caption}</p>
                               )}
@@ -718,15 +697,13 @@ const TaskDetailPage: React.FC = () => {
                               </p>
                               {file.uploader && (
                                 <div className="mt-1.5 flex items-center gap-1.5">
-                                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                                    file.uploader.role === "ADMIN" || file.uploader.role === "ERASPHERE"
-                                      ? "bg-purple-500/20 text-purple-400"
-                                      : file.uploader.role === "WORKER"
-                                      ? "bg-blue-500/20 text-blue-400"
-                                      : "bg-green-500/20 text-green-400"
-                                  }`}>
+                                  <StatusBadge
+                                    dot={false}
+                                    tone={roleTone(file.uploader.role)}
+                                    className="uppercase tracking-wide"
+                                  >
                                     {file.uploader.role === "ERASPHERE" ? "Admin" : file.uploader.role}
-                                  </span>
+                                  </StatusBadge>
                                   <span className="text-xs text-[var(--color-text-muted)]">{file.uploader.name}</span>
                                 </div>
                               )}
@@ -734,26 +711,10 @@ const TaskDetailPage: React.FC = () => {
                               {/* Review status badge — only relevant for worker-uploaded files */}
                               {isWorkerUpload && (
                                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                                  {rs === "PENDING" && (
-                                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                                      ⏳ Awaiting Review
-                                    </span>
-                                  )}
-                                  {rs === "APPROVED" && (
-                                    <span className="inline-flex items-center gap-1 rounded-full border border-green-500/40 bg-green-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-400">
-                                      ✅ Approved
-                                    </span>
-                                  )}
-                                  {rs === "NEEDS_REVISION" && (
-                                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
-                                      ✏️ Needs Revision
-                                    </span>
-                                  )}
-                                  {rs === "REJECTED" && (
-                                    <span className="inline-flex items-center gap-1 rounded-full border border-red-500/40 bg-red-500/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-400">
-                                      ✗ Rejected
-                                    </span>
-                                  )}
+                                  {rs === "PENDING" && <StatusBadge tone="neutral">Awaiting Review</StatusBadge>}
+                                  {rs === "APPROVED" && <StatusBadge status="APPROVED" />}
+                                  {rs === "NEEDS_REVISION" && <StatusBadge tone="warning">Needs Revision</StatusBadge>}
+                                  {rs === "REJECTED" && <StatusBadge status="REJECTED" />}
                                 </div>
                               )}
 
@@ -761,8 +722,8 @@ const TaskDetailPage: React.FC = () => {
                               {isWorkerUpload && rc && (
                                 <p className={`mt-1.5 rounded-lg border px-3 py-2 text-xs italic ${
                                   rs === "NEEDS_REVISION"
-                                    ? "border-amber-500/30 bg-amber-500/10 text-amber-300"
-                                    : "border-red-500/30 bg-red-500/10 text-red-300"
+                                    ? "border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]"
+                                    : "border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] text-[var(--color-destructive-text)]"
                                 }`}>
                                   "{rc}"
                                 </p>
@@ -778,18 +739,18 @@ const TaskDetailPage: React.FC = () => {
                               )}
                             </div>
 
-                            <div className="flex shrink-0 gap-2 ml-3">
-                              <button
-                                type="button"
+                            <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                              <Button
+                                variant="primary"
+                                size="sm"
                                 onClick={() => { setViewerFile(file); setViewerOpen(true); }}
-                                className="btn-primary px-3 py-1 text-xs font-semibold"
                               >
                                 View
-                              </button>
+                              </Button>
                               <a
                                 href={getFileUrl(file.fileUrl)}
                                 download={file.fileName}
-                                className="flex items-center gap-1 rounded-full border border-[var(--color-border)] px-3 py-1 text-xs font-semibold text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                                className="btn-secondary h-9 px-3 text-xs"
                               >
                                 Download
                               </a>
@@ -798,23 +759,25 @@ const TaskDetailPage: React.FC = () => {
 
                           {/* Admin review actions — only for worker-uploaded files, locked once APPROVED */}
                           {currentUserRole === "ADMIN" && activeChannel === "worker" && isWorkerUpload && rs !== "APPROVED" && (
-                            <div className="mb-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-3)] p-3">
+                            <div className="mb-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-3)] p-3">
                               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
                                 Review Decision
                               </p>
 
                               {/* Action buttons — visible for PENDING, NEEDS_REVISION, REJECTED */}
                               <div className="flex flex-wrap gap-2">
-                                <button
-                                  type="button"
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
                                   disabled={reviewEntry.saving}
                                   onClick={() => submitReview(file.id, "APPROVED")}
-                                  className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 border border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                                  className="!border-[var(--color-success-border)] !bg-[var(--color-success-bg)] !text-[var(--color-success-text)]"
                                 >
-                                  ✅ Approve
-                                </button>
-                                <button
-                                  type="button"
+                                  ✓ Approve
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
                                   disabled={reviewEntry.saving}
                                   onClick={() =>
                                     setReviewState((prev) => ({
@@ -827,16 +790,15 @@ const TaskDetailPage: React.FC = () => {
                                       },
                                     }))
                                   }
-                                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                                    rs === "NEEDS_REVISION"
-                                      ? "border border-amber-500/60 bg-amber-500/25 text-amber-300"
-                                      : "border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                                  className={`!border-[var(--color-warning-border)] !bg-[var(--color-warning-bg)] !text-[var(--color-warning-text)] ${
+                                    rs === "NEEDS_REVISION" ? "ring-2 ring-[var(--color-warning-border)]" : ""
                                   }`}
                                 >
-                                  ✏️ Needs Revision
-                                </button>
-                                <button
-                                  type="button"
+                                  ✎ Needs Revision
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="sm"
                                   disabled={reviewEntry.saving}
                                   onClick={() =>
                                     setReviewState((prev) => ({
@@ -849,14 +811,12 @@ const TaskDetailPage: React.FC = () => {
                                       },
                                     }))
                                   }
-                                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
-                                    rs === "REJECTED"
-                                      ? "border border-red-500/60 bg-red-500/25 text-red-300"
-                                      : "border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                                  className={`!border-[var(--color-destructive-border)] !bg-[var(--color-destructive-bg)] !text-[var(--color-destructive-text)] ${
+                                    rs === "REJECTED" ? "ring-2 ring-[var(--color-destructive-border)]" : ""
                                   }`}
                                 >
                                   ✗ Reject
-                                </button>
+                                </Button>
                               </div>
 
                               {/* Inline comment box for Needs Revision / Reject */}
@@ -879,26 +839,26 @@ const TaskDetailPage: React.FC = () => {
                                     className="w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-3 py-2 text-xs text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
                                   />
                                   <div className="flex gap-2">
-                                    <button
-                                      type="button"
+                                    <Button
+                                      variant="primary"
+                                      size="sm"
                                       disabled={reviewEntry.saving || !reviewEntry.comment.trim()}
                                       onClick={() => submitReview(file.id, reviewEntry.pending!, reviewEntry.comment)}
-                                      className="rounded-lg px-3 py-1.5 text-xs font-semibold btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                       {reviewEntry.saving ? "Submitting…" : "Submit"}
-                                    </button>
-                                    <button
-                                      type="button"
+                                    </Button>
+                                    <Button
+                                      variant="secondary"
+                                      size="sm"
                                       onClick={() =>
                                         setReviewState((prev) => ({
                                           ...prev,
                                           [file.id]: { ...prev[file.id], pending: null },
                                         }))
                                       }
-                                      className="rounded-lg px-3 py-1.5 text-xs font-semibold btn-secondary"
                                     >
                                       Cancel
-                                    </button>
+                                    </Button>
                                   </div>
                                 </div>
                               )}
@@ -915,13 +875,13 @@ const TaskDetailPage: React.FC = () => {
                                   <div
                                     key={comment.id}
                                     id={`file-comment-${comment.id}`}
-                                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2 scroll-mt-4"
+                                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2.5 scroll-mt-4"
                                   >
-                                    <div className="mb-1 flex items-start justify-between">
+                                    <div className="mb-1 flex items-start justify-between gap-2">
                                       <p className="text-xs font-semibold text-[var(--color-text-primary)]">
                                         {comment.user?.name || `User #${comment.userId}`}
                                       </p>
-                                      <p className="text-xs text-[var(--color-text-muted)]">
+                                      <p className="shrink-0 text-xs text-[var(--color-text-muted)]">
                                         {new Date(comment.createdAt).toLocaleString()}
                                       </p>
                                     </div>
@@ -942,15 +902,16 @@ const TaskDetailPage: React.FC = () => {
                                 onKeyPress={(e) => {
                                   if (e.key === "Enter") addFileComment(file.id);
                                 }}
-                                className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+                                className="min-w-0 flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
                               />
-                              <button
+                              <Button
+                                variant="primary"
+                                size="sm"
                                 onClick={() => addFileComment(file.id)}
                                 disabled={addingFileComment[file.id] || !fileComments[file.id]?.trim()}
-                                className="btn-primary px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 {addingFileComment[file.id] ? "..." : "Add"}
-                              </button>
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -961,23 +922,27 @@ const TaskDetailPage: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <p className="py-8 text-center text-[var(--color-text-muted)]">No files uploaded yet</p>
+              <EmptyState
+                compact
+                title="No files yet"
+                description="No files uploaded yet. Files and screenshots shared on this task will appear here."
+              />
             )}
           </div>
 
           {/* General Comments Section */}
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-6 shadow-lg shadow-[var(--color-card-shadow)] backdrop-blur-md">
-            <h2 className="mb-4 text-xl font-bold text-[var(--color-text-primary)]">General Comments & Notes</h2>
+          <div className="card-panel min-w-0 p-5 sm:p-6">
+            <h2 className="section-title mb-4">General Comments & Notes</h2>
 
             {/* Add Comment */}
             <div className="mb-6">
-              <div className="mb-2 flex items-center justify-between">
-                {isAdmin && (
+              {isAdmin && (
+                <div className="mb-2 flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
                     Posting to {activeChannel === "client" ? "Client" : "Worker"}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
               <textarea
                 placeholder={
                   isAdmin
@@ -989,15 +954,20 @@ const TaskDetailPage: React.FC = () => {
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 rows={3}
-                className="mb-2 w-full resize-none rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+                className="mb-3 w-full resize-none rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder-[var(--color-placeholder)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--color-focus-ring)]"
               />
-              <button
-                onClick={addComment}
-                disabled={addingComment || !newComment.trim()}
-                className="btn-primary px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {addingComment ? "Adding..." : "Add Comment"}
-              </button>
+              <div className="flex justify-end">
+                <Button
+                  variant="primary"
+                  size="md"
+                  className="w-full sm:w-auto"
+                  onClick={addComment}
+                  loading={addingComment}
+                  disabled={addingComment || !newComment.trim()}
+                >
+                  {addingComment ? "Adding..." : "Add Comment"}
+                </Button>
+              </div>
             </div>
 
             {/* Comments List */}
@@ -1008,7 +978,7 @@ const TaskDetailPage: React.FC = () => {
                   : task.comments.filter((c) => c.visibleToClient)
                 : task.comments;
               return commentsToShow.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-3 stagger-children">
                   {commentsToShow.map((comment) => (
                     <div
                       key={comment.id}
@@ -1016,23 +986,21 @@ const TaskDetailPage: React.FC = () => {
                       className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 scroll-mt-4"
                     >
                       <div className="mb-2 flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex flex-wrap items-center gap-2">
                           {comment.user?.role && (
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                              comment.user.role === "ADMIN" || comment.user.role === "ERASPHERE"
-                                ? "bg-purple-500/20 text-purple-400"
-                                : comment.user.role === "WORKER"
-                                ? "bg-blue-500/20 text-blue-400"
-                                : "bg-green-500/20 text-green-400"
-                            }`}>
+                            <StatusBadge
+                              dot={false}
+                              tone={roleTone(comment.user.role)}
+                              className="uppercase tracking-wide"
+                            >
                               {comment.user.role === "ERASPHERE" ? "Admin" : comment.user.role}
-                            </span>
+                            </StatusBadge>
                           )}
                           <p className="text-sm font-semibold text-[var(--color-text-primary)]">
                             {comment.user?.name || `User #${comment.userId}`}
                           </p>
                         </div>
-                        <p className="text-xs text-[var(--color-text-muted)] shrink-0">
+                        <p className="shrink-0 text-xs text-[var(--color-text-muted)]">
                           {new Date(comment.createdAt).toLocaleString()}
                         </p>
                       </div>
@@ -1041,13 +1009,17 @@ const TaskDetailPage: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="py-8 text-center text-[var(--color-text-muted)]">
-                  {isAdmin
-                    ? activeChannel === "worker"
-                      ? "No worker channel comments yet."
-                      : "No client channel comments yet."
-                    : "No comments yet"}
-                </p>
+                <EmptyState
+                  compact
+                  title="No comments yet"
+                  description={
+                    isAdmin
+                      ? activeChannel === "worker"
+                        ? "No worker channel comments yet."
+                        : "No client channel comments yet."
+                      : "Comments and notes about this task will appear here."
+                  }
+                />
               );
             })()}
           </div>

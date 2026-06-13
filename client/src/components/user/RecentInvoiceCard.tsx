@@ -1,4 +1,5 @@
 import React from "react";
+import StatusBadge from "../ui/StatusBadge";
 
 interface Invoice {
   id: number;
@@ -10,43 +11,35 @@ interface Invoice {
 
 interface RecentInvoiceCardProps {
   invoice: Invoice;
+  /** Legacy prop — statuses now render via StatusBadge; kept for API compatibility */
   getStatusColor: (status?: string | null) => string;
   formatCurrency: (amount: number) => string;
   formatDate: (date?: string | null) => string;
+  /** Legacy prop — superseded by design tokens; kept for API compatibility */
   primaryColor: string;
 }
 
 const RecentInvoiceCard: React.FC<RecentInvoiceCardProps> = ({
   invoice,
-  getStatusColor,
   formatCurrency,
   formatDate,
-  primaryColor,
 }) => {
   return (
-    <div
-      className="p-4 transition-all border rounded-xl backdrop-blur-sm hover:border-white/15"
-      style={{
-        backgroundColor: "rgba(42, 42, 42, 0.8)",
-        borderColor: "rgba(255, 255, 255, 0.08)",
-      }}
-    >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h4 className="font-semibold text-white">#{invoice.invoiceNumber}</h4>
-          <p className="text-sm text-gray-500">Due: {formatDate(invoice.dueDate)}</p>
+    <div className="card-panel card-panel-hover p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h4 className="truncate text-sm font-semibold text-[var(--color-text-primary)]">
+            #{invoice.invoiceNumber}
+          </h4>
+          <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">
+            Due: {formatDate(invoice.dueDate)}
+          </p>
         </div>
-        <div className="text-right">
-          <p className="text-lg font-bold text-white" style={{ color: primaryColor }}>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <p className="text-base font-bold tabular-nums text-[var(--color-text-primary)]">
             {formatCurrency(invoice.amount)}
           </p>
-          <span
-            className={`px-2 py-1 text-xs font-semibold rounded-full border ${getStatusColor(
-              invoice.status
-            )}`}
-          >
-            {invoice.status || "N/A"}
-          </span>
+          <StatusBadge status={invoice.status} />
         </div>
       </div>
     </div>

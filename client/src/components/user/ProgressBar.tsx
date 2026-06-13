@@ -4,31 +4,26 @@ interface ProgressBarProps {
   label: string;
   current: number;
   total: number;
-  color: string;
-  labelColor: string;
+  /** Legacy props — superseded by design tokens, kept for API compatibility */
+  color?: string;
+  labelColor?: string;
 }
 
-const ProgressBar: React.FC<ProgressBarProps> = ({
-  label,
-  current,
-  total,
-  color,
-  labelColor,
-}) => {
-  const percentage = total > 0 ? (current / total) * 100 : 0;
+const ProgressBar: React.FC<ProgressBarProps> = ({ label, current, total }) => {
+  const percentage = total > 0 ? Math.min(100, (current / total) * 100) : 0;
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-400">{label}</span>
-        <span className={`text-sm font-bold ${labelColor}`}>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-sm font-medium text-[var(--color-text-secondary)]">{label}</span>
+        <span className="text-sm font-semibold tabular-nums text-[var(--color-text-primary)]">
           {current} / {total}
         </span>
       </div>
-      <div className="w-full h-3 overflow-hidden rounded-full bg-white/10">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-3)]">
         <div
-          className="h-full transition-all duration-500 rounded-full"
-          style={{ width: `${percentage}%`, backgroundColor: color }}
+          className="h-full rounded-full bg-[var(--color-nav-active-bg)] transition-all duration-500"
+          style={{ width: `${percentage}%` }}
         />
       </div>
     </div>

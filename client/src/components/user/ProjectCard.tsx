@@ -1,4 +1,5 @@
 import React from "react";
+import StatusBadge from "../ui/StatusBadge";
 
 interface Task {
   id: number;
@@ -14,21 +15,17 @@ interface Task {
 interface ProjectCardProps {
   task: Task;
   onClick: () => void;
+  /** Legacy prop — statuses now render via StatusBadge; kept for API compatibility */
   getStatusColor: (status?: string | null) => string;
   formatDate: (date?: string | null) => string;
   getDaysUntilDue: (date?: string | null) => number | null;
+  /** Legacy prop — superseded by design tokens; kept for API compatibility */
   primaryColor: string;
 }
-
-const cardStyle = {
-  backgroundColor: "rgba(42, 42, 42, 0.8)",
-  borderColor: "rgba(255, 255, 255, 0.08)",
-};
 
 const ProjectCard: React.FC<ProjectCardProps> = ({
   task,
   onClick,
-  getStatusColor,
   formatDate,
   getDaysUntilDue,
 }) => {
@@ -39,35 +36,36 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className="p-6 transition-all border rounded-2xl cursor-pointer backdrop-blur-sm hover:border-white/15"
-      style={cardStyle}
+      className="card-panel card-panel-hover cursor-pointer p-5 sm:p-6"
     >
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="mb-2 text-xl font-bold text-white">{task.title}</h3>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-lg font-semibold tracking-tight text-[var(--color-text-primary)]">
+            {task.title}
+          </h3>
           {task.description && (
-            <p className="mb-3 text-sm text-gray-400">{task.description}</p>
+            <p className="mt-1 text-sm text-[var(--color-text-muted)]">{task.description}</p>
           )}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[var(--color-text-muted)]">
             {task.worker && (
-              <span className="flex items-center gap-2 text-gray-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span className="flex items-center gap-1.5">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                <span className="font-medium">{task.worker.name}</span>
+                <span className="font-medium text-[var(--color-text-secondary)]">{task.worker.name}</span>
               </span>
             )}
             {task.dueDate && (
               <span
-                className={`flex items-center gap-2 ${
+                className={`flex items-center gap-1.5 ${
                   isOverdue
-                    ? "text-red-400 font-semibold"
+                    ? "font-semibold text-[var(--color-destructive-text)]"
                     : isDueSoon
-                    ? "text-amber-400 font-semibold"
+                    ? "font-semibold text-[var(--color-warning-text)]"
                     : ""
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <span>
@@ -79,29 +77,21 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 </span>
               </span>
             )}
-            <span className="flex items-center gap-2 text-gray-500">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <span className="flex items-center gap-1.5">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span>Created: {formatDate(task.createdAt)}</span>
             </span>
           </div>
         </div>
-        <span
-          className={`px-4 py-2 text-sm font-semibold rounded-full border ${getStatusColor(
-            task.status
-          )}`}
-        >
-          {task.status?.replace("_", " ") || "N/A"}
-        </span>
+        <StatusBadge status={task.status} className="shrink-0 self-start" />
       </div>
-      <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
-        <span className="text-sm font-medium text-gray-500">
+      <div className="mt-4 flex flex-col gap-3 border-t border-[var(--color-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <span className="text-sm text-[var(--color-text-muted)]">
           {(task.files || []).length} files attached
         </span>
-        <button
-          className="btn-secondary rounded-full px-4 py-2 text-sm transition-all"
-        >
+        <button className="btn-secondary w-full rounded-full px-4 py-2 text-sm sm:w-auto">
           View Details →
         </button>
       </div>

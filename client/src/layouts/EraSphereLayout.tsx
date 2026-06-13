@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { AdminProvider, useAdmin } from "../contexts/AdminContext";
 import { useEraSphereOverview } from "../hooks/useEraSphereOverview";
+import { SkeletonDashboard } from "../components/ui/Skeleton";
 
 const ERASPHERE_NAV = [
   { path: "/admin/erasphere/analytics", label: "Analytics", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
@@ -18,47 +19,48 @@ function EraSphereOverviewCard() {
 
   if (loading || !data) {
     return (
-      <div className="px-5 pb-6 mt-auto">
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
-          <p className="text-xs text-[var(--color-text-muted)]">Partner referral program</p>
-          <p className="mt-1 text-xs text-[var(--color-text-muted)] opacity-70">Loading…</p>
+      <div className="mt-auto hidden px-4 pb-5 lg:block">
+        <div className="space-y-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+          <div className="skeleton h-3 w-24" />
+          <div className="skeleton h-3 w-32" />
+          <div className="skeleton h-3 w-28" />
         </div>
       </div>
     );
   }
 
+  const rows = [
+    { label: "Partners", value: String(data.partners), href: "/admin/erasphere/partners" },
+    { label: "Referred clients", value: String(data.referredClients), href: "/admin/erasphere/clients" },
+    { label: "Active tasks", value: String(data.activeTasks), href: "/admin/erasphere/tasks" },
+    { label: "Total revenue", value: formatEuro(data.totalRevenue), href: "/admin/erasphere/analytics" },
+  ];
+
   return (
-    <div className="px-5 pb-6 mt-auto">
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3 space-y-3">
-        <p className="text-xs font-semibold text-[var(--color-text-primary)]">Partner referral program</p>
-        <p className="text-xs text-[var(--color-text-muted)] opacity-70">Manage partners, track referred clients, and monitor revenue.</p>
-        <div className="space-y-1.5 text-xs">
-          <p className="flex justify-between text-[var(--color-text-secondary)]">
-            <span>Partners</span>
-            <span className="font-medium text-[var(--color-text-primary)]">{data.partners}</span>
-          </p>
-          <p className="flex justify-between text-[var(--color-text-secondary)]">
-            <span>Referred clients</span>
-            <span className="font-medium text-[var(--color-text-primary)]">{data.referredClients}</span>
-          </p>
-          <p className="flex justify-between text-[var(--color-text-secondary)]">
-            <span>Active tasks</span>
-            <span className="font-medium text-[var(--color-text-primary)]">{data.activeTasks}</span>
-          </p>
-          <p className="flex justify-between text-[var(--color-text-secondary)]">
-            <span>Total revenue</span>
-            <span className="font-medium text-[var(--color-text-primary)]">{formatEuro(data.totalRevenue)}</span>
-          </p>
-          {data.pendingRevenue > 0 && (
-            <Link
-              to="/admin/erasphere/analytics"
-              className="flex justify-between text-[var(--color-primary)] hover:underline"
-            >
-              <span>Pending revenue</span>
-              <span className="font-medium">{formatEuro(data.pendingRevenue)}</span>
+    <div className="mt-auto hidden px-4 pb-5 lg:block">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+        <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
+          Referral Program
+        </p>
+        <div className="mt-3 space-y-2 text-[0.8125rem]">
+          {rows.map((r) => (
+            <Link key={r.label} to={r.href} className="group flex items-center justify-between gap-2">
+              <span className="text-[var(--color-text-secondary)] transition group-hover:text-[var(--color-text-primary)]">
+                {r.label}
+              </span>
+              <span className="truncate font-semibold tabular-nums text-[var(--color-text-primary)]">{r.value}</span>
             </Link>
-          )}
+          ))}
         </div>
+        {data.pendingRevenue > 0 && (
+          <Link
+            to="/admin/erasphere/analytics"
+            className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-3 py-2 text-xs font-medium text-[var(--color-warning-text)] transition hover:brightness-110"
+          >
+            <span>Pending revenue</span>
+            <span className="font-semibold tabular-nums">{formatEuro(data.pendingRevenue)}</span>
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -69,25 +71,18 @@ function EraSphereLayoutInner() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex gap-2">
-            <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-80" />
-            <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-60" style={{ animationDelay: "0.1s" }} />
-            <div className="h-3 w-3 rounded-full animate-bounce bg-[var(--color-text-muted)] opacity-40" style={{ animationDelay: "0.2s" }} />
-          </div>
-          <span className="text-[var(--color-text-muted)]">Loading EraSphere...</span>
-        </div>
+      <div className="mx-auto max-w-7xl px-4 pt-24 sm:px-6 lg:px-8">
+        <SkeletonDashboard />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="flex min-h-[60vh] items-center justify-center pt-16">
         <div className="max-w-md rounded-2xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] p-6">
-          <p className="mb-2 font-semibold text-[var(--color-destructive-text)]">Error</p>
-          <p className="text-[var(--color-destructive-text)]">{error}</p>
+          <p className="mb-2 font-semibold text-[var(--color-destructive-text)]">Something went wrong</p>
+          <p className="text-sm text-[var(--color-destructive-text)]">{error}</p>
         </div>
       </div>
     );
@@ -95,29 +90,42 @@ function EraSphereLayoutInner() {
 
   return (
     <div className="flex min-h-[calc(100vh-4rem)] pt-16">
-      {/* Sidebar - sticky so it stays in place when scrolling */}
-      <aside className="hidden lg:flex flex-col w-[220px] shrink-0 h-[calc(100vh-4rem)] sticky top-16 self-start overflow-y-auto border-r border-[var(--color-border)] bg-[var(--color-bg)]">
-        <div className="px-5 pt-6 pb-4">
-          <p className="text-xs font-bold uppercase tracking-widest text-[var(--color-text-muted)]">EraSphere</p>
+      {/* Sidebar: icon rail on tablet (md), full at lg+ */}
+      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[68px] shrink-0 flex-col self-start overflow-y-auto overflow-x-hidden border-r border-[var(--color-border)] bg-[var(--color-bg)] md:flex lg:w-[248px]">
+        <div className="hidden px-5 pb-3 pt-6 lg:block">
+          <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+            EraSphere Workspace
+          </p>
         </div>
-        <nav className="flex-1 px-3 space-y-1">
+        <nav className="flex-1 space-y-1 px-3 pt-4 lg:pt-0" aria-label="EraSphere">
           {ERASPHERE_NAV.map(({ path, label, icon }) => (
             <NavLink
               key={path}
               to={path}
               end={path.endsWith("/analytics")}
+              title={label}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+                `group relative flex items-center justify-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all lg:justify-start ${
                   isActive
-                    ? "bg-[var(--color-surface-2)] text-[var(--color-text-primary)] shadow-sm border border-[var(--color-border-hover)]"
-                    : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)] border border-transparent"
+                    ? "bg-[var(--color-surface-3)] text-[var(--color-text-primary)]"
+                    : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
                 }`
               }
             >
-              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={icon} />
-              </svg>
-              {label}
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={`absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[var(--color-nav-active-bg)] transition-opacity ${
+                      isActive ? "opacity-100" : "opacity-0"
+                    }`}
+                    aria-hidden="true"
+                  />
+                  <svg className="h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d={icon} />
+                  </svg>
+                  <span className="hidden min-w-0 flex-1 lg:block">{label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -125,8 +133,8 @@ function EraSphereLayoutInner() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 min-w-0 overflow-x-hidden">
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <main className="min-w-0 flex-1 overflow-x-hidden">
+        <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <Outlet />
         </div>
       </main>

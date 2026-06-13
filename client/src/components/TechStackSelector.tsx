@@ -47,13 +47,13 @@ export const TechStackSelector: React.FC<Props> = ({ selected, onChange }) => {
           {selected.map((name) => (
             <span
               key={name}
-              className="flex items-center gap-1.5 rounded-full border border-[var(--color-border-hover)] bg-[var(--color-surface-3)] px-3 py-1 text-xs font-medium text-[var(--color-text-primary)]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-nav-active-bg)] px-3 py-1 text-xs font-semibold text-[var(--color-nav-active-text)] shadow-elev-sm"
             >
               {name}
               <button
                 type="button"
                 onClick={() => toggle(name)}
-                className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[var(--color-text-muted)] hover:text-[var(--color-destructive-text)]"
+                className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-[var(--color-nav-active-text)] opacity-70 transition-opacity hover:opacity-100"
                 aria-label={`Remove ${name}`}
               >
                 ×
@@ -63,7 +63,7 @@ export const TechStackSelector: React.FC<Props> = ({ selected, onChange }) => {
           <button
             type="button"
             onClick={() => onChange([])}
-            className="rounded-full border border-[var(--color-border)] px-3 py-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-destructive-text)] transition-colors"
+            className="badge transition-colors hover:text-[var(--color-destructive-text)]"
           >
             Clear all
           </button>
@@ -85,10 +85,11 @@ export const TechStackSelector: React.FC<Props> = ({ selected, onChange }) => {
                     key={tech.name}
                     type="button"
                     onClick={() => toggle(tech.name)}
-                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] ${
+                    aria-pressed={active}
+                    className={`transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)] ${
                       active
-                        ? "border-[var(--color-btn-primary-border)] bg-[var(--color-btn-primary-bg)] text-[var(--color-btn-primary-text)]"
-                        : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-3)]"
+                        ? "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--color-nav-active-bg)] px-3 py-1 text-xs font-semibold leading-5 text-[var(--color-nav-active-text)] shadow-elev-sm"
+                        : "badge hover:border-[var(--color-border-focus)] hover:text-[var(--color-text-primary)]"
                     }`}
                   >
                     {tech.name}

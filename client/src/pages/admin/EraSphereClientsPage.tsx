@@ -4,6 +4,12 @@ import { Link } from "react-router-dom";
 import { useAdmin } from "../../contexts/AdminContext";
 import ClientForm from "../../components/admin/ClientForm";
 import API from "../../api";
+import PageHeader from "../../components/ui/PageHeader";
+import StatusBadge from "../../components/ui/StatusBadge";
+import EmptyState from "../../components/ui/EmptyState";
+import Button from "../../components/ui/Button";
+import { SkeletonRows } from "../../components/ui/Skeleton";
+import { CONTROL_INPUT } from "../../components/ui/controls";
 
 const colors = { primary: "", secondary: "#374151", accent: "#6B7280", light: "#F8F9FA", dark: "#1A1A2E" };
 
@@ -81,106 +87,117 @@ export default function EraSphereClientsPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
-        <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Clients</h2>
-        <div className="flex min-h-[200px] items-center justify-center rounded-2xl card-panel p-8">
-          <span className="text-[var(--color-text-muted)]">Loading...</span>
-        </div>
+      <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0 space-y-6">
+        <PageHeader title="EraSphere Clients" subtitle="Invite new clients or manage clients you referred" />
+        <SkeletonRows rows={5} />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0">
-      <h2 className="mb-6 text-2xl font-bold text-[var(--color-text-primary)]">EraSphere Clients</h2>
-      <p className="mb-6 text-sm text-[var(--color-text-muted)]">
-        Invite new clients or manage clients you referred. They will receive an email to set their password and complete their profile.
-      </p>
+    <div className="mx-auto max-w-[1200px] w-full max-w-full min-w-0 space-y-6">
+      <PageHeader
+        title="EraSphere Clients"
+        subtitle="Invite new clients or manage clients you referred. They will receive an email to set their password and complete their profile."
+      />
 
-      <div className="mt-6 rounded-2xl card-panel p-6 shadow-xl">
+      <section className="card-panel rounded-2xl p-5 sm:p-6 animate-fade-up">
         <ClientForm onInviteSent={handleInviteSent} colors={colors} hideDomainAndHosting />
+      </section>
 
-        {pendingInvites.length > 0 && (
-          <div className="mt-8">
-            <h3 className="mb-4 text-lg font-bold text-[var(--color-text-primary)]">
-              Pending Invites <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({pendingInvites.length})</span>
-            </h3>
-            <div className="space-y-2">
-              {pendingInvites.map((inv) => (
-                <div key={inv.id} className="flex flex-col gap-2 rounded-lg card-panel p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
+      {pendingInvites.length > 0 && (
+        <section className="animate-fade-up">
+          <h3 className="section-title mb-4">
+            Pending Invites{" "}
+            <span className="ml-1 text-sm font-normal text-[var(--color-text-muted)]">
+              ({pendingInvites.length})
+            </span>
+          </h3>
+          <div className="space-y-3 stagger-children">
+            {pendingInvites.map((inv) => (
+              <div key={inv.id} className="card-panel row-hover flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-[var(--color-text-primary)]">{inv.name}</p>
-                    <p className="text-sm text-[var(--color-text-muted)]">{inv.company ?? "—"} · {inv.email}</p>
-                    <p className={`text-xs ${inv.status === "EXPIRED" ? "text-red-400" : "text-amber-400"}`}>
-                      {inv.status === "EXPIRED" ? "Expired" : `Expires ${new Date(inv.expiresAt).toLocaleDateString()}`}
+                    <StatusBadge status={inv.status === "EXPIRED" ? "EXPIRED" : "PENDING"} />
+                  </div>
+                  <p className="mt-0.5 text-sm text-[var(--color-text-muted)]">{inv.company ?? "—"} · {inv.email}</p>
+                  {inv.status !== "EXPIRED" && (
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      Expires {new Date(inv.expiresAt).toLocaleDateString()}
                     </p>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleResend(inv.id)}
-                      disabled={resendingIds.has(inv.id)}
-                      className="h-8 px-3 text-xs font-medium rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition disabled:opacity-50"
-                    >
-                      {resendingIds.has(inv.id) ? "Sending..." : "Resend"}
-                    </button>
-                    {inv.status === "PENDING" && (
-                      <button
-                        type="button"
-                        onClick={() => handleCancel(inv.id)}
-                        className="h-8 px-3 text-xs font-medium rounded-lg border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
-              ))}
-            </div>
+                <div className="flex flex-col gap-2 shrink-0 sm:flex-row">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    loading={resendingIds.has(inv.id)}
+                    onClick={() => handleResend(inv.id)}
+                    className="flex-1 sm:flex-none"
+                  >
+                    {resendingIds.has(inv.id) ? "Sending..." : "Resend"}
+                  </Button>
+                  {inv.status === "PENDING" && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      onClick={() => handleCancel(inv.id)}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+        </section>
+      )}
 
-      <h3 className="mt-8 mb-4 text-xl font-bold text-[var(--color-text-primary)]">My clients</h3>
-      <div className="mb-6">
-        <input
-          type="search"
-          placeholder="Search by name, email, or company..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="input-dark w-full max-w-md rounded-xl px-4 py-2.5 text-sm"
-        />
-      </div>
+      <section className="animate-fade-up">
+        <h3 className="section-title mb-4">My Clients</h3>
+        <div className="mb-4">
+          <input
+            type="search"
+            placeholder="Search by name, email, or company..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={`${CONTROL_INPUT} w-full sm:max-w-sm`}
+          />
+        </div>
 
-      <div className="rounded-2xl card-panel p-4 shadow-xl sm:p-6">
         {erasphereClients.length === 0 ? (
-          <p className="py-12 text-center text-[var(--color-text-muted)]">
-            {clients.some((c) => c.referredById != null) ? "No clients match your search." : "No EraSphere-referred clients yet."}
-          </p>
+          <EmptyState
+            compact
+            title={clients.some((c) => c.referredById != null) ? "No clients match your search" : "No EraSphere-referred clients yet"}
+            description={
+              clients.some((c) => c.referredById != null)
+                ? "Try a different name, email or company."
+                : "Invite a client above to get started."
+            }
+          />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3 stagger-children">
             {erasphereClients.map((c) => (
               <Link
                 key={c.id}
                 to={`/clients/${c.id}`}
-                className="flex flex-col gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4 transition-colors hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-3)] sm:flex-row sm:items-center sm:gap-4"
+                className="card-panel row-hover flex flex-col gap-2 rounded-xl p-4 sm:flex-row sm:items-center sm:gap-4"
               >
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-[var(--color-text-primary)]">{c.name}</p>
-                  <p className="text-sm text-[var(--color-text-muted)]">{c.company ?? "—"} • {c.email}</p>
+                  <p className="text-sm text-[var(--color-text-muted)]">{c.company ?? "—"} · {c.email}</p>
                 </div>
-                <span
-                  className={`shrink-0 self-start rounded-full px-2.5 py-0.5 text-xs font-semibold sm:self-center ${
-                    c.profileStatus === "COMPLETE" ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"
-                  }`}
-                >
-                  {c.profileStatus === "COMPLETE" ? "Complete" : "Incomplete"}
-                </span>
+                <StatusBadge
+                  status={c.profileStatus === "COMPLETE" ? "COMPLETE" : "INCOMPLETE"}
+                  className="shrink-0 self-start sm:self-center"
+                />
               </Link>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

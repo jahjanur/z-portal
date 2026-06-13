@@ -1,3 +1,6 @@
+import Button from "../ui/Button";
+import EmptyState from "../ui/EmptyState";
+
 interface User {
   id: number;
   name: string;
@@ -21,31 +24,49 @@ function getInitials(name: string): string {
 }
 
 const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete, canDelete = true }) => {
+  if (workers.length === 0) {
+    return (
+      <EmptyState
+        compact
+        title="No workers yet"
+        description="Invite a worker above to get started."
+        icon={
+          <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        }
+      />
+    );
+  }
+
   return (
-    <div className="space-y-2 min-w-0 max-w-full">
+    <div className="stagger-children min-w-0 max-w-full space-y-3">
       {workers.map((w) => (
         <div
           key={w.id}
-          className="flex flex-col gap-2 rounded-lg card-panel p-4 shadow-lg transition hover:-translate-y-[1px] card-panel-hover sm:flex-row sm:items-center sm:gap-4"
+          className="card-panel row-hover flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4"
         >
           <div className="flex min-w-0 flex-1 items-center gap-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] text-sm font-medium text-[var(--color-text-primary)]">
               {getInitials(w.name)}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-semibold text-[var(--color-text-primary)] break-words">{w.name}</p>
-              <p className="text-sm text-[var(--color-text-muted)] break-all">{w.email}</p>
+              <p className="truncate font-semibold text-[var(--color-text-primary)]">{w.name}</p>
+              <p className="truncate text-sm text-[var(--color-text-muted)]">{w.email}</p>
             </div>
           </div>
           {canDelete && (
-          <div className="flex flex-wrap gap-2 justify-start shrink-0 sm:justify-end">
-            <button
-              onClick={() => onDelete(w.id)}
-              className="h-9 px-3 text-sm font-semibold rounded-lg border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] text-[var(--color-destructive-text)] transition hover:opacity-90 whitespace-nowrap"
-            >
-              Delete
-            </button>
-          </div>
+            <div className="flex w-full gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
+              <Button
+                variant="danger"
+                size="sm"
+                className="flex-1 sm:flex-none"
+                onClick={() => onDelete(w.id)}
+                aria-label={`Delete worker: ${w.name}`}
+              >
+                Delete
+              </Button>
+            </div>
           )}
         </div>
       ))}

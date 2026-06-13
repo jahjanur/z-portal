@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT } from "../ui/controls";
 import DatePicker from "../ui/DatePicker";
+import Button from "../ui/Button";
 
 interface User {
   id: number;
@@ -211,17 +212,12 @@ const DomainForm: React.FC<DomainFormProps> = ({
   };
 
   return (
-    <div
-      ref={formRef}
-      className="mb-6 rounded-xl card-panel p-5 shadow-lg shadow-[var(--color-shadow)] transition"
-    >
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-theme-primary">
-          {editingDomain ? "Edit Domain" : "Add New Domain"}
-        </h3>
-      </div>
+    <div ref={formRef} className="card-panel rounded-2xl p-5 sm:p-6 animate-fade-up">
+      <h3 className="section-title mb-4">
+        {editingDomain ? "Edit Domain" : "Add New Domain"}
+      </h3>
       {editingDomain && (editingDomain.activationEmailSentAt || editingDomain.renewalReminderSentAt) && (
-        <div className="mb-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
+        <div className="mb-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-text-muted)]">
           {editingDomain.activationEmailSentAt && (
             <p>Activation email sent on {new Date(editingDomain.activationEmailSentAt).toLocaleDateString()}</p>
           )}
@@ -288,20 +284,28 @@ const DomainForm: React.FC<DomainFormProps> = ({
             />
           </div>
 
-          <div className="w-full">
+          {/* Lifespan: segmented pills */}
+          <div className="w-full md:col-span-2 lg:col-span-2">
             <label className={CONTROL_LABEL}>Domain Lifespan</label>
-            <select
-              name="lifespan"
-              value={formData.lifespan}
-              onChange={handleChange}
-              className={CONTROL_SELECT}
-            >
-              {LIFESPAN_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <div className="-mx-1 overflow-x-auto px-1">
+              <div className="inline-flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1">
+                {LIFESPAN_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, lifespan: opt.value }))}
+                    aria-pressed={formData.lifespan === opt.value}
+                    className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                      formData.lifespan === opt.value
+                        ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
+                        : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-secondary)]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {formData.lifespan === "custom" && (
@@ -360,20 +364,13 @@ const DomainForm: React.FC<DomainFormProps> = ({
           </div>
 
           <div className="flex items-center gap-2 md:col-span-2 lg:col-span-3">
-            <button
-              type="submit"
-              className="btn-primary inline-flex h-11 min-h-[44px] flex-1 items-center justify-center rounded-xl px-4 text-sm font-semibold"
-            >
+            <Button type="submit" variant="primary" className="flex-1">
               {editingDomain ? "Update" : "Add"} Domain
-            </button>
+            </Button>
             {editingDomain && (
-              <button
-                type="button"
-                onClick={onCancelEdit}
-                className="btn-secondary inline-flex h-11 min-h-[44px] items-center justify-center rounded-xl px-4 text-sm font-semibold"
-              >
+              <Button variant="secondary" onClick={onCancelEdit}>
                 Cancel
-              </button>
+              </Button>
             )}
           </div>
         </div>
