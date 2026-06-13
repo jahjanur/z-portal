@@ -770,15 +770,50 @@ router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) 
 
     const commenterName = (comment.user as { name: string }).name;
     const authorRole = (comment.user as { role?: string })?.role ?? "WORKER";
-    await emit(EventType.TASK_COMMENT_ADDED, {
-      title: "New comment on file",
-      message: `${commenterName} commented on a file in task "${task.title}"`,
-      link: `/tasks/${taskIdNum}?highlightFileComment=${comment.id}`,
-      taskId: taskIdNum,
-      actorId: authUserId,
-      actorRole: authorRole,
-      threadType: visibleToClient ? "client" : "internal",
-    });
+
+    // Channel-isolated notification routing (mirror task comments — the generic
+    // emit() routing is channel-unaware and would notify the wrong side):
+    //   Client channel  → client posts notify admins; admin posts notify the client
+    //   Worker channel  → worker posts notify admins; admin posts notify task workers
+    // An internal file comment must never notify the client, and a client-channel
+    // file comment must never notify task workers.
+    try {
+      const adminUsers = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+      const recipientIds: number[] = [];
+      if (visibleToClient) {
+        if (role === "CLIENT") {
+          recipientIds.push(...adminUsers.map((a) => a.id));
+        } else if (task.clientId != null) {
+          recipientIds.push(task.clientId);
+        }
+      } else {
+        if (role === "WORKER") {
+          recipientIds.push(...adminUsers.map((a) => a.id));
+        } else {
+          recipientIds.push(...task.workers.map((w) => w.userId));
+        }
+      }
+      const finalRecipients = recipientIds.filter((uid) => uid !== authUserId);
+      await Promise.all(
+        finalRecipients.map((userId) =>
+          prisma.notification.create({
+            data: {
+              userId,
+              type: "TASK_COMMENT_ADDED",
+              title: "New comment on file",
+              message: `${commenterName} commented on a file in task "${task.title}"`,
+              link: `/tasks/${taskIdNum}?highlightFileComment=${comment.id}`,
+              taskId: taskIdNum,
+              sourceRole: authorRole,
+              threadType: visibleToClient ? "client" : "internal",
+              read: false,
+            },
+          })
+        )
+      );
+    } catch (notifErr: any) {
+      console.error("File comment notification failed (comment still saved):", notifErr?.message ?? notifErr);
+    }
 
     res.status(201).json(comment);
   } catch (error) {
