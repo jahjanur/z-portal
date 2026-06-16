@@ -1,34 +1,59 @@
 /**
- * Worker privacy: external audiences (CLIENT, ERASPHERE) must never see a
- * worker's real name or email — only a stable, auto-generated codename + emoji
- * avatar. Aliases are derived deterministically from the worker's id, so they
- * stay consistent across requests with no extra storage.
+ * Worker privacy: external audiences (CLIENT, ERASPHERE) never see a worker's
+ * real name/email — only a stable, premium codename + emoji ("🎨 Cobalt Pixel").
+ *
+ * Handles are derived deterministically from the worker's immutable id (FNV-1a
+ * hash), so they stay consistent across every request with no storage. A role
+ * "pool" (emoji + nouns) is also picked from the id — clients can't tell a
+ * worker's real discipline, so the theming is purely cosmetic to them and the
+ * variety just makes the handles feel human.
  */
 
-// Creative one-word codenames (kept neutral so they suit designers & devs alike).
-const ALIASES = [
-  "Nova", "Atlas", "Pixel", "Quartz", "Vega", "Orbit", "Cobalt", "Ember",
-  "Sable", "Onyx", "Comet", "Flint", "Zephyr", "Lumen", "Indigo", "Maple",
-  "Cedar", "Slate", "Echo", "Drift", "Sol", "Lyra", "Koda", "Wren",
-  "Fable", "Pippin", "Juno", "Mica", "Rune", "Tycho", "Halo", "Nimbus",
-  "Vesper", "Cyan", "Marlo", "Quill", "Arlo", "Nyx", "Pax", "Birch",
+// Jewel-toned adjectives shared across all pools.
+const ADJECTIVES = [
+  "Cobalt", "Crimson", "Amber", "Onyx", "Quartz", "Velvet", "Lunar", "Nova",
+  "Ember", "Slate", "Indigo", "Saffron", "Cedar", "Frost", "Solar", "Ivory",
+  "Cyan", "Garnet", "Obsidian", "Aurum", "Sable", "Halcyon", "Verdant", "Marble",
 ];
 
-// Memoji-style emoji faces/creatures. Different length from ALIASES so the
-// name and emoji vary independently (avoids everyone with the same name/emoji).
-const EMOJIS = [
-  "🦊", "🐼", "🦉", "🐺", "🦁", "🐯", "🐨", "🐵", "🦅", "🐧",
-  "🦄", "🐙", "🦋", "🐢", "🐝", "🦓", "🦒", "🐬", "🦈", "🐳",
-  "🦚", "🦜", "🐊", "🦦", "🦡", "🐲", "🦕", "🐶", "🐱", "🐭",
-  "🐹", "🐰", "🐻", "🐸", "🦔", "🐥", "🦝",
+// emoji + noun pools (one per discipline). Index chosen from the id hash.
+const ROLE_POOLS: { emoji: string; nouns: string[] }[] = [
+  { emoji: "🎨", nouns: ["Pixel", "Canvas", "Palette", "Vector", "Pigment", "Inkwell", "Aura", "Stencil", "Muse", "Tint"] },
+  { emoji: "💠", nouns: ["Layout", "Frame", "Viewport", "Render", "Prism", "Facet", "Glaze", "Bevel", "Ripple", "Marquee"] },
+  { emoji: "⚙️", nouns: ["Daemon", "Core", "Kernel", "Engine", "Forge", "Anvil", "Cache", "Cipher", "Vault", "Pylon"] },
+  { emoji: "🧩", nouns: ["Nexus", "Bridge", "Loom", "Weaver", "Conduit", "Pivot", "Hinge", "Mesh", "Lattice", "Span"] },
+  { emoji: "🧠", nouns: ["Oracle", "Neuron", "Cortex", "Synapse", "Vertex", "Lambda", "Tensor", "Halo", "Quanta", "Echo"] },
+  { emoji: "📱", nouns: ["Pocket", "Beacon", "Signal", "Drift", "Pebble", "Tap", "Pulse", "Nomad", "Swift", "Orbit"] },
+  { emoji: "🔍", nouns: ["Hawk", "Sentinel", "Sieve", "Probe", "Lens", "Tracer", "Falcon", "Net", "Gauge", "Scout"] },
+  { emoji: "🚀", nouns: ["Atlas", "Helm", "Pipeline", "Summit", "Relay", "Pylon", "Beacon", "Comet", "Stack", "Forge"] },
+  { emoji: "🎯", nouns: ["Compass", "Pilot", "Anchor", "Vantage", "Captain", "Quill", "Helm", "Tempo", "Vector", "North"] },
 ];
 
-export function workerAlias(id: number): string {
-  return ALIASES[Math.abs(id) % ALIASES.length];
+/** Deterministic 32-bit FNV-1a hash — stable across runs, no crypto needed. */
+function hash32(str: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
 }
 
+function poolFor(id: number) {
+  return ROLE_POOLS[hash32(`${id}`) % ROLE_POOLS.length];
+}
+
+/** "Cobalt Pixel" — the worker's codename (adjective + role-themed noun). */
+export function workerAlias(id: number): string {
+  const h = hash32(`${id}`);
+  const adj = ADJECTIVES[(h >>> 4) % ADJECTIVES.length];
+  const noun = poolFor(id).nouns[(h >>> 8) % 10];
+  return `${adj} ${noun}`;
+}
+
+/** The role-themed emoji avatar (🎨 / ⚙️ / 🧠 …). */
 export function workerEmoji(id: number): string {
-  return EMOJIS[Math.abs(id) % EMOJIS.length];
+  return poolFor(id).emoji;
 }
 
 type EmbeddedUser = { id: number; name?: string | null; email?: string | null; role?: string | null } | null | undefined;

@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useEffect } from "react";
 import {
   ArrowLeft, Paperclip, Send, Download, Maximize2, Check, RotateCcw,
-  Image as ImageIcon, FileText, Palette, File as FileIcon, Calendar, RefreshCw, FolderKanban,
+  Image as ImageIcon, FileText, Palette, File as FileIcon, Calendar, RefreshCw, FolderKanban, ChevronDown,
 } from "lucide-react";
 import Button from "../ui/Button";
 import StatusBadge from "../ui/StatusBadge";
@@ -345,12 +345,14 @@ export default function TaskConversation(p: any) {
                 uploadedAt: new Date().toISOString(),
               });
             return (
-              <div className="mt-3 card-panel p-4 sm:p-5">
-                <div className="mb-3 flex items-center gap-2">
+              <details className="mt-3 card-panel overflow-hidden">
+                <summary className="flex cursor-pointer list-none items-center gap-2 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
                   <Palette className="h-4 w-4 text-[var(--color-text-muted)]" />
-                  <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Brand &amp; assets</h3>
-                </div>
-                <div className="space-y-4">
+                  <span className="text-sm font-bold text-[var(--color-text-primary)]">Brand &amp; assets</span>
+                  <span className="ml-auto text-[11px] font-normal text-[var(--color-text-muted)]">view</span>
+                  <ChevronDown className="h-4 w-4 text-[var(--color-text-muted)]" />
+                </summary>
+                <div className="space-y-4 border-t border-[var(--color-border)] p-4 sm:p-5">
                   {hasLogo && (
                     <div className="flex items-center gap-3">
                       <AssetImage url={c.logo} label="logo" onView={() => openImg(c.logo)} />
@@ -394,7 +396,7 @@ export default function TaskConversation(p: any) {
                     </div>
                   )}
                 </div>
-              </div>
+              </details>
             );
           })()}
 
