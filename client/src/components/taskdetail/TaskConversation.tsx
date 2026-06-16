@@ -317,8 +317,10 @@ export default function TaskConversation(p: any) {
             </div>
           </div>
 
-          {/* Brand & assets — client brand kit + project assets, so workers can do the work */}
-          {(() => {
+          {/* Brand & assets — a work tool for the team (admin/worker/partner) so they
+              can do the work. Hidden from clients (they provided it and can't access
+              the internal project files anyway). */}
+          {p.currentUserRole !== "CLIENT" && (() => {
             const c: any = task.client || {};
             const meta: any = task.project?.metadata || {};
             const hexFrom = (s?: string) => (s ? s.match(/#[0-9a-fA-F]{6}/g) || [] : []);
