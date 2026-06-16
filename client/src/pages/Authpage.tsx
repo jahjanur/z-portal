@@ -54,11 +54,11 @@ export default function AuthPage() {
           <div className="relative p-6 sm:p-10">
             {/* Brand mark */}
             <div className="mb-6 flex flex-col items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-3)] shadow-elev-sm">
-                <span className="font-display text-2xl font-bold leading-none text-[var(--color-text-primary)]">
-                  Z
-                </span>
-              </div>
+              <img
+                src="/Zulbera-Text-Logo.svg"
+                alt="Zulbera"
+                className="h-10 w-auto max-w-[200px] object-contain"
+              />
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3.5 py-1.5">
                 <span
                   className="h-1.5 w-1.5 rounded-full bg-[var(--color-success-text)] shadow-[0_0_8px_var(--color-success-text)]"
