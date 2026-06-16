@@ -270,7 +270,10 @@ export default function TaskConversation(p: any) {
               </>
             )}
           </div>
+        </div>
 
+        {/* Scrollable conversation — header/brand/switchers scroll away so the chat gets the room */}
+        <div ref={feedRef} className="min-h-0 flex-1 overflow-y-auto pb-4 pt-1">
           <div className="card-panel p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -436,10 +439,9 @@ export default function TaskConversation(p: any) {
               </div>
             </div>
           )}
-        </div>
 
-        {/* feed */}
-        <div ref={feedRef} className="min-h-0 flex-1 overflow-y-auto py-4">
+          {/* conversation */}
+          <div className="mt-4 border-t border-[var(--color-border)] pt-3">
           {items.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-muted)]"><ImageIcon className="h-6 w-6" /></span>
@@ -483,6 +485,7 @@ export default function TaskConversation(p: any) {
               );
             })
           )}
+          </div>
         </div>
 
         {/* composer */}

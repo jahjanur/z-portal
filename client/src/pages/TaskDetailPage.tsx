@@ -205,7 +205,7 @@ const TaskDetailPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     const refresh = () => { if (!document.hidden && localStorage.getItem("token")) fetchTaskRef.current({ silent: true }); };
-    const interval = setInterval(refresh, 15000);
+    const interval = setInterval(refresh, 10000);
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
     return () => {
