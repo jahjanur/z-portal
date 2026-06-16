@@ -178,11 +178,11 @@ const TaskDetailPage: React.FC = () => {
       .catch(() => {});
   }, [task?.project?.id]);
 
-  const fetchTask = async () => {
+  const fetchTask = async (opts?: { silent?: boolean }) => {
     try {
       if (!task) {
         setLoading(true);
-      } else {
+      } else if (!opts?.silent) {
         setRefreshing(true);
       }
       const response = await API.get(`/tasks/${id}`);
@@ -196,6 +196,24 @@ const TaskDetailPage: React.FC = () => {
       setRefreshing(false);
     }
   };
+
+  // Live auto-refresh: poll while the tab is visible and refetch immediately when
+  // the window regains focus, so new files/comments from others appear without a
+  // manual reload. Silent = no visible refreshing indicator on these background pulls.
+  const fetchTaskRef = useRef(fetchTask);
+  fetchTaskRef.current = fetchTask;
+  useEffect(() => {
+    if (!id) return;
+    const refresh = () => { if (!document.hidden) fetchTaskRef.current({ silent: true }); };
+    const interval = setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [id]);
 
   const fetchUnreadByTask = useCallback(async () => {
     if (!id || !isAdmin) return;

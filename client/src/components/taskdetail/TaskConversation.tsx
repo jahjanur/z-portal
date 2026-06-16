@@ -69,6 +69,27 @@ function fmtDay(d: string): string {
 }
 
 /* ------------------------------------------------------------------ deliverable card */
+/** Brand/asset image thumbnail: click to open the in-app viewer, hover for a download button. */
+function AssetImage({ url, label, onView }: { url: string; label?: string; onView: () => void }) {
+  return (
+    <div className="group relative h-16 w-16 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]">
+      <button type="button" onClick={onView} title={label || "View"} className="block h-full w-full">
+        <img src={getFileUrl(url)} alt={label || ""} className="h-full w-full object-cover transition group-hover:scale-105" />
+      </button>
+      <a
+        href={getFileUrl(url)}
+        download={label || ""}
+        onClick={(e) => e.stopPropagation()}
+        title="Download"
+        aria-label="Download"
+        className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-md bg-black/55 text-white opacity-0 backdrop-blur-sm transition hover:bg-black/75 group-hover:opacity-100"
+      >
+        <Download className="h-3.5 w-3.5" />
+      </a>
+    </div>
+  );
+}
+
 function DeliverableCard({ file, p }: { file: any; p: any }) {
   const rs: string = file.reviewStatus;
   const isWorkerUpload = file.uploader?.role === "WORKER";
@@ -313,6 +334,14 @@ export default function TaskConversation(p: any) {
             const hasLogo = !!c.logo;
             if (!hasLogo && colors.length === 0 && assets.length === 0 && !brief && !c.shortInfo) return null;
             const isImg = (a: any) => a.fileType === "image" || /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(a.url || "");
+            const openImg = (url: string) =>
+              p.openViewer({
+                id: -Math.abs([...url].reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 7)) || -1,
+                fileName: url.split("?")[0].split("/").pop() || "image",
+                fileUrl: url,
+                fileType: "image",
+                uploadedAt: new Date().toISOString(),
+              });
             return (
               <div className="mt-3 card-panel p-4 sm:p-5">
                 <div className="mb-3 flex items-center gap-2">
@@ -322,10 +351,8 @@ export default function TaskConversation(p: any) {
                 <div className="space-y-4">
                   {hasLogo && (
                     <div className="flex items-center gap-3">
-                      <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1.5">
-                        <img src={getFileUrl(c.logo)} alt="Client logo" className="max-h-full max-w-full object-contain" />
-                      </div>
-                      <a href={getFileUrl(c.logo)} target="_blank" rel="noreferrer" className="text-xs font-medium text-[var(--color-info-text)] hover:underline">Open logo</a>
+                      <AssetImage url={c.logo} label="logo" onView={() => openImg(c.logo)} />
+                      <span className="text-xs text-[var(--color-text-muted)]">Client logo — click to view, hover to download</span>
                     </div>
                   )}
                   {colors.length > 0 && (
@@ -347,9 +374,7 @@ export default function TaskConversation(p: any) {
                       <div className="flex flex-wrap gap-2">
                         {assets.map((a: any, i: number) =>
                           isImg(a) ? (
-                            <a key={i} href={getFileUrl(a.url)} target="_blank" rel="noreferrer" title={a.label || ""} className="h-16 w-16 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]">
-                              <img src={getFileUrl(a.url)} alt={a.label || ""} className="h-full w-full object-cover" />
-                            </a>
+                            <AssetImage key={i} url={a.url} label={a.label} onView={() => openImg(a.url)} />
                           ) : (
                             <a key={i} href={getFileUrl(a.url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]">
                               <Paperclip className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
