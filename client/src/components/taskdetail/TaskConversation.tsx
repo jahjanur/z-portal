@@ -141,6 +141,9 @@ function DeliverableCard({ file, p }: { file: any; p: any }) {
         <div className="flex shrink-0 gap-1.5">
           <button onClick={() => p.openViewer(file)} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]">View</button>
           <a href={p.getFileUrl(file.fileUrl)} download={file.fileName} className="flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1.5 text-[var(--color-text-muted)] transition hover:text-[var(--color-text-primary)]" aria-label="Download"><Download className="h-3.5 w-3.5" /></a>
+          {(p.isAdmin || file.uploadedBy === p.currentUserId) && (
+            <button onClick={() => { if (window.confirm("Delete this file?")) p.deleteFile?.(file.id); }} className="flex items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1.5 text-[var(--color-text-muted)] transition hover:text-[var(--color-destructive-text)]" aria-label="Delete file"><Trash2 className="h-3.5 w-3.5" /></button>
+          )}
         </div>
       </div>
 
@@ -215,6 +218,114 @@ function DeliverableCard({ file, p }: { file: any; p: any }) {
 }
 
 /* ------------------------------------------------------------------ main */
+/** Brand & assets panel — collapsible; lives in the task sidebar. Hidden from clients. */
+function BrandAssets({ task, p }: { task: any; p: any }) {
+  if (p.currentUserRole === "CLIENT") return null;
+  const c: any = task.client || {};
+  const meta: any = task.project?.metadata || {};
+  const hexFrom = (s?: string) => (s ? s.match(/#[0-9a-fA-F]{6}/g) || [] : []);
+  const colors = Array.from(
+    new Set<string>([
+      ...hexFrom(c.colorHex),
+      ...hexFrom(c.brandPattern),
+      ...((Array.isArray(meta.brandColors) ? meta.brandColors : []) as string[]),
+    ])
+  );
+  const assets = (Array.isArray(meta.assets) ? meta.assets : []).filter((a: any) => a?.url);
+  const brief = String(meta.brief || meta.notes || "").trim();
+  const hasLogo = !!c.logo;
+  if (!hasLogo && colors.length === 0 && assets.length === 0 && !brief && !c.shortInfo) return null;
+  const isImg = (a: any) => a.fileType === "image" || /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(a.url || "");
+  const openImg = (url: string) =>
+    p.openViewer({
+      id: -Math.abs([...url].reduce((acc: number, ch: string) => (acc * 31 + ch.charCodeAt(0)) | 0, 7)) || -1,
+      fileName: url.split("?")[0].split("/").pop() || "image",
+      fileUrl: url,
+      fileType: "image",
+      uploadedAt: new Date().toISOString(),
+    });
+  return (
+    <details className="card-panel overflow-hidden lg:[&[open]]:open">
+      <summary className="flex cursor-pointer list-none items-center gap-2 p-4 [&::-webkit-details-marker]:hidden">
+        <Palette className="h-4 w-4 text-[var(--color-text-muted)]" />
+        <span className="text-sm font-bold text-[var(--color-text-primary)]">Brand &amp; assets</span>
+        <ChevronDown className="ml-auto h-4 w-4 text-[var(--color-text-muted)]" />
+      </summary>
+      <div className="space-y-4 border-t border-[var(--color-border)] p-4">
+        {hasLogo && (
+          <div className="flex items-center gap-3">
+            <AssetImage url={c.logo} label="logo" onView={() => openImg(c.logo)} />
+            <span className="text-xs text-[var(--color-text-muted)]">Client logo</span>
+          </div>
+        )}
+        {colors.length > 0 && (
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Brand colors</p>
+            <div className="flex flex-wrap gap-2">
+              {colors.map((col, i) => (
+                <span key={i} className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-1)] py-1 pl-1 pr-2">
+                  <span className="h-5 w-5 rounded-md border border-[var(--color-border)]" style={{ background: col }} />
+                  <span className="text-xs font-medium uppercase text-[var(--color-text-secondary)]">{col}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {assets.length > 0 && (
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Assets &amp; references</p>
+            <div className="flex flex-wrap gap-2">
+              {assets.map((a: any, i: number) =>
+                isImg(a) ? (
+                  <AssetImage key={i} url={a.url} label={a.label} onView={() => openImg(a.url)} />
+                ) : (
+                  <a key={i} href={getFileUrl(a.url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]">
+                    <Paperclip className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
+                    {a.label?.trim() || a.url}
+                  </a>
+                )
+              )}
+            </div>
+          </div>
+        )}
+        {(brief || c.shortInfo) && (
+          <div>
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Brief</p>
+            <p className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)]">{brief || c.shortInfo}</p>
+          </div>
+        )}
+      </div>
+    </details>
+  );
+}
+
+/** Sibling tasks in the same project — vertical list for the sidebar. */
+function SiblingTasks({ task, p }: { task: any; p: any }) {
+  if (!p.project || (p.siblingTasks?.length ?? 0) <= 1) return null;
+  return (
+    <div className="card-panel p-4">
+      <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
+        {p.siblingTasks.length} tasks in {p.project.name}
+      </p>
+      <div className="flex flex-col gap-2">
+        {p.siblingTasks.map((t: any) => {
+          const active = t.id === task.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => p.navigate(`/tasks/${t.id}`)}
+              className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition ${active ? "border-[var(--card-hover-border)] bg-[var(--color-surface-3)] text-[var(--color-text-primary)]" : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"}`}
+            >
+              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: statusDot(t.status) }} />
+              <span className="truncate">{t.title}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function TaskConversation(p: any) {
   const { task } = p;
   const feedRef = useRef<HTMLDivElement | null>(null);
@@ -254,8 +365,16 @@ export default function TaskConversation(p: any) {
 
   return (
     <div className="pt-16">
-      <div className="mx-auto flex h-[calc(100vh-4rem)] w-full max-w-5xl flex-col px-3 sm:px-4">
-        {/* top: breadcrumb + header */}
+      <div className="mx-auto flex h-[calc(100vh-4rem)] w-full max-w-[1400px] flex-col gap-4 px-3 sm:px-4 lg:flex-row lg:gap-6">
+        {/* INFO sidebar (desktop) — brand & assets + sibling tasks */}
+        <aside className="hidden shrink-0 flex-col gap-3 overflow-y-auto py-4 lg:order-2 lg:flex lg:w-[360px]">
+          <BrandAssets task={task} p={p} />
+          <SiblingTasks task={task} p={p} />
+        </aside>
+
+        {/* MAIN — conversation */}
+        <div className="flex min-w-0 flex-1 flex-col lg:order-1">
+        {/* top: breadcrumb */}
         <div className="shrink-0 pt-3">
           <div className="mb-3 flex items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
             <button onClick={() => p.navigate("/dashboard")} className="inline-flex items-center gap-1.5 transition hover:text-[var(--color-text-primary)]">
@@ -320,109 +439,15 @@ export default function TaskConversation(p: any) {
             </div>
           </div>
 
-          {/* Brand & assets — a work tool for the team (admin/worker/partner) so they
-              can do the work. Hidden from clients (they provided it and can't access
-              the internal project files anyway). */}
-          {p.currentUserRole !== "CLIENT" && (() => {
-            const c: any = task.client || {};
-            const meta: any = task.project?.metadata || {};
-            const hexFrom = (s?: string) => (s ? s.match(/#[0-9a-fA-F]{6}/g) || [] : []);
-            const colors = Array.from(
-              new Set<string>([
-                ...hexFrom(c.colorHex),
-                ...hexFrom(c.brandPattern),
-                ...((Array.isArray(meta.brandColors) ? meta.brandColors : []) as string[]),
-              ])
-            );
-            const assets = (Array.isArray(meta.assets) ? meta.assets : []).filter((a: any) => a?.url);
-            const brief = String(meta.brief || meta.notes || "").trim();
-            const hasLogo = !!c.logo;
-            if (!hasLogo && colors.length === 0 && assets.length === 0 && !brief && !c.shortInfo) return null;
-            const isImg = (a: any) => a.fileType === "image" || /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(a.url || "");
-            const openImg = (url: string) =>
-              p.openViewer({
-                id: -Math.abs([...url].reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) | 0, 7)) || -1,
-                fileName: url.split("?")[0].split("/").pop() || "image",
-                fileUrl: url,
-                fileType: "image",
-                uploadedAt: new Date().toISOString(),
-              });
-            return (
-              <details className="mt-3 card-panel overflow-hidden">
-                <summary className="flex cursor-pointer list-none items-center gap-2 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
-                  <Palette className="h-4 w-4 text-[var(--color-text-muted)]" />
-                  <span className="text-sm font-bold text-[var(--color-text-primary)]">Brand &amp; assets</span>
-                  <span className="ml-auto text-[11px] font-normal text-[var(--color-text-muted)]">view</span>
-                  <ChevronDown className="h-4 w-4 text-[var(--color-text-muted)]" />
-                </summary>
-                <div className="space-y-4 border-t border-[var(--color-border)] p-4 sm:p-5">
-                  {hasLogo && (
-                    <div className="flex items-center gap-3">
-                      <AssetImage url={c.logo} label="logo" onView={() => openImg(c.logo)} />
-                      <span className="text-xs text-[var(--color-text-muted)]">Client logo — click to view, hover to download</span>
-                    </div>
-                  )}
-                  {colors.length > 0 && (
-                    <div>
-                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Brand colors</p>
-                      <div className="flex flex-wrap gap-2">
-                        {colors.map((col, i) => (
-                          <span key={i} className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-1)] py-1 pl-1 pr-2">
-                            <span className="h-5 w-5 rounded-md border border-[var(--color-border)]" style={{ background: col }} />
-                            <span className="text-xs font-medium uppercase text-[var(--color-text-secondary)]">{col}</span>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {assets.length > 0 && (
-                    <div>
-                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Assets &amp; references</p>
-                      <div className="flex flex-wrap gap-2">
-                        {assets.map((a: any, i: number) =>
-                          isImg(a) ? (
-                            <AssetImage key={i} url={a.url} label={a.label} onView={() => openImg(a.url)} />
-                          ) : (
-                            <a key={i} href={getFileUrl(a.url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]">
-                              <Paperclip className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
-                              {a.label?.trim() || a.url}
-                            </a>
-                          )
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {(brief || c.shortInfo) && (
-                    <div>
-                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Brief</p>
-                      <p className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)]">{brief || c.shortInfo}</p>
-                    </div>
-                  )}
-                </div>
-              </details>
-            );
-          })()}
+          {/* Brand & assets (mobile only — desktop shows it in the right sidebar) */}
+          <div className="mt-3 lg:hidden">
+            <BrandAssets task={task} p={p} />
+          </div>
 
-          {/* project task switcher — group a project's tasks */}
-          {p.project && (p.siblingTasks?.length ?? 0) > 1 && (
-            <div className="mt-3">
-              <p className="mb-1.5 px-1 text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-muted)]">
-                {p.siblingTasks.length} tasks in {p.project.name}
-              </p>
-              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-                {p.siblingTasks.map((t: any) => {
-                  const active = t.id === task.id;
-                  return (
-                    <button key={t.id} onClick={() => p.navigate(`/tasks/${t.id}`)}
-                      className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition ${active ? "border-[var(--card-hover-border)] bg-[var(--color-surface-3)] text-[var(--color-text-primary)]" : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"}`}>
-                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: statusDot(t.status) }} />
-                      <span className="max-w-[150px] truncate">{t.title}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          {/* Sibling tasks (mobile only — desktop shows it in the right sidebar) */}
+          <div className="mt-3 lg:hidden">
+            <SiblingTasks task={task} p={p} />
+          </div>
 
           {/* channel toggle */}
           {p.isAdmin && (
@@ -530,6 +555,7 @@ export default function TaskConversation(p: any) {
             <button onClick={p.onRefresh} className="inline-flex items-center gap-1 hover:text-[var(--color-text-primary)]"><RefreshCw className={`h-3 w-3 ${p.refreshing ? "animate-spin" : ""}`} /> Refresh</button>
             <span>Enter to send · Shift+Enter for a new line</span>
           </div>
+        </div>
         </div>
       </div>
     </div>

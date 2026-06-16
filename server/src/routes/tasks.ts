@@ -986,6 +986,33 @@ router.post("/:id/comments", verifyJWT, async (req: any, res) => {
   }
 });
 
+// delete an uploaded task file — admins delete any; everyone else only their own upload.
+router.delete("/:taskId/files/:fileId", verifyJWT, async (req: any, res) => {
+  try {
+    const fileId = Number(req.params.fileId);
+    if (isNaN(fileId)) return res.status(400).json({ error: "Invalid file id" });
+    const { role, userId } = req.user;
+
+    const file = await prisma.taskFile.findUnique({
+      where: { id: fileId },
+      select: { id: true, uploadedBy: true },
+    });
+    if (!file) return res.status(404).json({ error: "File not found" });
+
+    if (role !== "ADMIN" && file.uploadedBy !== userId) {
+      return res.status(403).json({ error: "You can only delete files you uploaded" });
+    }
+
+    await prisma.fileComment.deleteMany({ where: { fileId } });
+    await prisma.taskFile.delete({ where: { id: fileId } });
+    res.json({ message: "File deleted" });
+  } catch (error: any) {
+    if (error?.code === "P2025") return res.status(404).json({ error: "File not found" });
+    console.error("Error deleting file:", error);
+    res.status(500).json({ error: "Failed to delete file" });
+  }
+});
+
 // delete a task comment — admins delete any; everyone else only their own.
 router.delete("/:taskId/comments/:commentId", verifyJWT, async (req: any, res) => {
   try {

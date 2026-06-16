@@ -348,6 +348,15 @@ const TaskDetailPage: React.FC = () => {
     }
   };
 
+  const deleteFile = async (fileId: number) => {
+    try {
+      await API.delete(`/tasks/${id}/files/${fileId}`);
+      fetchTask({ silent: true });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't delete file");
+    }
+  };
+
   const submitReview = async (
     fileId: number,
     status: "APPROVED" | "NEEDS_REVISION" | "REJECTED",
@@ -542,6 +551,7 @@ const TaskDetailPage: React.FC = () => {
         addComment={addComment}
         addingComment={addingComment}
         deleteComment={deleteComment}
+        deleteFile={deleteFile}
         selectedFile={selectedFile}
         setSelectedFile={setSelectedFile}
         uploadFile={uploadFile}
