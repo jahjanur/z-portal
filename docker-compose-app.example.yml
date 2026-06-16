@@ -20,6 +20,10 @@ services:
     volumes:
       # Mount so seed (and app) can read SEED_ADMIN_* when running inside container
       - app/server/.env.production:/app/server/.env.production:ro
+      # IMPORTANT: persist uploaded files (logos, task files, invoice PDFs, project
+      # assets) so they survive rebuilds. Path = the app's runtime uploads dir
+      # (uploadsPath.ts → dist/uploads when built). Without this, every deploy wipes uploads.
+      - portal_uploads:/app/server/dist/uploads
     depends_on:
       - portal_db
     networks:
@@ -40,6 +44,7 @@ services:
 
 volumes:
   portal_pgdata:
+  portal_uploads:
 
 networks:
   aem_net:
