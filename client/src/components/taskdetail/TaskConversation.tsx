@@ -6,6 +6,7 @@ import {
 import Button from "../ui/Button";
 import StatusBadge from "../ui/StatusBadge";
 import WorkerMultiSelect from "../ui/WorkerMultiSelect";
+import { getFileUrl } from "../../api";
 import AdminStatusControls from "./AdminStatusControls";
 import WorkerStatusControls from "./WorkerStatusControls";
 import ClientStatusView from "./ClientStatusView";
@@ -294,6 +295,81 @@ export default function TaskConversation(p: any) {
               )}
             </div>
           </div>
+
+          {/* Brand & assets — client brand kit + project assets, so workers can do the work */}
+          {(() => {
+            const c: any = task.client || {};
+            const meta: any = task.project?.metadata || {};
+            const hexFrom = (s?: string) => (s ? s.match(/#[0-9a-fA-F]{6}/g) || [] : []);
+            const colors = Array.from(
+              new Set<string>([
+                ...hexFrom(c.colorHex),
+                ...hexFrom(c.brandPattern),
+                ...((Array.isArray(meta.brandColors) ? meta.brandColors : []) as string[]),
+              ])
+            );
+            const assets = (Array.isArray(meta.assets) ? meta.assets : []).filter((a: any) => a?.url);
+            const brief = String(meta.brief || meta.notes || "").trim();
+            const hasLogo = !!c.logo;
+            if (!hasLogo && colors.length === 0 && assets.length === 0 && !brief && !c.shortInfo) return null;
+            const isImg = (a: any) => a.fileType === "image" || /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(a.url || "");
+            return (
+              <div className="mt-3 card-panel p-4 sm:p-5">
+                <div className="mb-3 flex items-center gap-2">
+                  <Palette className="h-4 w-4 text-[var(--color-text-muted)]" />
+                  <h3 className="text-sm font-bold text-[var(--color-text-primary)]">Brand &amp; assets</h3>
+                </div>
+                <div className="space-y-4">
+                  {hasLogo && (
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1.5">
+                        <img src={getFileUrl(c.logo)} alt="Client logo" className="max-h-full max-w-full object-contain" />
+                      </div>
+                      <a href={getFileUrl(c.logo)} target="_blank" rel="noreferrer" className="text-xs font-medium text-[var(--color-info-text)] hover:underline">Open logo</a>
+                    </div>
+                  )}
+                  {colors.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Brand colors</p>
+                      <div className="flex flex-wrap gap-2">
+                        {colors.map((col, i) => (
+                          <span key={i} className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-1)] py-1 pl-1 pr-2">
+                            <span className="h-5 w-5 rounded-md border border-[var(--color-border)]" style={{ background: col }} />
+                            <span className="text-xs font-medium uppercase text-[var(--color-text-secondary)]">{col}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {assets.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Assets &amp; references</p>
+                      <div className="flex flex-wrap gap-2">
+                        {assets.map((a: any, i: number) =>
+                          isImg(a) ? (
+                            <a key={i} href={getFileUrl(a.url)} target="_blank" rel="noreferrer" title={a.label || ""} className="h-16 w-16 overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]">
+                              <img src={getFileUrl(a.url)} alt={a.label || ""} className="h-full w-full object-cover" />
+                            </a>
+                          ) : (
+                            <a key={i} href={getFileUrl(a.url)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]">
+                              <Paperclip className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
+                              {a.label?.trim() || a.url}
+                            </a>
+                          )
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {(brief || c.shortInfo) && (
+                    <div>
+                      <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Brief</p>
+                      <p className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)]">{brief || c.shortInfo}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* project task switcher — group a project's tasks */}
           {p.project && (p.siblingTasks?.length ?? 0) > 1 && (

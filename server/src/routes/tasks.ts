@@ -203,6 +203,10 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
             company: true,
             role: true,
             referredById: true,
+            logo: true,
+            colorHex: true,
+            brandPattern: true,
+            shortInfo: true,
           }
         },
         workers: {
@@ -221,7 +225,9 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
           select: {
             id: true,
             name: true,
-            description: true
+            description: true,
+            serviceType: true,
+            metadata: true
           }
         },
         files: {
@@ -313,6 +319,14 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
         ...f,
         comments: f.comments.filter((c: { visibleToClient: boolean }) => !c.visibleToClient),
       }));
+    }
+
+    // Privacy: a project's metadata may hold access credentials (logins) —
+    // only ADMIN may see those. Strip them for workers/clients/partners.
+    if (role !== "ADMIN" && (task as any).project?.metadata && typeof (task as any).project.metadata === "object") {
+      const m: Record<string, unknown> = { ...(task as any).project.metadata };
+      delete m.credentials;
+      (task as any).project.metadata = m;
     }
 
     res.json(task);

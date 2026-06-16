@@ -83,12 +83,17 @@ router.get(/.*/, async (req: any, res) => {
         }
       }
     } else if (rel.startsWith("project-assets/")) {
-      // Project assets (logos, design files) — managed by Zulbera/EraSphere staff.
-      authorized = role === "ERASPHERE"; // ADMIN already authorized above
+      // Project assets (brand colors, design files) — staff + assigned workers.
+      authorized = role === "ERASPHERE" || role === "WORKER"; // ADMIN already authorized above
     } else if (rel.startsWith("profile-files/")) {
       const ownerId = Number(rel.split("/")[1]);
       if (role === "CLIENT") authorized = ownerId === userId;
       else if (role === "ERASPHERE") authorized = (await referredClientIds(userId)).includes(ownerId);
+      else if (role === "WORKER") {
+        // A worker may see a client's brand files only for a client they're assigned to.
+        const t = await prisma.task.findFirst({ where: { clientId: ownerId, workers: { some: { userId } } }, select: { id: true } });
+        authorized = !!t;
+      }
     } else {
       // Task file (/uploads/<name>) or a branding logo (/uploads/files/<name>).
       const taskFile = await prisma.taskFile.findFirst({
@@ -102,9 +107,17 @@ router.get(/.*/, async (req: any, res) => {
         else if (role === "ERASPHERE")
           authorized = task.clientId !== null && (await referredClientIds(userId)).includes(task.clientId);
       } else {
-        // Branding asset (logo): allow the owning user. Admins already allowed above.
+        // Branding asset (logo): the owning client, or a worker assigned to that
+        // client's task. Admins already allowed above.
         const owner = await prisma.user.findFirst({ where: { logo: fileUrl }, select: { id: true } });
-        if (owner) authorized = owner.id === userId;
+        if (owner) {
+          if (role === "WORKER") {
+            const t = await prisma.task.findFirst({ where: { clientId: owner.id, workers: { some: { userId } } }, select: { id: true } });
+            authorized = !!t;
+          } else {
+            authorized = owner.id === userId;
+          }
+        }
       }
     }
 
