@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useEffect } from "react";
 import {
   ArrowLeft, Paperclip, Send, Download, Maximize2, Check, RotateCcw,
-  Image as ImageIcon, FileText, Palette, File as FileIcon, Calendar, RefreshCw, FolderKanban, ChevronDown,
+  Image as ImageIcon, FileText, Palette, File as FileIcon, Calendar, RefreshCw, FolderKanban, ChevronDown, Trash2,
 } from "lucide-react";
 import Button from "../ui/Button";
 import StatusBadge from "../ui/StatusBadge";
@@ -254,7 +254,7 @@ export default function TaskConversation(p: any) {
 
   return (
     <div className="pt-16">
-      <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-3xl flex-col px-3 sm:px-4">
+      <div className="mx-auto flex h-[calc(100vh-4rem)] w-full max-w-5xl flex-col px-3 sm:px-4">
         {/* top: breadcrumb + header */}
         <div className="shrink-0 pt-3">
           <div className="mb-3 flex items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
@@ -463,13 +463,24 @@ export default function TaskConversation(p: any) {
                       <span className="h-px flex-1 bg-[var(--color-border)]" />{day}<span className="h-px flex-1 bg-[var(--color-border)]" />
                     </div>
                   )}
-                  <div id={it.kind === "msg" ? `task-comment-${d.id}` : undefined} className="flex gap-3 py-2 scroll-mt-20" style={{ animationDelay: `${Math.min(i, 8) * 20}ms` }}>
+                  <div id={it.kind === "msg" ? `task-comment-${d.id}` : undefined} className="group flex gap-3 py-2 scroll-mt-20" style={{ animationDelay: `${Math.min(i, 8) * 20}ms` }}>
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-xs font-bold" style={avatarTint(role)}>{emoji ? <span className="text-base leading-none">{emoji}</span> : initials(name)}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[13px] font-bold text-[var(--color-text-primary)]">{name}</span>
                         <StatusBadge dot={false} tone={roleTone(role)} className="!px-1.5 !py-0 text-[9px] uppercase tracking-wide">{roleLabel(role)}</StatusBadge>
                         <span className="ml-auto text-[11px] text-[var(--color-text-muted)]">{fmtTime(it.at)}</span>
+                        {it.kind === "msg" && (p.isAdmin || d.userId === p.currentUserId) && (
+                          <button
+                            type="button"
+                            onClick={() => { if (window.confirm("Delete this message?")) p.deleteComment?.(d.id); }}
+                            title="Delete message"
+                            aria-label="Delete message"
+                            className="text-[var(--color-text-muted)] opacity-0 transition hover:text-[var(--color-destructive-text)] focus:opacity-100 group-hover:opacity-100"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                       {it.kind === "msg" ? (
                         <p className="mt-0.5 whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--color-text-secondary)]">{d.content}</p>

@@ -986,6 +986,32 @@ router.post("/:id/comments", verifyJWT, async (req: any, res) => {
   }
 });
 
+// delete a task comment — admins delete any; everyone else only their own.
+router.delete("/:taskId/comments/:commentId", verifyJWT, async (req: any, res) => {
+  try {
+    const commentId = Number(req.params.commentId);
+    if (isNaN(commentId)) return res.status(400).json({ error: "Invalid comment id" });
+    const { role, userId } = req.user;
+
+    const comment = await prisma.taskComment.findUnique({
+      where: { id: commentId },
+      select: { id: true, userId: true },
+    });
+    if (!comment) return res.status(404).json({ error: "Comment not found" });
+
+    if (role !== "ADMIN" && comment.userId !== userId) {
+      return res.status(403).json({ error: "You can only delete your own messages" });
+    }
+
+    await prisma.taskComment.delete({ where: { id: commentId } });
+    res.json({ message: "Comment deleted" });
+  } catch (error: any) {
+    if (error?.code === "P2025") return res.status(404).json({ error: "Comment not found" });
+    console.error("Error deleting comment:", error);
+    res.status(500).json({ error: "Failed to delete comment" });
+  }
+});
+
 // update task
 router.put("/:id", verifyJWT, async (req: any, res) => {
   try {
