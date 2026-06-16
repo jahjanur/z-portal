@@ -1,320 +1,323 @@
-import { useState, useMemo, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { useAdmin } from "../../contexts/AdminContext";
 import TaskForm from "../../components/admin/TaskForm";
-import TasksList from "../../components/admin/TasksList";
+import TaskBoard from "../../components/admin/TaskBoard";
 import PageHeader from "../../components/ui/PageHeader";
 import EmptyState from "../../components/ui/EmptyState";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import { CONTROL_INPUT, CONTROL_SELECT, CONTROL_TEXTAREA, CONTROL_LABEL } from "../../components/ui/controls";
-import type { Task, Project } from "../../contexts/AdminContext";
-
-const colors = { primary: "" };
-
-type StatusCategory = "pending" | "in_progress" | "completed";
+import { LayoutGrid, List, Plus, FolderKanban, Pencil, Trash2, Search, ExternalLink, ClipboardList } from "lucide-react";
+import type { Project } from "../../contexts/AdminContext";
+import { ServiceTypePicker, ServiceFieldsForm, ServiceBadge, ServiceSummaryView } from "../../components/admin/ServiceFields";
+import type { ServiceType } from "../../utils/serviceTypes";
+import { playSuccessSound } from "../../utils/sound";
 
 export default function AdminTasksPage() {
-  const { clients, workers, projects, tasks, adminOwnClients, adminOwnTasks, createTask, handleCreateProject, updateProject, deleteProject, deleteTask } = useAdmin();
-  const [statusCategory, setStatusCategory] = useState<StatusCategory>("pending");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [showProjects, setShowProjects] = useState(false);
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [editProjName, setEditProjName] = useState("");
-  const [editProjDescription, setEditProjDescription] = useState("");
-  const [editProjStatus, setEditProjStatus] = useState("");
-  const [editProjSaving, setEditProjSaving] = useState(false);
+  const {
+    clients, workers, projects, tasks,
+    adminOwnClients, adminOwnTasks,
+    createTask, handleCreateProject, updateProject, deleteProject, deleteTask,
+  } = useAdmin();
+
   const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
   const isAdmin = localStorage.getItem("role") === "ADMIN";
-  const formRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
-  const openEditProject = (p: Project) => {
-    setEditingProject(p);
-    setEditProjName(p.name);
-    setEditProjDescription(p.description ?? "");
-    setEditProjStatus((p as any).status ?? "ACTIVE");
-  };
+  const [searchQuery, setSearchQuery] = useState("");
+  const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [view, setView] = useState<"board" | "list">("board");
+  const [showCreate, setShowCreate] = useState(false);
+  const [showProjects, setShowProjects] = useState(false);
 
-  const saveEditProject = async () => {
-    if (!editingProject) return;
-    setEditProjSaving(true);
-    try {
-      await updateProject(editingProject.id, {
-        name: editProjName,
-        description: editProjDescription,
-        status: editProjStatus,
-      });
-      setEditingProject(null);
-    } finally {
-      setEditProjSaving(false);
-    }
-  };
+  // Manage-projects modal state
+  const emptyProj = { name: "", clientId: "", description: "", serviceType: "OTHER", metadata: {} as Record<string, unknown> };
+  const [newProj, setNewProj] = useState(emptyProj);
+  const [creatingProj, setCreatingProj] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [editProj, setEditProj] = useState({ name: "", description: "", status: "ACTIVE", serviceType: "OTHER", metadata: {} as Record<string, unknown> });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const baseTasks = isAdmin ? adminOwnTasks : tasks;
   const formClients = isAdmin ? adminOwnClients : clients;
 
-  const filterTasks = (taskList: Task[]) => {
-    if (!searchQuery.trim()) return taskList;
+  const filteredTasks = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return taskList.filter(
-      (t) =>
+    return baseTasks.filter((t) => {
+      if (projectFilter === "standalone" && t.projectId) return false;
+      if (projectFilter !== "all" && projectFilter !== "standalone" && String(t.projectId ?? "") !== projectFilter) return false;
+      if (!q) return true;
+      return (
         t.title?.toLowerCase().includes(q) ||
         t.description?.toLowerCase().includes(q) ||
         t.client?.name?.toLowerCase().includes(q) ||
         t.client?.company?.toLowerCase().includes(q)
-    );
+      );
+    });
+  }, [baseTasks, searchQuery, projectFilter]);
+
+  const counts = useMemo(() => ({
+    total: filteredTasks.length,
+    pending: filteredTasks.filter((t) => t.status === "PENDING").length,
+    active: filteredTasks.filter((t) => t.status === "IN_PROGRESS" || t.status === "PENDING_APPROVAL").length,
+    done: filteredTasks.filter((t) => t.status === "COMPLETED").length,
+  }), [filteredTasks]);
+
+  const submitTask = async (data: Parameters<typeof createTask>[0]) => {
+    await createTask(data);
+    // Audible confirmation for your own action (incoming-notification sounds
+    // only fire for the recipient, never the creator).
+    playSuccessSound();
+    toast.success("Task created");
+    setShowCreate(false);
   };
 
-  const pendingTasks = useMemo(
-    () => filterTasks(baseTasks.filter((t) => t.status === "PENDING")),
-    [baseTasks, searchQuery]
-  );
-  const inProgressTasks = useMemo(
-    () => filterTasks(baseTasks.filter((t) => t.status === "IN_PROGRESS" || t.status === "PENDING_APPROVAL")),
-    [baseTasks, searchQuery]
-  );
-  const completedTasks = useMemo(
-    () => filterTasks(baseTasks.filter((t) => t.status === "COMPLETED")),
-    [baseTasks, searchQuery]
-  );
+  const createProject = async () => {
+    if (!newProj.name.trim()) { toast.error("Project name is required"); return; }
+    setCreatingProj(true);
+    try {
+      await handleCreateProject(newProj);
+      setNewProj(emptyProj);
+    } finally {
+      setCreatingProj(false);
+    }
+  };
 
-  const currentTasks =
-    statusCategory === "pending"
-      ? pendingTasks
-      : statusCategory === "in_progress"
-        ? inProgressTasks
-        : completedTasks;
+  const beginEdit = (p: Project) => {
+    setEditingProject(p);
+    setEditProj({
+      name: p.name,
+      description: p.description ?? "",
+      status: (p as { status?: string }).status ?? "ACTIVE",
+      serviceType: p.serviceType ?? "OTHER",
+      metadata: (p.metadata as Record<string, unknown>) ?? {},
+    });
+  };
 
-  const statusTabs: { key: StatusCategory; label: string; count: number }[] = [
-    { key: "pending", label: "Pending", count: pendingTasks.length },
-    { key: "in_progress", label: "In Progress", count: inProgressTasks.length },
-    { key: "completed", label: "Completed", count: completedTasks.length },
-  ];
+  const saveEdit = async () => {
+    if (!editingProject) return;
+    setSavingEdit(true);
+    try {
+      await updateProject(editingProject.id, editProj);
+      setEditingProject(null);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const viewBtn = (key: "board" | "list", label: string, Icon: typeof LayoutGrid) => (
+    <button
+      type="button"
+      onClick={() => setView(key)}
+      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+        view === key
+          ? "bg-[var(--color-nav-active-bg)] text-[var(--color-nav-active-text)]"
+          : "text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+      }`}
+      aria-pressed={view === key}
+    >
+      <Icon className="h-4 w-4" />
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  );
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-6">
+    <div className="mx-auto w-full min-w-0 max-w-[1400px] space-y-6">
       <PageHeader
         title="Tasks"
-        subtitle="Create, assign and track tasks across clients and projects"
+        subtitle="Plan, assign and track work across clients and projects"
         actions={
-          <Button
-            variant="primary"
-            onClick={() =>
-              formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
-            }
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Task
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" onClick={() => setShowProjects(true)}>
+              <FolderKanban className="h-4 w-4" />
+              Projects
+              <span className="ml-1 rounded-full bg-[var(--color-surface-3)] px-1.5 text-xs">{projects.length}</span>
+            </Button>
+            <Button variant="primary" onClick={() => setShowCreate(true)}>
+              <Plus className="h-4 w-4" />
+              New Task
+            </Button>
+          </div>
         }
       />
 
-      <div ref={formRef} className="scroll-mt-24">
+      {/* Unified control bar */}
+      <div className="card-panel flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <input
+            type="search"
+            placeholder="Search tasks, clients…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`${CONTROL_INPUT} w-full !pl-9`}
+          />
+        </div>
+        <select
+          value={projectFilter}
+          onChange={(e) => setProjectFilter(e.target.value)}
+          className={`${CONTROL_SELECT} sm:w-56`}
+          aria-label="Filter by project"
+        >
+          <option value="all">All projects</option>
+          <option value="standalone">Standalone (no project)</option>
+          {projects.map((p) => (
+            <option key={p.id} value={String(p.id)}>{p.name}</option>
+          ))}
+        </select>
+        <div className="flex shrink-0 items-center gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1">
+          {viewBtn("board", "Board", LayoutGrid)}
+          {viewBtn("list", "List", List)}
+        </div>
+        {isAdmin && (
+          <Link
+            to="/admin/erasphere/tasks"
+            className="hidden shrink-0 items-center gap-1.5 rounded-xl border border-[var(--color-border)] px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)] lg:inline-flex"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            EraSphere
+          </Link>
+        )}
+      </div>
+
+      {/* Board / list */}
+      {filteredTasks.length > 0 ? (
+        <TaskBoard tasks={filteredTasks} onDelete={deleteTask} view={view} />
+      ) : (
+        <EmptyState
+          title={searchQuery || projectFilter !== "all" ? "No matching tasks" : "No tasks yet"}
+          description={
+            searchQuery || projectFilter !== "all"
+              ? "Try clearing the search or project filter."
+              : "Create your first task to get started."
+          }
+          icon={<ClipboardList className="h-6 w-6" />}
+          action={
+            !searchQuery && projectFilter === "all" ? (
+              <Button variant="primary" onClick={() => setShowCreate(true)}>
+                <Plus className="h-4 w-4" /> New Task
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
+
+      {/* Footer summary */}
+      <p className="px-1 text-xs text-[var(--color-text-muted)]">
+        {counts.total} task{counts.total !== 1 ? "s" : ""} · {counts.pending} pending · {counts.active} in progress · {counts.done} completed
+      </p>
+
+      {/* Create task slide-over */}
+      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Task" maxWidth="2xl">
         <TaskForm
-          onSubmit={createTask}
+          onSubmit={submitTask}
           clients={formClients}
           workers={workers}
           projects={projects}
           onCreateProject={handleCreateProject}
           hideWorkerAssignment={isEraSphere}
+          embedded
         />
-      </div>
+      </Modal>
 
-      <div className="card-panel p-5 sm:p-6">
-        {/* Search and filters */}
-        <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <input
-            type="search"
-            placeholder="Search tasks by title, description, or client..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`${CONTROL_INPUT} w-full sm:max-w-sm`}
-          />
-          {isAdmin && (
-            <Link
-              to="/admin/erasphere/tasks"
-              className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full border border-[var(--color-border)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)] sm:self-auto"
-            >
-              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              EraSphere Tasks
-            </Link>
-          )}
-        </div>
-
-        {/* Status category tabs: Pending | In Progress | Completed */}
-        <div className="-mx-1 mb-4 overflow-x-auto px-1 pb-1">
-          <div className="inline-flex w-full min-w-max gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1 sm:min-w-0">
-            {statusTabs.map(({ key, label, count }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setStatusCategory(key)}
-                className={`flex-1 shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
-                  statusCategory === key
-                    ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] shadow-elev-sm"
-                    : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)]"
-                }`}
-              >
-                {label} ({count})
-              </button>
-            ))}
+      {/* Manage projects */}
+      <Modal isOpen={showProjects} onClose={() => setShowProjects(false)} title="Manage Projects" maxWidth="2xl">
+        <div className="space-y-5">
+          {/* create */}
+          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+            <h4 className="section-title mb-3">New project</h4>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className={CONTROL_LABEL}>Project name *</label>
+                <input value={newProj.name} onChange={(e) => setNewProj({ ...newProj, name: e.target.value })} className={CONTROL_INPUT} placeholder="Website redesign" />
+              </div>
+              <div>
+                <label className={CONTROL_LABEL}>Client</label>
+                <select value={newProj.clientId} onChange={(e) => setNewProj({ ...newProj, clientId: e.target.value })} className={CONTROL_SELECT}>
+                  <option value="">No client (standalone)</option>
+                  {formClients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}{c.company ? ` (${c.company})` : ""}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className={CONTROL_LABEL}>Description</label>
+                <input value={newProj.description} onChange={(e) => setNewProj({ ...newProj, description: e.target.value })} className={CONTROL_INPUT} placeholder="Optional" />
+              </div>
+            </div>
+            <div className="mt-4">
+              <label className={CONTROL_LABEL}>Service type</label>
+              <ServiceTypePicker value={newProj.serviceType} onChange={(t: ServiceType) => setNewProj({ ...newProj, serviceType: t, metadata: {} })} />
+            </div>
+            <div className="mt-4">
+              <ServiceFieldsForm serviceType={newProj.serviceType} metadata={newProj.metadata} onChange={(m) => setNewProj({ ...newProj, metadata: m })} />
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button variant="primary" size="sm" loading={creatingProj} onClick={createProject}>
+                <Plus className="h-4 w-4" /> Create project
+              </Button>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-4">
-          {currentTasks.length > 0 ? (
-            <TasksList tasks={currentTasks} onDelete={deleteTask} colors={colors} />
-          ) : (
-            <EmptyState
-              compact
-              title={
-                searchQuery
-                  ? "No tasks match your search"
-                  : statusCategory === "pending"
-                    ? "No pending tasks"
-                    : statusCategory === "in_progress"
-                      ? "No tasks in progress"
-                      : "No completed tasks yet"
-              }
-              description={searchQuery ? "Try a different search term." : "Tasks will appear here once created."}
-              icon={
-                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              }
-            />
-          )}
-        </div>
-      </div>
-
-      {/* Projects section */}
-      <section>
-        <button
-          type="button"
-          onClick={() => setShowProjects(!showProjects)}
-          className="card-panel row-hover mb-4 flex w-full items-center justify-between p-4 text-left"
-          aria-expanded={showProjects}
-        >
-          <h3 className="text-lg font-bold text-[var(--color-text-primary)]">
-            Projects <span className="ml-2 text-sm font-normal text-[var(--color-text-muted)]">({projects.length})</span>
-          </h3>
-          <svg className={`h-5 w-5 shrink-0 text-[var(--color-text-muted)] transition-transform ${showProjects ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
-        {showProjects && (
-          <div className="stagger-children space-y-3">
+          {/* list */}
+          <div>
+            <h4 className="section-title mb-3">All projects ({projects.length})</h4>
             {projects.length === 0 ? (
-              <EmptyState
-                compact
-                title="No projects yet"
-                description="Create a project from the task form above to group related tasks."
-                icon={
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                  </svg>
-                }
-              />
+              <EmptyState compact title="No projects yet" description="Create one above to group related tasks." icon={<FolderKanban className="h-6 w-6" />} />
             ) : (
-              projects.map((p) => (
-                <div key={p.id} className="card-panel row-hover flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-[var(--color-text-primary)]">{p.name}</p>
-                    {p.client && (
-                      <p className="truncate text-xs text-[var(--color-text-muted)]">{p.client.name}{p.client.company ? ` — ${p.client.company}` : ""}</p>
-                    )}
-                    {p.description && (
-                      <p className="mt-0.5 truncate text-xs text-[var(--color-text-muted)]">{p.description}</p>
+              <div className="space-y-2">
+                {projects.map((p) => (
+                  <div key={p.id} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3">
+                    {editingProject?.id === p.id ? (
+                      <div className="space-y-3">
+                        <input value={editProj.name} onChange={(e) => setEditProj({ ...editProj, name: e.target.value })} className={CONTROL_INPUT} />
+                        <textarea value={editProj.description} onChange={(e) => setEditProj({ ...editProj, description: e.target.value })} rows={2} className={CONTROL_TEXTAREA} />
+                        <ServiceTypePicker value={editProj.serviceType} onChange={(t: ServiceType) => setEditProj({ ...editProj, serviceType: t, metadata: editProj.serviceType === t ? editProj.metadata : {} })} />
+                        <ServiceFieldsForm serviceType={editProj.serviceType} metadata={editProj.metadata} onChange={(m) => setEditProj({ ...editProj, metadata: m })} />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select value={editProj.status} onChange={(e) => setEditProj({ ...editProj, status: e.target.value })} className={`${CONTROL_SELECT} flex-1`}>
+                            <option value="ACTIVE">Active</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="ARCHIVED">Archived</option>
+                          </select>
+                          <Button variant="secondary" size="sm" onClick={() => setEditingProject(null)}>Cancel</Button>
+                          <Button variant="primary" size="sm" loading={savingEdit} onClick={saveEdit}>Save</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate font-semibold text-[var(--color-text-primary)]">{p.name}</p>
+                              <ServiceBadge serviceType={p.serviceType} />
+                            </div>
+                            <p className="truncate text-xs text-[var(--color-text-muted)]">
+                              {p.client ? `${p.client.name}${p.client.company ? ` — ${p.client.company}` : ""}` : "Standalone"}
+                              {p.description ? ` · ${p.description}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 gap-1">
+                            <button onClick={() => { setShowProjects(false); navigate(`/admin/zulbera/services/${p.id}`); }} aria-label="Open service" className="rounded-lg p-2 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]">
+                              <ExternalLink className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => beginEdit(p)} aria-label="Edit project" className="rounded-lg p-2 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]">
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => { if (confirm(`Delete project "${p.name}"?`)) deleteProject(p.id); }} aria-label="Delete project" className="rounded-lg p-2 text-[var(--color-text-muted)] transition hover:bg-[var(--color-destructive-bg)] hover:text-[var(--color-destructive-text)]">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                        <ServiceSummaryView serviceType={p.serviceType} metadata={p.metadata} />
+                      </div>
                     )}
                   </div>
-                  <div className="flex w-full gap-2 sm:ml-4 sm:w-auto sm:shrink-0">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="flex-1 sm:flex-none"
-                      onClick={() => openEditProject(p)}
-                    >
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      Edit
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      className="flex-1 sm:flex-none"
-                      onClick={() => deleteProject(p.id)}
-                    >
-                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
-          </div>
-        )}
-      </section>
-
-      {/* Project edit modal */}
-      <Modal
-        isOpen={editingProject !== null}
-        onClose={() => setEditingProject(null)}
-        title="Edit Project"
-        maxWidth="md"
-      >
-        <div className="space-y-4">
-          <div>
-            <label className={CONTROL_LABEL}>Name</label>
-            <input
-              value={editProjName}
-              onChange={(e) => setEditProjName(e.target.value)}
-              className={CONTROL_INPUT}
-            />
-          </div>
-          <div>
-            <label className={CONTROL_LABEL}>Description</label>
-            <textarea
-              value={editProjDescription}
-              onChange={(e) => setEditProjDescription(e.target.value)}
-              rows={3}
-              className={CONTROL_TEXTAREA}
-            />
-          </div>
-          <div>
-            <label className={CONTROL_LABEL}>Status</label>
-            <select
-              value={editProjStatus}
-              onChange={(e) => setEditProjStatus(e.target.value)}
-              className={CONTROL_SELECT}
-            >
-              <option value="ACTIVE">Active</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="ARCHIVED">Archived</option>
-            </select>
-          </div>
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-            <Button
-              variant="secondary"
-              className="w-full sm:w-auto"
-              onClick={() => setEditingProject(null)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              loading={editProjSaving}
-              className="w-full sm:w-auto"
-              onClick={saveEditProject}
-            >
-              {editProjSaving ? "Saving…" : "Save"}
-            </Button>
           </div>
         </div>
       </Modal>

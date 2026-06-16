@@ -1,31 +1,57 @@
+import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import {
   AlertTriangle,
-  BarChart3,
-  Briefcase,
-  Check,
-  Clock,
-  FileText,
+  Building2,
+  CalendarClock,
   Globe,
-  Mail,
+  LayoutDashboard,
   MessageSquare,
-  Users,
+  Receipt,
+  Send,
+  SquareKanban,
+  UsersRound,
 } from "lucide-react";
 import { AdminProvider, useAdmin } from "../contexts/AdminContext";
 import { useWorkspaceOverview } from "../hooks/useWorkspaceOverview";
 import { useNotifications } from "../hooks/useNotifications";
+import { useMobileMenu } from "../contexts/MobileMenuContext";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
+import MobileTabBar from "../components/MobileTabBar";
+import MobileNavSheet from "../components/MobileNavSheet";
 
-const ZULBERA_NAV = [
-  { path: "/admin/zulbera/analytics", label: "Analytics", icon: BarChart3 },
-  { path: "/admin/zulbera/workers", label: "Workers", icon: Users },
-  { path: "/admin/zulbera/clients", label: "Clients", icon: Briefcase },
-  { path: "/admin/zulbera/tasks", label: "Tasks", icon: Check },
-  { path: "/admin/zulbera/comments", label: "Comments", icon: MessageSquare, showNotificationBadge: true },
-  { path: "/admin/zulbera/invoices", label: "Invoices", icon: FileText },
-  { path: "/admin/zulbera/domains", label: "Domains", icon: Globe },
-  { path: "/admin/zulbera/send-offer", label: "Send Offer", icon: Mail },
-  { path: "/admin/zulbera/timesheets", label: "Timesheets", icon: Clock },
+const ZULBERA_TABS = [
+  { to: "/admin/zulbera/analytics", label: "Analytics", icon: LayoutDashboard, end: true },
+  { to: "/admin/zulbera/tasks", label: "Tasks", icon: SquareKanban },
+  { to: "/admin/zulbera/clients", label: "Clients", icon: Building2 },
+  { to: "/admin/zulbera/invoices", label: "Invoices", icon: Receipt },
+];
+
+const ZULBERA_NAV_SECTIONS = [
+  {
+    label: "Overview",
+    items: [
+      { path: "/admin/zulbera/analytics", label: "Analytics", icon: LayoutDashboard },
+      { path: "/admin/zulbera/timesheets", label: "Timesheets", icon: CalendarClock },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { path: "/admin/zulbera/workers", label: "Workers", icon: UsersRound },
+      { path: "/admin/zulbera/clients", label: "Clients", icon: Building2 },
+      { path: "/admin/zulbera/tasks", label: "Tasks", icon: SquareKanban },
+      { path: "/admin/zulbera/comments", label: "Comments", icon: MessageSquare, showNotificationBadge: true },
+    ],
+  },
+  {
+    label: "Finance",
+    items: [
+      { path: "/admin/zulbera/invoices", label: "Invoices", icon: Receipt },
+      { path: "/admin/zulbera/domains", label: "Domains", icon: Globe },
+      { path: "/admin/zulbera/send-offer", label: "Send Offer", icon: Send },
+    ],
+  },
 ];
 
 function WorkspaceOverviewCard() {
@@ -100,6 +126,18 @@ function WorkspaceOverviewCard() {
 function ZulberaLayoutInner() {
   const { loading, error } = useAdmin();
   const { unreadCount } = useNotifications();
+  useMobileMenu();
+  const [navSheetOpen, setNavSheetOpen] = useState(false);
+
+  const sheetSections = ZULBERA_NAV_SECTIONS.map((s) => ({
+    label: s.label,
+    items: s.items.map((it) => ({
+      path: it.path,
+      label: it.label,
+      icon: it.icon,
+      badge: (it as { showNotificationBadge?: boolean }).showNotificationBadge && unreadCount > 0 ? unreadCount : undefined,
+    })),
+  }));
 
   if (loading) {
     return (
@@ -123,36 +161,21 @@ function ZulberaLayoutInner() {
   return (
     <div className="flex min-h-[calc(100vh-4rem)] pt-16">
       {/* Sidebar: icon rail on tablet (md), full at lg+ */}
-      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[68px] shrink-0 flex-col self-start overflow-y-auto overflow-x-hidden border-r border-[var(--color-border)] bg-[var(--color-bg)] md:flex lg:w-[248px]">
-        <div className="hidden px-5 pb-3 pt-6 lg:block">
-          <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
-            Zulbera Workspace
-          </p>
-        </div>
-        <nav className="flex-1 space-y-1 px-3 pt-4 lg:pt-0" aria-label="Zulbera">
-          {ZULBERA_NAV.map(({ path, label, icon: Icon, showNotificationBadge }) => (
-            <NavLink
-              key={path}
-              to={path}
-              end={path.endsWith("/analytics")}
-              title={label}
-              className={({ isActive }) =>
-                `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all justify-center lg:justify-start ${
-                  isActive
-                    ? "bg-[var(--color-surface-3)] text-[var(--color-text-primary)]"
-                    : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {/* Active accent bar */}
-                  <span
-                    className={`absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[var(--color-nav-active-bg)] transition-opacity ${
-                      isActive ? "opacity-100" : "opacity-0"
-                    }`}
-                    aria-hidden="true"
-                  />
+      <aside className="app-sidebar sticky top-16 hidden h-[calc(100vh-4rem)] w-[72px] shrink-0 flex-col self-start overflow-y-auto overflow-x-hidden md:flex lg:w-[252px]">
+        <nav className="flex-1 space-y-4 px-3 pt-6" aria-label="Zulbera">
+          {ZULBERA_NAV_SECTIONS.map((section) => (
+            <div key={section.label} className="space-y-1">
+              <p className="nav-section-label mb-1 hidden lg:block">{section.label}</p>
+              {section.items.map(({ path, label, icon: Icon, showNotificationBadge }) => (
+                <NavLink
+                  key={path}
+                  to={path}
+                  end={path.endsWith("/analytics")}
+                  title={label}
+                  className={({ isActive }) =>
+                    `nav-item justify-center lg:justify-start ${isActive ? "active" : ""}`
+                  }
+                >
                   <span className="relative shrink-0">
                     <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
                     {showNotificationBadge && unreadCount > 0 && (
@@ -167,20 +190,23 @@ function ZulberaLayoutInner() {
                       {unreadCount > 99 ? "99+" : unreadCount}
                     </span>
                   )}
-                </>
-              )}
-            </NavLink>
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
         <WorkspaceOverviewCard />
       </aside>
 
       {/* Main content */}
-      <main className="min-w-0 flex-1 overflow-x-hidden">
-        <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <main className="min-w-0 flex-1 [overflow-x:clip]">
+        <div className="mx-auto max-w-[1400px] px-4 py-6 pb-28 sm:px-6 md:pb-8 lg:px-8 lg:py-8">
           <Outlet />
         </div>
       </main>
+
+      <MobileTabBar items={ZULBERA_TABS} onMore={() => setNavSheetOpen(true)} moreActive={navSheetOpen} />
+      <MobileNavSheet open={navSheetOpen} onClose={() => setNavSheetOpen(false)} title="Zulbera" subtitle="Workspace" sections={sheetSections} alertCount={unreadCount} />
     </div>
   );
 }

@@ -100,6 +100,19 @@
   /* Skeleton shimmer */
   --color-skeleton-base: rgba(255, 255, 255, 0.06);
   --color-skeleton-highlight: rgba(255, 255, 255, 0.12);
+  /* Premium bento system (dark) */
+  --card-radius: 1.25rem;
+  --card-grad-top: rgba(255, 255, 255, 0.055);
+  --card-grad-bottom: rgba(255, 255, 255, 0.012);
+  --card-ring: rgba(255, 255, 255, 0.06);
+  --card-hover-glow: rgba(255, 255, 255, 0.10);
+  --card-hover-border: rgba(255, 255, 255, 0.22);
+  --sidebar-bg: #0c1116;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.10);
+  --sidebar-active-text: #ffffff;
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+  --topbar-bg: rgba(11, 15, 20, 0.72);
+  --halo: rgba(255, 255, 255, 0.06);
 }
 
 /* ---------------------------------------------------------------------------
@@ -198,6 +211,61 @@
   /* Skeleton shimmer */
   --color-skeleton-base: rgba(15, 23, 42, 0.06);
   --color-skeleton-highlight: rgba(15, 23, 42, 0.12);
+  /* Premium bento system (light) */
+  --card-radius: 1.25rem;
+  --card-grad-top: #ffffff;
+  --card-grad-bottom: #fbfcfd;
+  --card-ring: rgba(15, 23, 42, 0.035);
+  --card-hover-glow: rgba(15, 23, 42, 0.05);
+  --card-hover-border: rgba(15, 23, 42, 0.22);
+  --sidebar-bg: #ffffff;
+  --sidebar-active-bg: rgba(15, 23, 42, 0.06);
+  --sidebar-active-text: #0b0f14;
+  --sidebar-hover-bg: rgba(15, 23, 42, 0.04);
+  --topbar-bg: rgba(246, 247, 248, 0.78);
+  --halo: rgba(15, 23, 42, 0.04);
+}
+
+/* ---------------------------------------------------------------------------
+   EraSphere workspace accent — rose gold.
+   Scoped to [data-workspace="erasphere"] (set on the EraSphere layout root) so
+   only that workspace re-tints. Zulbera keeps the default monochrome accent.
+   Overrides only the accent-bearing tokens; surfaces/text stay theme-driven.
+   --------------------------------------------------------------------------- */
+[data-theme="dark"] [data-workspace="erasphere"],
+html:not([data-theme]) [data-workspace="erasphere"] {
+  /* Primary/solid accent (buttons, navbar-style active chips) */
+  --color-nav-active-bg: #c98a82;
+  --color-nav-active-text: #2a1518;
+  /* Sidebar active row */
+  --sidebar-active-bg: rgba(183, 110, 121, 0.22);
+  --sidebar-active-text: #f4d9cc;
+  /* Dashboard tabs */
+  --color-tab-active-bg: rgba(183, 110, 121, 0.22);
+  --color-tab-active-text: #f4d9cc;
+  --color-tab-active-border: rgba(201, 138, 130, 0.45);
+  /* Focus, card hover glow, halo */
+  --color-focus-ring: rgba(201, 138, 130, 0.45);
+  --card-hover-glow: rgba(201, 138, 130, 0.32);
+  --card-hover-border: rgba(201, 138, 130, 0.45);
+  --halo: rgba(201, 138, 130, 0.12);
+  /* Active-row accent bar (see index.css) */
+  --nav-active-bar: #d9a39a;
+}
+
+[data-theme="light"] [data-workspace="erasphere"] {
+  --color-nav-active-bg: #b76e79;
+  --color-nav-active-text: #ffffff;
+  --sidebar-active-bg: rgba(183, 110, 121, 0.12);
+  --sidebar-active-text: #9d4d57;
+  --color-tab-active-bg: rgba(183, 110, 121, 0.12);
+  --color-tab-active-text: #9d4d57;
+  --color-tab-active-border: rgba(183, 110, 121, 0.35);
+  --color-focus-ring: rgba(183, 110, 121, 0.35);
+  --card-hover-glow: rgba(183, 110, 121, 0.18);
+  --card-hover-border: rgba(183, 110, 121, 0.4);
+  --halo: rgba(183, 110, 121, 0.08);
+  --nav-active-bar: #b76e79;
 }
 
 /* Default (no data-theme yet): use dark so no flash before script runs */
@@ -276,4 +344,16 @@ html:not([data-theme]) {
   --color-scrollbar-hover: rgba(255, 255, 255, 0.28);
   --color-skeleton-base: rgba(255, 255, 255, 0.06);
   --color-skeleton-highlight: rgba(255, 255, 255, 0.12);
+  --card-radius: 1.25rem;
+  --card-grad-top: rgba(255, 255, 255, 0.055);
+  --card-grad-bottom: rgba(255, 255, 255, 0.012);
+  --card-ring: rgba(255, 255, 255, 0.06);
+  --card-hover-glow: rgba(255, 255, 255, 0.10);
+  --card-hover-border: rgba(255, 255, 255, 0.22);
+  --sidebar-bg: #0c1116;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.10);
+  --sidebar-active-text: #ffffff;
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.05);
+  --topbar-bg: rgba(11, 15, 20, 0.72);
+  --halo: rgba(255, 255, 255, 0.06);
 }

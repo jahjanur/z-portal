@@ -299,10 +299,10 @@ export async function generateInvoicePdf(
     ]);
   } catch {
     try {
-      logoUrl = await loadImageToPngDataUrl("/ZPortalLogo.svg", 400, 80);
+      logoUrl = await loadImageToPngDataUrl("/Zulbera-Text-Logo.svg", 400, 80);
     } catch {
       try {
-        logoUrl = await loadImageToPngDataUrl("/ZPortalFavIcon.svg", 400, 80);
+        logoUrl = await loadImageToPngDataUrl("/ZulberaFavicon.svg", 400, 80);
       } catch {
         // keep null, renderHeader will use "Zulbera" text
       }

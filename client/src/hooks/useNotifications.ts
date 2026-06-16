@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import API from "../api";
+import { playNotificationSound, playForNotificationType } from "../utils/sound";
+
+// Shared across all hook instances so only one sound fires per new notification.
+let lastSeenCount: number | null = null;
 
 export interface Notification {
   id: number;
@@ -20,7 +24,19 @@ export function useNotifications() {
   const fetchUnreadCount = useCallback(async () => {
     try {
       const { data } = await API.get("/notifications/unread-count");
-      setUnreadCount(data.count);
+      const c: number = data.count ?? 0;
+      if (lastSeenCount !== null && c > lastSeenCount) {
+        // A new notification arrived — play a sound matched to the latest one.
+        try {
+          const { data: nd } = await API.get("/notifications?page=1&limit=1");
+          const latest = (nd.notifications ?? nd)?.[0];
+          playForNotificationType(latest?.type);
+        } catch {
+          playNotificationSound();
+        }
+      }
+      lastSeenCount = c;
+      setUnreadCount(c);
     } catch {
       // silently fail
     }
@@ -31,7 +47,9 @@ export function useNotifications() {
       const { data } = await API.get("/notifications?page=1&limit=20");
       const items: Notification[] = data.notifications ?? data;
       setNotifications(items);
-      setUnreadCount(items.filter((n) => !n.read).length);
+      const unread = items.filter((n) => !n.read).length;
+      lastSeenCount = unread; // keep the shared counter in sync (avoid false sound triggers)
+      setUnreadCount(unread);
     } catch {
       // silently fail
     }

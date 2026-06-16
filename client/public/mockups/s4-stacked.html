@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>S4 · Stacked — Z-Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/mockups/mono.css" />
+<style>
+.nav{position:sticky;top:0;z-index:20;background:rgba(11,15,20,.82);backdrop-filter:blur(16px);border-bottom:1px solid var(--color-border)}
+.nav-in{max-width:1080px;margin:0 auto;height:66px;display:flex;align-items:center;gap:18px;padding:0 28px}
+.logo{display:flex;align-items:center;gap:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;font-size:13.5px}.logo svg{width:28px;height:28px}
+.links{margin-left:14px;display:flex;gap:22px}.links a{font-size:14px;font-weight:500;color:var(--color-text-muted);text-decoration:none;padding:4px 0;border-bottom:2px solid transparent}
+.links a.on{color:var(--color-text-primary);border-color:#fff}.links a:hover{color:var(--color-text-primary)}
+.nr{margin-left:auto;display:flex;align-items:center;gap:10px}.me .avatar{width:30px;height:30px;font-size:11px}
+.wrap{max-width:1080px;margin:0 auto;padding:44px 28px 80px}
+.hero{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;padding-bottom:30px;border-bottom:1px solid var(--color-border)}
+.hero .k{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--color-text-muted)}
+.hero h1{font-size:46px;font-weight:800;letter-spacing:-.03em;margin-top:10px;line-height:1}
+.hero p{color:var(--color-text-muted);font-size:15px;margin-top:12px}
+/* big stat row — no boxes, just rules */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);margin:34px 0 10px}
+@media(max-width:840px){.stats{grid-template-columns:repeat(2,1fr);gap:24px 0}}
+.stat{padding-right:24px;border-left:1px solid var(--color-border);padding-left:22px}
+.stat:first-child{border-left:none;padding-left:0}
+.stat .l{font-size:12.5px;color:var(--color-text-muted)}.stat .v{font-size:38px;font-weight:800;letter-spacing:-.03em;margin-top:8px;line-height:1}.stat .c{font-size:12.5px;margin-top:8px;color:var(--color-text-secondary)}
+.section{margin-top:54px}
+.sh{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--color-border);padding-bottom:14px;margin-bottom:6px}
+.sh h2{font-size:20px;font-weight:700;letter-spacing:-.01em}.sh .meta{color:var(--color-text-muted);font-size:13px}
+.sh a{font-size:13.5px;font-weight:600;color:var(--color-text-secondary);text-decoration:none}.sh a:hover{color:var(--color-text-primary)}
+.chart{margin-top:26px;height:200px;display:flex;align-items:stretch;gap:18px}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:8px;height:100%}
+.bar .bb{width:100%;border-radius:7px;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.4))}.bar .bb.g{background:var(--color-surface-3)}.bar small{font-size:11.5px;color:var(--color-text-muted)}
+/* list rows, generous */
+.rows{margin-top:6px}
+.r{display:flex;align-items:center;gap:16px;padding:18px 0;border-bottom:1px solid var(--color-border)}
+.r .avatar{width:42px;height:42px;font-size:13px;border-radius:12px}
+.r .who b{font-size:15px;font-weight:600}.r .who small{display:block;color:var(--color-text-muted);font-size:12.5px;margin-top:2px}
+.r .item{color:var(--color-text-secondary);font-size:14px;flex:1}
+.r .amt{font-weight:700;font-size:15px;width:90px;text-align:right}
+.r .st{width:120px;text-align:right}
+.banner{margin-top:40px;display:flex;align-items:center;gap:14px;padding:18px 22px;border:1px solid var(--warning-border);background:var(--warning-bg);border-radius:14px;color:var(--warning-text);font-size:14px}
+.banner .t{font-size:11px;font-weight:800;letter-spacing:.1em;background:rgba(0,0,0,.2);padding:4px 9px;border-radius:7px}
+</style></head>
+<body>
+  <div class="nav"><div class="nav-in">
+    <div class="logo"><svg viewBox="0 0 500 500"><path fill="#432AF4" d="M428.2,173c-9.6-51.9-39.1-79.8-94.5-89c-53.9-9.2-108.5-9.6-162.4-0.8c-65,10.4-94.9,41.1-102.5,102.5c-1.2,9.6-2.8,18.7-4,28.3c0,24.3,0,48.7,0,73c2,12.4,3.2,24.7,5.6,36.7c12,59.8,43.9,87.8,108.9,95.3c10.8,1.2,21.1,2.8,31.5,4c26.3,0,52.3,0,78.2,0c13.6-2,26.7-3.2,40.3-5.6c60.2-10,89-36.3,99.3-92.9C437.7,274.3,437.3,223.3,428.2,173z M173.7,230.8h73c10.4,0,19.1,8.4,19.1,19.1c0,10.4-8.8,19.1-19.1,19.1h-73c-10.4,0-19.1-8.4-19.1-19.1C154.5,239.6,162.9,230.8,173.7,230.8z M355.6,321.4h-215c-10.4,0-19.1-8.4-19.1-19.1c0-10.4,8.4-19.1,19.1-19.1h215c10.4,0,19.1,8.4,19.1,19.1S366.3,321.4,355.6,321.4z M359.1,217.3H206.8c-10.4,0-19.1-8.4-19.1-19.1c0-10.4,8.4-19.1,19.1-19.1h152.4c10.4,0,19.1,8.4,19.1,19.1C378.3,208.5,369.9,217.3,359.1,217.3z"/></svg>Zulbera</div>
+    <nav class="links"><a class="on" href="#">Analytics</a><a href="#">Zulbera</a><a href="#">EraSphere</a></nav>
+    <div class="nr"><div class="iconbtn"><span class="dot"></span>🔔</div><div class="iconbtn">◐</div><div class="me"><span class="avatar">AU</span></div></div>
+  </div></div>
+  <div class="wrap">
+    <div class="hero"><div><div class="k">Dashboard</div><h1>Analytics</h1><p>Performance across Zulbera &amp; EraSphere · Last 30 days</p></div>
+      <div style="display:flex;gap:10px"><button class="btn ghost">Export</button><button class="btn primary">+ New invoice</button></div></div>
+
+    <div class="stats">
+      <div class="stat"><div class="l">Total revenue</div><div class="v">$48,250</div><div class="c">▲ 12.4% vs last month</div></div>
+      <div class="stat"><div class="l">Outstanding</div><div class="v">$7,920</div><div class="c">3 invoices pending</div></div>
+      <div class="stat"><div class="l">Active clients</div><div class="v">24</div><div class="c">▲ 2 new this month</div></div>
+      <div class="stat"><div class="l">Tasks in progress</div><div class="v">17</div><div class="c">92% on schedule</div></div>
+    </div>
+
+    <div class="section">
+      <div class="sh"><div><h2>Revenue</h2></div><div class="meta">Paid vs pending · monthly</div></div>
+      <div class="chart">
+        <div class="bar"><div class="bb" style="height:46%"></div><small>Jan</small></div>
+        <div class="bar"><div class="bb" style="height:58%"></div><small>Feb</small></div>
+        <div class="bar"><div class="bb" style="height:51%"></div><small>Mar</small></div>
+        <div class="bar"><div class="bb" style="height:72%"></div><small>Apr</small></div>
+        <div class="bar"><div class="bb" style="height:64%"></div><small>May</small></div>
+        <div class="bar"><div class="bb" style="height:88%"></div><small>Jun</small></div>
+        <div class="bar"><div class="bb g" style="height:34%"></div><small>Jul</small></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="sh"><h2>Recent activity</h2><a href="#">View all →</a></div>
+      <div class="rows">
+        <div class="r"><span class="avatar">TC</span><div class="who"><b>TechCorp Inc</b><small>Zulbera</small></div><div class="item">Build Landing Page · John Worker</div><div class="st"><span class="badge i">In progress</span></div><div class="amt">$4,500</div></div>
+        <div class="r"><span class="avatar">SX</span><div class="who"><b>StartupXYZ</b><small>EraSphere</small></div><div class="item">INV-2025-002</div><div class="st"><span class="badge s">Paid</span></div><div class="amt">$2,200</div></div>
+        <div class="r"><span class="avatar">DH</span><div class="who"><b>DesignHub</b><small>Zulbera</small></div><div class="item">Brand Identity Design · Jane Developer</div><div class="st"><span class="badge w">Pending</span></div><div class="amt">$6,800</div></div>
+        <div class="r"><span class="avatar">TC</span><div class="who"><b>TechCorp Inc</b><small>Zulbera</small></div><div class="item">INV-2025-001</div><div class="st"><span class="badge s">Paid</span></div><div class="amt">$3,400</div></div>
+      </div>
+    </div>
+
+    <div class="banner"><span class="t">ALERT</span> 3 domains renew within 30 days — review before they expire.</div>
+  </div>
+</body></html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>S3 · Rail — Z-Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/mockups/mono.css" />
+<style>
+.shell{display:flex;min-height:100vh}
+.rail{width:68px;flex-shrink:0;border-right:1px solid var(--color-border);background:var(--color-surface-1);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px}
+.rail .logo{width:36px;height:36px;margin-bottom:10px}
+.rail a{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:var(--color-text-muted);text-decoration:none;font-size:17px;position:relative}
+.rail a:hover{background:var(--color-surface-2);color:var(--color-text-primary)}
+.rail a.on{background:var(--nav-active-bg);color:var(--nav-active-text)}
+.rail a .b{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:99px;background:#fff;box-shadow:0 0 0 2px var(--color-surface-1)}
+.rail .foot{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:8px}
+.rail .avatar{width:38px;height:38px;font-size:13px;border-radius:12px}
+.main{flex:1;min-width:0;display:flex}
+/* secondary context panel */
+.ctx{width:230px;flex-shrink:0;border-right:1px solid var(--color-border);padding:22px 18px;display:none}
+@media(min-width:1100px){.ctx{display:block}}
+.ctx h2{font-size:16px;font-weight:800;letter-spacing:-.01em}.ctx .sub{font-size:12.5px;color:var(--color-text-muted);margin-top:3px;margin-bottom:18px}
+.ctx .t{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-muted);margin:18px 0 8px}
+.ctx a{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:9px;color:var(--color-text-secondary);text-decoration:none;font-size:13.5px;font-weight:500}
+.ctx a:hover{background:var(--color-surface-2);color:var(--color-text-primary)}.ctx a.on{background:var(--color-surface-3);color:var(--color-text-primary);font-weight:600}
+.ctx a .b{background:var(--color-surface-3);font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;color:var(--color-text-secondary)}
+.work{flex:1;min-width:0}
+.top{height:62px;display:flex;align-items:center;gap:14px;padding:0 26px;border-bottom:1px solid var(--color-border);position:sticky;top:0;background:rgba(11,15,20,.82);backdrop-filter:blur(14px);z-index:5}
+.top .title{font-size:16px;font-weight:700}.search{margin-left:auto;width:280px;display:flex;align-items:center;gap:9px;background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:10px;padding:8px 12px;color:var(--color-text-muted);font-size:13px}
+.content{padding:26px;max-width:1080px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+@media(max-width:980px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--color-panel-solid);border:1px solid var(--color-border);border-radius:14px;padding:18px}
+.kpi .l{font-size:12.5px;color:var(--color-text-muted)}.kpi .v{font-size:27px;font-weight:800;letter-spacing:-.02em;margin-top:10px}.kpi .c{font-size:12px;margin-top:7px;color:var(--color-text-secondary)}
+.panel{background:var(--color-panel-solid);border:1px solid var(--color-border);border-radius:14px;padding:20px;margin-bottom:16px}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px}.panel h3{font-size:14.5px;font-weight:700}.meta{color:var(--color-text-muted);font-size:12.5px;margin-top:2px}
+.chart{margin-top:18px;height:170px;display:flex;align-items:stretch;gap:12px}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+.bar .bb{width:100%;border-radius:6px;background:linear-gradient(180deg,rgba(255,255,255,.85),rgba(255,255,255,.45))}.bar .bb.g{background:var(--color-surface-3)}.bar small{font-size:11px;color:var(--color-text-muted)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:12px}
+th{text-align:left;color:var(--color-text-muted);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:9px 12px;border-bottom:1px solid var(--color-border)}
+td{padding:13px 12px;border-bottom:1px solid var(--color-border);color:var(--color-text-secondary)}tr:last-child td{border-bottom:none}tr:hover td{background:var(--color-surface-2)}
+.who{display:flex;align-items:center;gap:11px}.who .avatar{width:31px;height:31px;font-size:11px}.who b{color:var(--color-text-primary)}.who small{display:block;color:var(--color-text-muted);font-size:11px}
+</style></head>
+<body>
+<div class="shell">
+  <nav class="rail">
+    <svg class="logo" viewBox="0 0 500 500"><path fill="#432AF4" d="M428.2,173c-9.6-51.9-39.1-79.8-94.5-89c-53.9-9.2-108.5-9.6-162.4-0.8c-65,10.4-94.9,41.1-102.5,102.5c-1.2,9.6-2.8,18.7-4,28.3c0,24.3,0,48.7,0,73c2,12.4,3.2,24.7,5.6,36.7c12,59.8,43.9,87.8,108.9,95.3c10.8,1.2,21.1,2.8,31.5,4c26.3,0,52.3,0,78.2,0c13.6-2,26.7-3.2,40.3-5.6c60.2-10,89-36.3,99.3-92.9C437.7,274.3,437.3,223.3,428.2,173z M173.7,230.8h73c10.4,0,19.1,8.4,19.1,19.1c0,10.4-8.8,19.1-19.1,19.1h-73c-10.4,0-19.1-8.4-19.1-19.1C154.5,239.6,162.9,230.8,173.7,230.8z M355.6,321.4h-215c-10.4,0-19.1-8.4-19.1-19.1c0-10.4,8.4-19.1,19.1-19.1h215c10.4,0,19.1,8.4,19.1,19.1S366.3,321.4,355.6,321.4z M359.1,217.3H206.8c-10.4,0-19.1-8.4-19.1-19.1c0-10.4,8.4-19.1,19.1-19.1h152.4c10.4,0,19.1,8.4,19.1,19.1C378.3,208.5,369.9,217.3,359.1,217.3z"/></svg>
+    <a class="on" href="#" title="Analytics">▤</a>
+    <a href="#" title="Clients">◫</a>
+    <a href="#" title="Tasks">✓</a>
+    <a href="#" title="Comments">❝<span class="b"></span></a>
+    <a href="#" title="Invoices">$</a>
+    <a href="#" title="Domains">⊗</a>
+    <div class="foot"><div class="iconbtn" style="border:none;background:transparent">◐</div><span class="avatar">AU</span></div>
+  </nav>
+  <div class="main">
+    <aside class="ctx">
+      <h2>Zulbera</h2><div class="sub">Workspace overview</div>
+      <div class="t">Overview</div>
+      <a class="on" href="#">Analytics</a>
+      <a href="#">Timesheets</a>
+      <div class="t">Operations</div>
+      <a href="#">Clients <span class="b">24</span></a>
+      <a href="#">Workers <span class="b">6</span></a>
+      <a href="#">Tasks <span class="b">17</span></a>
+      <a href="#">Comments <span class="b">3</span></a>
+      <div class="t">Finance</div>
+      <a href="#">Invoices</a>
+      <a href="#">Send Offer</a>
+      <a href="#">Domains</a>
+    </aside>
+    <div class="work">
+      <div class="top"><div class="title">Analytics</div><div class="search">⌕ Search…</div><button class="btn primary" style="margin-left:12px">+ New invoice</button></div>
+      <div class="content">
+        <div class="kpis">
+          <div class="kpi"><div class="l">Total revenue</div><div class="v">$48,250</div><div class="c">▲ 12.4% vs last month</div></div>
+          <div class="kpi"><div class="l">Outstanding</div><div class="v">$7,920</div><div class="c">3 invoices pending</div></div>
+          <div class="kpi"><div class="l">Active clients</div><div class="v">24</div><div class="c">▲ 2 new this month</div></div>
+          <div class="kpi"><div class="l">Tasks in progress</div><div class="v">17</div><div class="c">92% on schedule</div></div>
+        </div>
+        <div class="panel"><div class="ph"><div><h3>Revenue</h3><div class="meta">Paid vs pending · monthly</div></div><span class="badge">6 months</span></div>
+          <div class="chart">
+            <div class="bar"><div class="bb" style="height:46%"></div><small>Jan</small></div>
+            <div class="bar"><div class="bb" style="height:58%"></div><small>Feb</small></div>
+            <div class="bar"><div class="bb" style="height:51%"></div><small>Mar</small></div>
+            <div class="bar"><div class="bb" style="height:72%"></div><small>Apr</small></div>
+            <div class="bar"><div class="bb" style="height:64%"></div><small>May</small></div>
+            <div class="bar"><div class="bb" style="height:88%"></div><small>Jun</small></div>
+            <div class="bar"><div class="bb g" style="height:34%"></div><small>Jul</small></div>
+          </div></div>
+        <div class="panel"><div class="ph"><div><h3>Recent activity</h3><div class="meta">Latest tasks and invoices</div></div><button class="btn ghost">View all</button></div>
+          <table><thead><tr><th>Client</th><th>Item</th><th>Owner</th><th>Status</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+            <tr><td><div class="who"><span class="avatar">TC</span><b>TechCorp Inc<small>Zulbera</small></b></div></td><td>Build Landing Page</td><td>John Worker</td><td><span class="badge i">In progress</span></td><td style="text-align:right">$4,500</td></tr>
+            <tr><td><div class="who"><span class="avatar">SX</span><b>StartupXYZ<small>EraSphere</small></b></div></td><td>INV-2025-002</td><td>—</td><td><span class="badge s">Paid</span></td><td style="text-align:right">$2,200</td></tr>
+            <tr><td><div class="who"><span class="avatar">DH</span><b>DesignHub<small>Zulbera</small></b></div></td><td>Brand Identity Design</td><td>Jane Developer</td><td><span class="badge w">Pending</span></td><td style="text-align:right">$6,800</td></tr>
+            <tr><td><div class="who"><span class="avatar">TC</span><b>TechCorp Inc<small>Zulbera</small></b></div></td><td>INV-2025-001</td><td>—</td><td><span class="badge s">Paid</span></td><td style="text-align:right">$3,400</td></tr>
+          </tbody></table></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

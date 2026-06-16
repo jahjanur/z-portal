@@ -1,13 +1,25 @@
+import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
+import { LayoutDashboard, Handshake, Building2, SquareKanban } from "lucide-react";
 import { AdminProvider, useAdmin } from "../contexts/AdminContext";
 import { useEraSphereOverview } from "../hooks/useEraSphereOverview";
+import { useMobileMenu } from "../contexts/MobileMenuContext";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
+import MobileTabBar from "../components/MobileTabBar";
+import MobileNavSheet from "../components/MobileNavSheet";
+
+const ERASPHERE_TABS = [
+  { to: "/admin/erasphere/analytics", label: "Analytics", icon: LayoutDashboard, end: true },
+  { to: "/admin/erasphere/partners", label: "Partners", icon: Handshake },
+  { to: "/admin/erasphere/clients", label: "Clients", icon: Building2 },
+  { to: "/admin/erasphere/tasks", label: "Tasks", icon: SquareKanban },
+];
 
 const ERASPHERE_NAV = [
-  { path: "/admin/erasphere/analytics", label: "Analytics", icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
-  { path: "/admin/erasphere/partners", label: "Partners", icon: "M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" },
-  { path: "/admin/erasphere/clients", label: "Clients", icon: "M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" },
-  { path: "/admin/erasphere/tasks", label: "Tasks", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
+  { path: "/admin/erasphere/analytics", label: "Analytics", icon: LayoutDashboard },
+  { path: "/admin/erasphere/partners", label: "Partners", icon: Handshake },
+  { path: "/admin/erasphere/clients", label: "Clients", icon: Building2 },
+  { path: "/admin/erasphere/tasks", label: "Tasks", icon: SquareKanban },
 ];
 
 function formatRevenue(amount: number): string {
@@ -69,6 +81,9 @@ function EraSphereOverviewCard() {
 
 function EraSphereLayoutInner() {
   const { loading, error } = useAdmin();
+  useMobileMenu();
+  const [navSheetOpen, setNavSheetOpen] = useState(false);
+  const sheetSections = [{ label: "Navigation", items: ERASPHERE_TABS.map((t) => ({ path: t.to, label: t.label, icon: t.icon, end: t.end })) }];
 
   if (loading) {
     return (
@@ -90,43 +105,21 @@ function EraSphereLayoutInner() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] pt-16">
+    <div data-workspace="erasphere" className="flex min-h-[calc(100vh-4rem)] pt-16">
       {/* Sidebar: icon rail on tablet (md), full at lg+ */}
-      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[68px] shrink-0 flex-col self-start overflow-y-auto overflow-x-hidden border-r border-[var(--color-border)] bg-[var(--color-bg)] md:flex lg:w-[248px]">
-        <div className="hidden px-5 pb-3 pt-6 lg:block">
-          <p className="text-[0.6875rem] font-bold uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
-            EraSphere Workspace
-          </p>
-        </div>
-        <nav className="flex-1 space-y-1 px-3 pt-4 lg:pt-0" aria-label="EraSphere">
-          {ERASPHERE_NAV.map(({ path, label, icon }) => (
+      <aside className="app-sidebar sticky top-16 hidden h-[calc(100vh-4rem)] w-[72px] shrink-0 flex-col self-start overflow-y-auto overflow-x-hidden md:flex lg:w-[252px]">
+        <nav className="flex-1 space-y-1 px-3 pt-6" aria-label="EraSphere">
+          <p className="nav-section-label mb-1 hidden lg:block">Navigation</p>
+          {ERASPHERE_NAV.map(({ path, label, icon: Icon }) => (
             <NavLink
               key={path}
               to={path}
               end={path.endsWith("/analytics")}
               title={label}
-              className={({ isActive }) =>
-                `group relative flex items-center justify-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all lg:justify-start ${
-                  isActive
-                    ? "bg-[var(--color-surface-3)] text-[var(--color-text-primary)]"
-                    : "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
-                }`
-              }
+              className={({ isActive }) => `nav-item justify-center lg:justify-start ${isActive ? "active" : ""}`}
             >
-              {({ isActive }) => (
-                <>
-                  <span
-                    className={`absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-[var(--color-nav-active-bg)] transition-opacity ${
-                      isActive ? "opacity-100" : "opacity-0"
-                    }`}
-                    aria-hidden="true"
-                  />
-                  <svg className="h-[18px] w-[18px] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d={icon} />
-                  </svg>
-                  <span className="hidden min-w-0 flex-1 lg:block">{label}</span>
-                </>
-              )}
+              <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
+              <span className="hidden min-w-0 flex-1 lg:block">{label}</span>
             </NavLink>
           ))}
         </nav>
@@ -134,11 +127,14 @@ function EraSphereLayoutInner() {
       </aside>
 
       {/* Main content */}
-      <main className="min-w-0 flex-1 overflow-x-hidden">
-        <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <main className="min-w-0 flex-1 [overflow-x:clip]">
+        <div className="mx-auto max-w-[1400px] px-4 py-6 pb-28 sm:px-6 md:pb-8 lg:px-8 lg:py-8">
           <Outlet />
         </div>
       </main>
+
+      <MobileTabBar items={ERASPHERE_TABS} onMore={() => setNavSheetOpen(true)} moreActive={navSheetOpen} />
+      <MobileNavSheet open={navSheetOpen} onClose={() => setNavSheetOpen(false)} title="EraSphere" subtitle="Referral program" sections={sheetSections} />
     </div>
   );
 }

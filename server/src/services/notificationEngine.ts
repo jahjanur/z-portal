@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import prisma from "../lib/prisma";
 import { zulberaEmailTemplate } from "./inviteEmails";
+import { logoAttachment } from "./logoAsset";
 
 // ─── Event types ─────────────────────────────────────────────────────────────
 
@@ -214,6 +215,7 @@ async function sendNotificationEmail(
     to: user.email,
     subject: `Zulbera — ${title}`,
     html,
+    attachments: [logoAttachment()],
   });
 }
 

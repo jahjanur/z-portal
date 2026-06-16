@@ -17,11 +17,16 @@ export interface User {
   referredById?: number;
 }
 
+export type ServiceType = "WEB_APP" | "WEBSITE" | "SMM" | "OTHER";
+
 export interface Project {
   id: number;
   name: string;
   description?: string;
   clientId?: number;
+  status?: string;
+  serviceType?: ServiceType;
+  metadata?: Record<string, unknown> | null;
   client?: { id: number; name: string; company?: string };
 }
 
@@ -144,8 +149,8 @@ interface AdminContextValue {
   }) => void;
   resendInvite: (clientId: number) => Promise<void>;
   createTask: (data: { title: string; description: string; clientId: string; workerIds: number[]; dueDate: string; projectId: string }) => void;
-  handleCreateProject: (data: { name: string; clientId: string; description: string }) => Promise<void>;
-  updateProject: (id: number, data: { name?: string; description?: string; status?: string; clientId?: string }) => Promise<void>;
+  handleCreateProject: (data: { name: string; clientId: string; description: string; serviceType?: string; metadata?: Record<string, unknown> }) => Promise<void>;
+  updateProject: (id: number, data: { name?: string; description?: string; status?: string; clientId?: string; serviceType?: string; metadata?: Record<string, unknown> }) => Promise<void>;
   deleteProject: (id: number) => Promise<void>;
   deleteTask: (id: number) => Promise<void>;
   createInvoice: (formData: FormData) => Promise<void>;
@@ -326,21 +331,25 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     await fetchAll();
   };
 
-  const handleCreateProject = async (data: { name: string; clientId: string; description: string }) => {
+  const handleCreateProject = async (data: { name: string; clientId: string; description: string; serviceType?: string; metadata?: Record<string, unknown> }) => {
     await API.post("/projects", {
       name: data.name,
       clientId: data.clientId || null,
       description: data.description || null,
+      serviceType: data.serviceType || "OTHER",
+      metadata: data.metadata ?? undefined,
     });
     await fetchProjects();
   };
 
-  const updateProject = async (id: number, data: { name?: string; description?: string; status?: string; clientId?: string }) => {
+  const updateProject = async (id: number, data: { name?: string; description?: string; status?: string; clientId?: string; serviceType?: string; metadata?: Record<string, unknown> }) => {
     await API.patch(`/projects/${id}`, {
       name: data.name,
       description: data.description || null,
       status: data.status,
       clientId: data.clientId ? Number(data.clientId) : null,
+      serviceType: data.serviceType,
+      metadata: data.metadata,
     });
     await fetchProjects();
     toast.success("Project updated!");

@@ -48,6 +48,8 @@ model Project {
   description String?
   clientId    Int?
   status      String    @default("ACTIVE")
+  serviceType String    @default("OTHER") // WEB_APP | WEBSITE | SMM | OTHER
+  metadata    Json?     // service-type-specific fields (ad spend, features, pages, …)
   startDate   DateTime?
   endDate     DateTime?
   createdAt   DateTime  @default(now())

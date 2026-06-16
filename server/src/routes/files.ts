@@ -82,6 +82,9 @@ router.get(/.*/, async (req: any, res) => {
           authorized = !!t;
         }
       }
+    } else if (rel.startsWith("project-assets/")) {
+      // Project assets (logos, design files) — managed by Zulbera/EraSphere staff.
+      authorized = role === "ERASPHERE"; // ADMIN already authorized above
     } else if (rel.startsWith("profile-files/")) {
       const ownerId = Number(rel.split("/")[1]);
       if (role === "CLIENT") authorized = ownerId === userId;

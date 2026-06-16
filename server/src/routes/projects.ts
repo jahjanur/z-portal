@@ -1,8 +1,43 @@
 import express from 'express';
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import prisma from "../lib/prisma";
 import { verifyJWT, verifyAdminOrEraSphere } from "../middleware/auth";
+import { uploadsDir } from "../lib/uploadsPath";
 
 const router = express.Router();
+
+// Project assets (logos, design files, references) live in their own subfolder.
+const assetsDir = path.join(uploadsDir, "project-assets");
+const assetStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    fs.mkdirSync(assetsDir, { recursive: true });
+    cb(null, assetsDir);
+  },
+  filename: (_req, file, cb) => {
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, unique + path.extname(file.originalname));
+  },
+});
+const uploadAsset = multer({ storage: assetStorage, limits: { fileSize: 25 * 1024 * 1024 } });
+
+// POST /api/projects/assets - Upload a single project asset, returns its URL.
+// Stored as free-form metadata on the project by the client (no DB row needed).
+router.post("/assets", verifyJWT, verifyAdminOrEraSphere, uploadAsset.single("file"), async (req: any, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const mime: string = req.file.mimetype || "";
+    res.status(201).json({
+      url: `/uploads/project-assets/${req.file.filename}`,
+      fileName: req.file.originalname,
+      fileType: mime.startsWith("image/") ? "image" : "file",
+    });
+  } catch (error) {
+    console.error("Error uploading project asset:", error);
+    res.status(500).json({ error: "Failed to upload asset" });
+  }
+});
 
 // GET /api/projects - Get all projects (for tasks)
 router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
@@ -51,12 +86,15 @@ router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
 // POST /api/projects - Create new project
 router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
-    const { name, description, clientId, startDate, endDate } = req.body;
+    const { name, description, clientId, startDate, endDate, serviceType, metadata } = req.body;
     const { role, userId } = req.user;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: "Project name is required" });
     }
+
+    const VALID_SERVICE_TYPES = ["WEB_APP", "WEBSITE", "SMM", "OTHER"];
+    const svcType = VALID_SERVICE_TYPES.includes(serviceType) ? serviceType : "OTHER";
 
     const clientIdNum = clientId != null && clientId !== "" ? Number(clientId) : null;
 
@@ -78,6 +116,8 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
         name: name.trim(),
         description: description?.trim() || null,
         clientId: clientIdNum,
+        serviceType: svcType,
+        metadata: metadata ?? undefined,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
       },
@@ -104,7 +144,7 @@ router.patch("/:id", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) =>
   try {
     const { id } = req.params;
     const { role, userId } = req.user;
-    const { name, description, status, clientId, startDate, endDate } = req.body;
+    const { name, description, status, clientId, startDate, endDate, serviceType, metadata } = req.body;
 
     if (role === "ERASPHERE") {
       const existing = await prisma.project.findUnique({ where: { id: Number(id) }, select: { clientId: true } });
@@ -122,6 +162,8 @@ router.patch("/:id", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) =>
     if (name !== undefined) updateData.name = name.trim();
     if (description !== undefined) updateData.description = description?.trim() || null;
     if (status !== undefined) updateData.status = status;
+    if (serviceType !== undefined && ["WEB_APP", "WEBSITE", "SMM", "OTHER"].includes(serviceType)) updateData.serviceType = serviceType;
+    if (metadata !== undefined) updateData.metadata = metadata;
     if (clientId !== undefined) updateData.clientId = clientId ? Number(clientId) : null;
     if (startDate !== undefined) updateData.startDate = startDate ? new Date(startDate) : null;
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null;

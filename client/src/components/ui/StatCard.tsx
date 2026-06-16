@@ -37,26 +37,32 @@ export default function StatCard({
   return (
     <Tag
       onClick={onClick}
-      className={`card-panel card-panel-hover w-full p-5 text-left ${
+      className={`card-panel card-panel-hover group relative w-full overflow-hidden p-5 text-left ${
         onClick ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]" : ""
       } ${className}`}
     >
+      {/* corner halo */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full opacity-60 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: "var(--halo)" }}
+      />
       <div className="flex items-start justify-between gap-3">
         <p className="truncate text-[0.8125rem] font-medium text-[var(--color-text-muted)]">
           {label}
         </p>
         {icon && (
           <span
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${ICON_TONE[tone]}`}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-transform duration-200 group-hover:scale-105 ${ICON_TONE[tone]}`}
           >
             {icon}
           </span>
         )}
       </div>
-      <p className="mt-2 text-2xl font-bold tracking-tight text-[var(--color-text-primary)] sm:text-[1.75rem]">
+      <p className="mt-3 truncate text-[1.4rem] font-bold leading-none tracking-tight text-[var(--color-text-primary)] sm:text-[1.75rem] lg:text-[2rem]">
         {value}
       </p>
-      {hint && <div className="mt-1.5 text-xs text-[var(--color-text-muted)]">{hint}</div>}
+      {hint && <div className="mt-2 text-xs text-[var(--color-text-muted)]">{hint}</div>}
     </Tag>
   );
 }

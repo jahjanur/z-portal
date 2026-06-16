@@ -25,7 +25,7 @@
    Global: theme-aware body, smooth defaults, no horizontal scroll
    --------------------------------------------------------------------------- */
 html {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
@@ -35,7 +35,7 @@ body {
   background-color: var(--color-bg);
   color: var(--color-text-primary);
   font-family: 'Inter', system-ui, sans-serif;
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -43,7 +43,7 @@ body {
 }
 
 #root {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100%;
 }
 
@@ -130,14 +130,14 @@ body {
   letter-spacing: -0.01em;
 }
 .page-title {
-  font-size: 1.5rem;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 1.625rem;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   color: var(--color-text-primary);
 }
 @media (min-width: 640px) {
-  .page-title { font-size: 1.875rem; }
+  .page-title { font-size: 2.125rem; }
 }
 .page-subtitle {
   margin-top: 0.375rem;
@@ -379,21 +379,92 @@ form label {
 }
 .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* Cards */
+/* Cards — premium bento surface */
 .card-panel {
+  background-image: linear-gradient(180deg, var(--card-grad-top), var(--card-grad-bottom));
   background-color: var(--color-panel-solid);
   border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 0 var(--card-ring);
 }
 .card-panel-hover {
-  transition: border-color 0.15s ease, background-color 0.15s ease,
-    box-shadow 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 .card-panel-hover:hover {
-  border-color: var(--color-border-hover);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  border-color: var(--card-hover-border);
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--card-ring), 0 0 28px -6px var(--card-hover-glow);
+  transform: translateY(-2px);
+}
+
+/* ---------------------------------------------------------------------------
+   Bento grid — mixed-size tiles. Use .bento as the container; children get
+   span helpers. Auto-collapses to a single column on small screens.
+   --------------------------------------------------------------------------- */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1rem;
+}
+.bento > * { grid-column: span 12; }
+@media (min-width: 640px) {
+  .bento > .col-6 { grid-column: span 6; }
+  .bento > .col-4 { grid-column: span 6; }
+}
+@media (min-width: 1024px) {
+  .bento > .col-3 { grid-column: span 3; }
+  .bento > .col-4 { grid-column: span 4; }
+  .bento > .col-5 { grid-column: span 5; }
+  .bento > .col-6 { grid-column: span 6; }
+  .bento > .col-7 { grid-column: span 7; }
+  .bento > .col-8 { grid-column: span 8; }
+  .bento > .col-9 { grid-column: span 9; }
+  .bento > .row-2 { grid-row: span 2; }
+}
+
+/* ---------------------------------------------------------------------------
+   App shell: sidebar + topbar (premium)
+   --------------------------------------------------------------------------- */
+.app-sidebar {
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--color-border);
+}
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-radius: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.nav-item:hover { background-color: var(--sidebar-hover-bg); color: var(--color-text-primary); }
+.nav-item.active {
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+  font-weight: 600;
+  box-shadow: inset 0 1px 0 0 var(--card-ring);
+}
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -0.75rem;
+  top: 50%;
+  height: 1.25rem;
+  width: 3px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: var(--nav-active-bar, var(--color-text-primary));
+}
+.nav-section-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 0 0.75rem;
 }
 
 /* Interactive list row */
@@ -450,9 +521,11 @@ form label {
 .table-wrap {
   width: 100%;
   overflow-x: auto;
-  border-radius: 1rem;
+  border-radius: var(--card-radius);
   border: 1px solid var(--color-border);
+  background-image: linear-gradient(180deg, var(--card-grad-top), var(--card-grad-bottom));
   background-color: var(--color-panel-solid);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 0 var(--card-ring);
   -webkit-overflow-scrolling: touch;
 }
 .table-modern {

@@ -1,36 +1,46 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { LayoutDashboard, UsersRound, Building2, SquareKanban, MessageSquare, Receipt, Globe, Send, CalendarClock, Handshake, Image as ImageIcon } from "lucide-react";
 import { useMobileMenu } from "../contexts/MobileMenuContext";
 import { ThemeToggle } from "./ThemeToggle";
 import NotificationDropdown from "./NotificationDropdown";
 import { useNotifications } from "../hooks/useNotifications";
+import MobileNavSheet from "./MobileNavSheet";
+import type { SheetSection } from "./MobileNavSheet";
 
 const ERASPHERE_TABS = [
-  { path: "erasphere-dashboard", label: "Dashboard" },
-  { path: "clients", label: "Clients" },
-  { path: "tasks", label: "Tasks" },
+  { path: "erasphere-dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { path: "clients", label: "Clients", icon: Building2 },
+  { path: "tasks", label: "Tasks", icon: SquareKanban },
 ];
 
 const ADMIN_ERASPHERE_TABS = [
-  { path: "analytics", label: "Analytics" },
-  { path: "partners", label: "Partners" },
-  { path: "clients", label: "Clients" },
-  { path: "tasks", label: "Tasks" },
+  { path: "analytics", label: "Analytics", icon: LayoutDashboard },
+  { path: "partners", label: "Partners", icon: Handshake },
+  { path: "clients", label: "Clients", icon: Building2 },
+  { path: "tasks", label: "Tasks", icon: SquareKanban },
 ];
 
 const ZULBERA_NAV_LINKS = [
-  { path: "analytics", label: "Analytics" },
-  { path: "workers", label: "Workers" },
-  { path: "clients", label: "Clients" },
-  { path: "tasks", label: "Tasks" },
-  { path: "comments", label: "Comments" },
-  { path: "invoices", label: "Invoices" },
-  { path: "domains", label: "Domains" },
-  { path: "send-offer", label: "Send Offer" },
-  { path: "timesheets", label: "Timesheets" },
+  { path: "analytics", label: "Analytics", icon: LayoutDashboard },
+  { path: "workers", label: "Workers", icon: UsersRound },
+  { path: "clients", label: "Clients", icon: Building2 },
+  { path: "tasks", label: "Tasks", icon: SquareKanban },
+  { path: "comments", label: "Comments", icon: MessageSquare },
+  { path: "invoices", label: "Invoices", icon: Receipt },
+  { path: "domains", label: "Domains", icon: Globe },
+  { path: "send-offer", label: "Send Offer", icon: Send },
+  { path: "timesheets", label: "Timesheets", icon: CalendarClock },
 ];
 
 const CLIENT_TABS = ["overview", "tasks", "invoices", "files", "domains"] as const;
+const CLIENT_TAB_META: Record<string, { label: string; icon: typeof LayoutDashboard }> = {
+  overview: { label: "Overview", icon: LayoutDashboard },
+  tasks: { label: "Tasks", icon: SquareKanban },
+  invoices: { label: "Invoices", icon: Receipt },
+  files: { label: "Files", icon: ImageIcon },
+  domains: { label: "Domains", icon: Globe },
+};
 
 function initials(fullName: string | null): string {
   if (!fullName) return "?";
@@ -62,6 +72,23 @@ export default function Navbar() {
   const clientTab = searchParams.get("tab") || "overview";
   const { mobileMenuOpen, setMobileMenuOpen } = useMobileMenu();
   const { unreadCount } = useNotifications();
+
+  const mobileSections: SheetSection[] = isAdmin
+    ? [
+        { label: "Main", items: [{ path: "/", label: "Analytics", icon: LayoutDashboard, end: true }] },
+        { label: "Zulbera", items: ZULBERA_NAV_LINKS.map((l) => ({ path: `/admin/zulbera/${l.path}`, label: l.label, icon: l.icon, badge: l.path === "comments" ? unreadCount : undefined })) },
+        { label: "EraSphere", items: ADMIN_ERASPHERE_TABS.map((l) => ({ path: `/admin/erasphere/${l.path}`, label: l.label, icon: l.icon })) },
+      ]
+    : isEraSphere
+    ? [{ label: "Navigation", items: ERASPHERE_TABS.map((l) => ({ path: `/admin/${l.path}`, label: l.label, icon: l.icon })) }]
+    : isWorker
+    ? [{ label: "Dashboard", items: [
+        { path: "/dashboard?tab=overview", label: "Overview", icon: LayoutDashboard },
+        { path: "/dashboard?tab=tasks", label: "Tasks", icon: SquareKanban },
+      ] }]
+    : isClient
+    ? [{ label: "Dashboard", items: CLIENT_TABS.map((t) => ({ path: `/dashboard?tab=${t}`, label: CLIENT_TAB_META[t].label, icon: CLIENT_TAB_META[t].icon })) }]
+    : [];
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -106,13 +133,7 @@ export default function Navbar() {
         : "text-[var(--color-nav-link-text)] hover:text-[var(--color-nav-link-hover-text)]"
     }`;
 
-  const primaryNav: { to: string; label: string; active: boolean }[] = isAdmin
-    ? [
-        { to: "/", label: "Analytics", active: isAnalytics },
-        { to: "/admin/zulbera", label: "Zulbera", active: isOnZulberaSection },
-        { to: "/admin/erasphere", label: "EraSphere", active: isOnEraSphereSection },
-      ]
-    : isWorker
+  const primaryNav: { to: string; label: string; active: boolean }[] = isWorker
     ? [
         { to: "/dashboard?tab=overview", label: "Overview", active: isDashboard && workerTab === "overview" },
         { to: "/dashboard?tab=tasks", label: "Tasks", active: isDashboard && workerTab === "tasks" },
@@ -133,15 +154,6 @@ export default function Navbar() {
       }))
     : [];
 
-  /* Drawer link styles */
-  const drawerLink =
-    "flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-left text-[0.9375rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]";
-  const drawerActive =
-    "bg-[var(--color-nav-active-bg)] text-[var(--color-nav-active-text)] shadow-elev-sm";
-  const drawerInactive =
-    "text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]";
-  const drawerSection = "px-4 pb-2 pt-5 text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]";
-
   return (
     <>
       <nav className="fixed top-0 z-50 w-full border-b border-[var(--color-border)] bg-[var(--color-bg)]/80 backdrop-blur-xl">
@@ -160,8 +172,40 @@ export default function Navbar() {
             />
           </Link>
 
-          {/* Center: segmented primary nav (desktop) */}
-          {token && primaryNav.length > 0 && (
+          {/* Center: primary nav (desktop) */}
+          {token && isAdmin ? (
+            <div className="hidden min-w-0 items-center gap-2 md:flex">
+              {/* Analytics — global cross-workspace overview, kept separate from the workspace toggle */}
+              <Link
+                to="/"
+                className={`flex items-center gap-1.5 rounded-full border px-4 py-1.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] ${
+                  isAnalytics
+                    ? "border-transparent bg-[var(--color-nav-active-bg)] text-[var(--color-nav-active-text)] shadow-elev-sm"
+                    : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-nav-link-text)] hover:text-[var(--color-nav-link-hover-text)]"
+                }`}
+              >
+                <LayoutDashboard className="h-4 w-4" strokeWidth={2} />
+                Analytics
+              </Link>
+
+              {/* Workspace toggle: Zulbera ⇄ EraSphere (single source — also drives the sidebar) */}
+              <div className="flex items-center gap-0.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1">
+                <Link to="/admin/zulbera" className={segItem(isOnZulberaSection)}>
+                  Zulbera
+                </Link>
+                <Link
+                  to="/admin/erasphere"
+                  className={`rounded-full px-4 py-1.5 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] ${
+                    isOnEraSphereSection
+                      ? "bg-gradient-to-br from-[#e7b7a6] via-[#c98a82] to-[#b76e79] text-white shadow-[0_4px_14px_rgba(183,110,121,0.4)]"
+                      : "text-[var(--color-nav-link-text)] hover:text-[var(--color-nav-link-hover-text)]"
+                  }`}
+                >
+                  EraSphere
+                </Link>
+              </div>
+            </div>
+          ) : token && primaryNav.length > 0 ? (
             <div className="hidden min-w-0 items-center md:flex">
               <div className="flex items-center gap-0.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1">
                 {primaryNav.map(({ to, label, active }) => (
@@ -171,7 +215,7 @@ export default function Navbar() {
                 ))}
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Right: actions */}
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -281,204 +325,18 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile drawer */}
-      <div
-        className={`fixed inset-0 z-40 md:hidden ${mobileMenuOpen ? "" : "pointer-events-none"}`}
-        aria-hidden={!mobileMenuOpen}
-      >
-        <div
-          className={`absolute inset-0 bg-[var(--color-overlay)] backdrop-blur-sm transition-opacity duration-200 ${
-            mobileMenuOpen ? "opacity-100" : "opacity-0"
-          }`}
-          onClick={() => setMobileMenuOpen(false)}
+      {/* Mobile navigation — premium bottom sheet */}
+      {token && (
+        <MobileNavSheet
+          open={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          title={name || "Menu"}
+          subtitle={role ? role.charAt(0) + role.slice(1).toLowerCase() : undefined}
+          sections={mobileSections}
+          alertCount={unreadCount}
         />
-        <div
-          className={`absolute top-0 right-0 flex h-full w-full max-w-[min(340px,100vw-2.5rem)] flex-col border-l border-[var(--color-border)] bg-[var(--color-bg)] shadow-elev-lg transition-transform duration-250 ease-out ${
-            mobileMenuOpen ? "translate-x-0" : "translate-x-full"
-          }`}
-          role="dialog"
-          aria-label="Navigation menu"
-        >
-          {/* Drawer header: user card */}
-          <div className="flex h-16 shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4">
-            {token ? (
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-nav-active-bg)] text-sm font-bold text-[var(--color-nav-active-text)]">
-                  {initials(name)}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{name}</p>
-                  <p className="text-xs capitalize text-[var(--color-text-muted)]">{role?.toLowerCase()}</p>
-                </div>
-              </div>
-            ) : (
-              <span className="text-sm font-semibold text-[var(--color-text-secondary)]">Menu</span>
-            )}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
-              aria-label="Close menu"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+      )}
 
-          {/* Drawer body */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4">
-            {token && isAdmin && (
-              <>
-                <p className={drawerSection}>Main</p>
-                <div className="space-y-1">
-                  <Link to="/" className={`${drawerLink} ${isAnalytics ? drawerActive : drawerInactive}`}>
-                    Analytics
-                  </Link>
-                </div>
-                <p className={drawerSection}>Zulbera</p>
-                <div className="space-y-1">
-                  {ZULBERA_NAV_LINKS.map(({ path, label }) => {
-                    const to = `/admin/zulbera/${path}`;
-                    const isActive =
-                      location.pathname === to ||
-                      (path === "analytics" && location.pathname === "/admin/zulbera");
-                    const showBadge = path === "comments" && unreadCount > 0;
-                    return (
-                      <Link key={path} to={to} className={`${drawerLink} ${isActive ? drawerActive : drawerInactive}`}>
-                        {label}
-                        {showBadge && (
-                          <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                            {unreadCount > 99 ? "99+" : unreadCount}
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
-                <p className={drawerSection}>EraSphere</p>
-                <div className="space-y-1">
-                  {ADMIN_ERASPHERE_TABS.map(({ path, label }) => {
-                    const to = `/admin/erasphere/${path}`;
-                    const isActive =
-                      location.pathname === to ||
-                      (path === "analytics" && location.pathname === "/admin/erasphere");
-                    return (
-                      <Link key={path} to={to} className={`${drawerLink} ${isActive ? drawerActive : drawerInactive}`}>
-                        {label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {token && isEraSphere && (
-              <>
-                <p className={drawerSection}>Navigation</p>
-                <div className="space-y-1">
-                  {ERASPHERE_TABS.map(({ path, label }) => {
-                    const to = `/admin/${path}`;
-                    const isActive =
-                      location.pathname === to ||
-                      (path === "erasphere-dashboard" && location.pathname === "/admin");
-                    return (
-                      <Link key={path} to={to} className={`${drawerLink} ${isActive ? drawerActive : drawerInactive}`}>
-                        {label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {token && isClient && (
-              <>
-                <p className={drawerSection}>Dashboard</p>
-                <div className="space-y-1">
-                  {CLIENT_TABS.map((tab) => (
-                    <Link
-                      key={tab}
-                      to={`/dashboard?tab=${tab}`}
-                      className={`${drawerLink} ${
-                        isDashboard && clientTab === tab ? drawerActive : drawerInactive
-                      }`}
-                    >
-                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                    </Link>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {token && isWorker && (
-              <>
-                <p className={drawerSection}>Dashboard</p>
-                <div className="space-y-1">
-                  <Link
-                    to="/dashboard?tab=overview"
-                    className={`${drawerLink} ${isDashboard && workerTab === "overview" ? drawerActive : drawerInactive}`}
-                  >
-                    Overview
-                  </Link>
-                  <Link
-                    to="/dashboard?tab=tasks"
-                    className={`${drawerLink} ${isDashboard && workerTab === "tasks" ? drawerActive : drawerInactive}`}
-                  >
-                    Tasks
-                  </Link>
-                </div>
-              </>
-            )}
-
-            {token && (
-              <>
-                <p className={drawerSection}>Account</p>
-                <div className="space-y-1">
-                  <Link to="/notifications" className={`${drawerLink} ${drawerInactive}`}>
-                    Notifications
-                    {unreadCount > 0 && (
-                      <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
-                        {unreadCount > 99 ? "99+" : unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                  <Link to="/settings/notifications" className={`${drawerLink} ${drawerInactive}`}>
-                    Notification settings
-                  </Link>
-                </div>
-              </>
-            )}
-
-            {!token && (
-              <div className="pt-4">
-                <Link to="/login" className={`${drawerLink} ${drawerInactive}`}>
-                  Log In
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Drawer footer: logout pinned */}
-          {token && (
-            <div className="shrink-0 border-t border-[var(--color-border)] p-3 safe-bottom">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  logout();
-                }}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] px-4 py-3 text-sm font-semibold text-[var(--color-destructive-text)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                </svg>
-                Log out
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
     </>
   );
 }

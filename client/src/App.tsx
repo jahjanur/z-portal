@@ -30,6 +30,7 @@ import EraSphereAnalyticsAdminPage from "./pages/admin/EraSphereAnalyticsAdminPa
 import EraSphereClientsPage from "./pages/admin/EraSphereClientsPage";
 import EraSphereTasksPage from "./pages/admin/EraSphereTasksPage";
 import ZulberaAnalyticsPage from "./pages/admin/ZulberaAnalyticsPage";
+import ServiceDetailPage from "./pages/admin/ServiceDetailPage";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { MobileMenuProvider } from "./contexts/MobileMenuContext";
@@ -45,9 +46,9 @@ function App() {
     <Router>
       <MobileMenuProvider>
       <Toaster position="top-right" />
-      <div className="flex w-full max-w-full min-w-0 min-h-screen flex-col bg-app-grid overflow-x-hidden">
+      <div className="flex w-full max-w-full min-w-0 min-h-screen flex-col bg-app-grid [overflow-x:clip]">
         <Navbar />
-        <main className="relative z-10 flex-grow min-h-0 min-w-0 overflow-x-hidden">
+        <main className="relative z-10 flex-grow min-h-0 min-w-0 [overflow-x:clip]">
           <Routes>
             {/* Home page - Admin only (EraSphere redirects to their dashboard) */}
             <Route
@@ -91,6 +92,7 @@ function App() {
             <Route path="/admin/zulbera" element={token && isAdmin ? <ZulberaLayout /> : <Navigate to="/login" />}>
               <Route index element={<Navigate to="/admin/zulbera/analytics" replace />} />
               <Route path="analytics" element={<ZulberaAnalyticsPage />} />
+              <Route path="services/:id" element={<ServiceDetailPage />} />
               <Route path="workers" element={<AdminWorkersPage />} />
               <Route path="clients" element={<AdminClientsPage />} />
               <Route path="tasks" element={<AdminTasksPage />} />

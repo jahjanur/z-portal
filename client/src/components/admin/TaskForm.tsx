@@ -4,6 +4,9 @@ import { CONTROL_INPUT, CONTROL_SELECT, CONTROL_LABEL, BTN_ACTION } from "../ui/
 import WorkerMultiSelect from "../ui/WorkerMultiSelect";
 import DatePicker from "../ui/DatePicker";
 import Button from "../ui/Button";
+import { ServiceTypePicker, ServiceFieldsForm } from "./ServiceFields";
+import { getServiceDef } from "../../utils/serviceTypes";
+import type { ServiceType } from "../../utils/serviceTypes";
 
 interface User {
   id: number;
@@ -30,8 +33,16 @@ interface TaskFormProps {
   clients: User[];
   workers: User[];
   projects: Project[];
-  onCreateProject: (projectData: { name: string; clientId: string; description: string }) => Promise<void>;
+  onCreateProject: (projectData: {
+    name: string;
+    clientId: string;
+    description: string;
+    serviceType?: string;
+    metadata?: Record<string, unknown>;
+  }) => Promise<void>;
   hideWorkerAssignment?: boolean;
+  /** When true, render without the outer card/title (e.g. inside a modal). */
+  embedded?: boolean;
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({
@@ -41,6 +52,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
   projects,
   onCreateProject,
   hideWorkerAssignment = false,
+  embedded = false,
 }) => {
   const [formData, setFormData] = useState({
     title: "",
@@ -52,11 +64,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
   });
 
   const [showProjectForm, setShowProjectForm] = useState(false);
-  const [newProject, setNewProject] = useState({
+  const emptyProject = {
     name: "",
     clientId: "",
     description: "",
-  });
+    serviceType: "OTHER" as ServiceType,
+    metadata: {} as Record<string, unknown>,
+  };
+  const [newProject, setNewProject] = useState(emptyProject);
 
   const handleSubmit = () => {
     if (!formData.title || !formData.clientId) {
@@ -73,7 +88,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       return;
     }
     await onCreateProject(newProject);
-    setNewProject({ name: "", clientId: "", description: "" });
+    setNewProject(emptyProject);
     setShowProjectForm(false);
   };
 
@@ -82,13 +97,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
     : projects;
 
   return (
-    <div className="card-panel relative z-20 mb-6 overflow-visible p-5 sm:p-6">
+    <div className={embedded ? "relative z-20 overflow-visible" : "card-panel relative z-20 mb-6 overflow-visible p-5 sm:p-6"}>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="section-title !mb-0">Add New Task</h3>
+        {!embedded && <h3 className="section-title !mb-0">Add New Task</h3>}
         <button
           type="button"
           onClick={() => setShowProjectForm(!showProjectForm)}
-          className={`${BTN_ACTION} w-full sm:w-auto`}
+          className={`${BTN_ACTION} w-full sm:w-auto ${embedded ? "sm:ml-auto" : ""}`}
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -101,6 +116,16 @@ const TaskForm: React.FC<TaskFormProps> = ({
       {showProjectForm && (
         <div className="mb-5 rounded-2xl border border-[var(--color-border-hover)] bg-[var(--color-surface-2)] p-4 sm:p-5">
           <h4 className="section-title">Create New Project</h4>
+
+          {/* Project type — each type unlocks its own fields below */}
+          <div className="mb-4">
+            <label className={CONTROL_LABEL}>Project Type</label>
+            <ServiceTypePicker
+              value={newProject.serviceType}
+              onChange={(serviceType) => setNewProject({ ...newProject, serviceType, metadata: {} })}
+            />
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className={CONTROL_LABEL}>Project Name *</label>
@@ -136,6 +161,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
               />
             </div>
           </div>
+
+          {/* Type-specific details (e.g. platforms & budgets for Social Media) */}
+          {getServiceDef(newProject.serviceType).fields.length > 0 && (
+            <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+              <label className={CONTROL_LABEL}>{getServiceDef(newProject.serviceType).label} details</label>
+              <ServiceFieldsForm
+                serviceType={newProject.serviceType}
+                metadata={newProject.metadata}
+                onChange={(metadata) => setNewProject({ ...newProject, metadata })}
+              />
+            </div>
+          )}
+
           <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
@@ -144,7 +182,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               className="w-full sm:w-auto"
               onClick={() => {
                 setShowProjectForm(false);
-                setNewProject({ name: "", clientId: "", description: "" });
+                setNewProject(emptyProject);
               }}
             >
               Cancel
@@ -231,6 +269,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
               onChange={(workerIds) => setFormData({ ...formData, workerIds })}
               placeholder="Assign workers (optional)"
               autoApply
+              usePortal
             />
           </div>
         )}
@@ -240,6 +279,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             value={formData.dueDate}
             onChange={(dueDate) => setFormData({ ...formData, dueDate })}
             placeholder="yyyy/mm/dd"
+            usePortal
           />
         </div>
       </div>

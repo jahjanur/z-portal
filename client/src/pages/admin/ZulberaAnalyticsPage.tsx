@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import API from "../../api";
 import { formatCurrency, formatDate, computeInvoiceRevenue, isInvoiceOverdue } from "../../utils";
 import {
-  AreaChart,
-  Area,
   PieChart,
   Pie,
   Cell,
@@ -16,8 +14,6 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
-  LineChart,
-  Line,
 } from "recharts";
 import {
   CircleDollarSign,
@@ -28,13 +24,24 @@ import {
   ClipboardList,
   FileText,
   ChevronRight,
-  UserRound,
+  Layers,
+  Megaphone,
 } from "lucide-react";
 import PageHeader from "../../components/ui/PageHeader";
 import StatCard from "../../components/ui/StatCard";
 import StatusBadge from "../../components/ui/StatusBadge";
 import EmptyState from "../../components/ui/EmptyState";
 import { SkeletonDashboard } from "../../components/ui/Skeleton";
+import { SERVICE_TYPES } from "../../utils/serviceTypes";
+
+interface SvcProject {
+  id: number;
+  name: string;
+  serviceType?: string;
+  metadata?: Record<string, unknown> | null;
+  client?: { id: number; name: string };
+}
+const mnum = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
 
 interface User {
   id: number;
@@ -100,6 +107,7 @@ export default function ZulberaAnalyticsPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
+  const [projects, setProjects] = useState<SvcProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");
 
@@ -110,14 +118,16 @@ export default function ZulberaAnalyticsPage() {
   const fetchOverview = async () => {
     setLoading(true);
     try {
-      const [usersRes, invoicesRes, tasksRes] = await Promise.all([
+      const [usersRes, invoicesRes, tasksRes, projectsRes] = await Promise.all([
         API.get<User[]>("/users"),
         API.get<Invoice[]>("/invoices"),
         API.get<Task[]>("/tasks"),
+        API.get<SvcProject[]>("/projects").catch(() => ({ data: [] as SvcProject[] })),
       ]);
       setUsers(usersRes.data);
       setInvoices(invoicesRes.data);
       setTasks(tasksRes.data);
+      setProjects(projectsRes.data);
 
       const adminOwnClients = usersRes.data.filter(
         (u) => u.role === "CLIENT" && (u as User).referredById == null
@@ -234,25 +244,6 @@ export default function ZulberaAnalyticsPage() {
       .slice(-10);
   };
 
-  const getTaskCompletionTrend = () => {
-    const days = timeRange === "week" ? 7 : timeRange === "month" ? 30 : 365;
-    const dataPoints = timeRange === "week" ? 7 : timeRange === "month" ? 10 : 12;
-    return Array.from({ length: dataPoints }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (days / dataPoints) * (dataPoints - 1 - i));
-      const dateStr = date.toISOString().split("T")[0];
-      const dayTasks = filteredTasks.filter((t) => new Date(t.createdAt).toISOString().split("T")[0] <= dateStr);
-      const completed = dayTasks.filter((t) => t.status === "COMPLETED").length;
-      const total = dayTasks.length;
-      return {
-        date: date.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        completed,
-        total,
-        rate: total > 0 ? Math.round((completed / total) * 100) : 0,
-      };
-    });
-  };
-
   const taskDistribution = [
     { name: "Completed", value: completedTasks, color: colors.success },
     { name: "In Progress", value: activeTasks, color: "rgba(255,255,255,0.7)" },
@@ -271,30 +262,6 @@ export default function ZulberaAnalyticsPage() {
     return Object.values(clientRevenue).sort((a, b) => b.amount - a.amount).slice(0, 5);
   };
 
-  const getWorkerPerformance = () => {
-    const workerStats: Record<string, { name: string; completed: number; total: number; id: number }> = {};
-    filteredTasks.forEach((task) => {
-      const workers = task.workers?.map((tw) => tw.user) ?? [];
-      if (workers.length === 0) {
-        const id = 0;
-        if (!workerStats[id]) workerStats[id] = { name: "Unassigned", completed: 0, total: 0, id: 0 };
-        workerStats[id].total += 1;
-        if (task.status === "COMPLETED") workerStats[id].completed += 1;
-        return;
-      }
-      workers.forEach((user) => {
-        const workerId = user.id;
-        if (!workerStats[workerId]) workerStats[workerId] = { name: user.name, completed: 0, total: 0, id: workerId };
-        workerStats[workerId].total += 1;
-        if (task.status === "COMPLETED") workerStats[workerId].completed += 1;
-      });
-    });
-    return Object.values(workerStats)
-      .map((s) => ({ ...s, rate: s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0 }))
-      .sort((a, b) => b.rate - a.rate)
-      .slice(0, 5);
-  };
-
   if (loading) {
     return (
       <div className="mx-auto max-w-[1400px] w-full min-w-0">
@@ -304,13 +271,27 @@ export default function ZulberaAnalyticsPage() {
   }
 
   const revenueByPeriod = getRevenueByPeriod();
+  const revMax = Math.max(...revenueByPeriod.map((d) => d.total), 1);
   const topClients = getTopClientsByRevenue();
-  const workerPerformance = getWorkerPerformance();
   const recentInvoices = adminOwnInvoices
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
   const totalAttention =
     overdueInvoices.length + overdueTasks.length + pendingApproval + incompleteProfiles + totalDomainAlerts;
+
+  // ---- Service-aware aggregates (Web App / Website / SMM) ----
+  const smmProjects = projects.filter((p) => p.serviceType === "SMM");
+  const mrr = smmProjects.reduce((s, p) => s + mnum((p.metadata as Record<string, unknown>)?.monthlyBudget), 0);
+  const adBudget = smmProjects.reduce((s, p) => s + mnum((p.metadata as Record<string, unknown>)?.adBudget), 0);
+  const adSpent = smmProjects.reduce((s, p) => s + mnum((p.metadata as Record<string, unknown>)?.adSpent), 0);
+  const adPct = adBudget > 0 ? Math.min(100, Math.round((adSpent / adBudget) * 100)) : 0;
+  const contentPlanned = smmProjects.reduce((s, p) => s + mnum((p.metadata as Record<string, unknown>)?.postsPlanned), 0);
+  const contentDelivered = smmProjects.reduce((s, p) => s + mnum((p.metadata as Record<string, unknown>)?.postsDelivered), 0);
+  const contentPct = contentPlanned > 0 ? Math.round((contentDelivered / contentPlanned) * 100) : 0;
+  const servicesByType = SERVICE_TYPES
+    .map((t) => ({ key: t.key, label: t.label, accent: t.accent, count: projects.filter((p) => (p.serviceType || "OTHER") === t.key).length }))
+    .filter((t) => t.count > 0);
+  const totalServices = projects.length;
 
   return (
     <div className="mx-auto max-w-[1400px] w-full min-w-0 space-y-6">
@@ -337,7 +318,7 @@ export default function ZulberaAnalyticsPage() {
       />
 
       {/* Key metrics — Zulbera only */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 stagger-children">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 stagger-children">
         <StatCard
           label="Total Revenue"
           value={formatCurrency(totalRevenue)}
@@ -384,33 +365,89 @@ export default function ZulberaAnalyticsPage() {
         />
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="card-panel p-5 sm:p-6 lg:col-span-2 min-w-0 overflow-hidden">
-          <h3 className="section-title mb-4">Revenue Trend</h3>
+      {/* Services & spend — service-aware */}
+      <div className="bento">
+        <div className="col-4 card-panel p-5 sm:p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="section-title">Services</h3>
+              <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">{totalServices} active · {servicesByType.length} type{servicesByType.length !== 1 ? "s" : ""}</p>
+            </div>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]"><Layers className="h-5 w-5" /></span>
+          </div>
+          <div className="mt-4 space-y-3">
+            {servicesByType.length ? servicesByType.map((t) => (
+              <div key={t.key}>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: t.accent }} /><span className="text-[var(--color-text-secondary)]">{t.label}</span></span>
+                  <span className="font-semibold tabular-nums text-[var(--color-text-primary)]">{t.count}</span>
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface-3)]"><div className="h-full rounded-full" style={{ width: `${totalServices ? (t.count / totalServices) * 100 : 0}%`, background: t.accent }} /></div>
+              </div>
+            )) : <p className="text-sm text-[var(--color-text-muted)]">No services yet — add one from Tasks → Projects.</p>}
+          </div>
+          {mrr > 0 && (
+            <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border)] pt-3 text-sm">
+              <span className="text-[var(--color-text-muted)]">Recurring (retainers)</span>
+              <span className="font-bold text-[var(--color-text-primary)]">{formatCurrency(mrr)}/mo</span>
+            </div>
+          )}
+        </div>
+
+        <div className="col-4 card-panel p-5 sm:p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="section-title">Ad spend</h3>
+              <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">{smmProjects.length} social service{smmProjects.length !== 1 ? "s" : ""}</p>
+            </div>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]"><Megaphone className="h-5 w-5" /></span>
+          </div>
+          <p className="mt-4 text-3xl font-bold tracking-tight text-[var(--color-text-primary)]">{formatCurrency(adSpent)} <span className="text-base font-medium text-[var(--color-text-muted)]">/ {formatCurrency(adBudget)}</span></p>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-3)]"><div className="h-full rounded-full transition-all" style={{ width: `${adPct}%`, background: adPct >= 90 ? "var(--color-destructive-text)" : "var(--color-warning-text)" }} /></div>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)]">{adPct}% of ad budget used{adBudget > 0 && adSpent > adBudget ? " · over budget" : ""}</p>
+        </div>
+
+        <div className="col-4 card-panel p-5 sm:p-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="section-title">Content delivery</h3>
+              <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">designs &amp; posts (SMM)</p>
+            </div>
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-info-bg)] text-[var(--color-info-text)]"><CheckCircle2 className="h-5 w-5" /></span>
+          </div>
+          <p className="mt-4 text-3xl font-bold tracking-tight text-[var(--color-text-primary)]">{contentPct}%</p>
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--color-surface-3)]"><div className="h-full rounded-full transition-all" style={{ width: `${contentPct}%`, background: "var(--color-info-text)" }} /></div>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)]">{contentDelivered} of {contentPlanned} delivered</p>
+        </div>
+      </div>
+
+      {/* Charts — bento */}
+      <div className="bento">
+        <div className="col-8 card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="section-title">Revenue</h3>
+              <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">Paid vs pending · per period</p>
+            </div>
+            <div className="flex gap-3 text-xs text-[var(--color-text-muted)]">
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[rgba(255,255,255,0.9)]" />Paid</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[var(--color-warning-text)]" />Pending</span>
+            </div>
+          </div>
           {revenueByPeriod.length > 0 ? (
-            <div className="h-[240px] sm:h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueByPeriod}>
-                  <defs>
-                    <linearGradient id="zulberaPaid" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={colors.success} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={colors.success} stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="zulberaPending" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={colors.warning} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={colors.warning} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text-primary)" strokeOpacity={0.1} />
-                  <XAxis dataKey="period" tick={axisTick} />
-                  <YAxis tick={axisTick} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
-                  <Legend wrapperStyle={legendWrapperStyle} />
-                  <Area type="monotone" dataKey="paid" stroke={colors.success} fillOpacity={1} fill="url(#zulberaPaid)" name="Paid" />
-                  <Area type="monotone" dataKey="pending" stroke={colors.warning} fillOpacity={1} fill="url(#zulberaPending)" name="Pending" />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="flex h-[240px] items-end gap-1.5 sm:h-[280px] sm:gap-3">
+              {revenueByPeriod.map((d) => (
+                <div key={d.period} className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2">
+                  <div className="relative flex w-full flex-1 flex-col justify-end">
+                    <div className="pointer-events-none absolute -top-1 left-1/2 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-[var(--color-border)] bg-[var(--color-panel-solid)] px-2 py-1 text-[10px] font-semibold text-[var(--color-text-primary)] opacity-0 shadow-lg transition group-hover:opacity-100">
+                      {formatCurrency(d.total)}
+                    </div>
+                    <div className="w-full rounded-t-md transition-all" style={{ height: `${(d.pending / revMax) * 100}%`, background: "var(--color-warning-text)", opacity: 0.5 }} />
+                    <div className="w-full rounded-b-sm transition-all" style={{ height: `${(d.paid / revMax) * 100}%`, background: "linear-gradient(180deg, rgba(255,255,255,0.95), rgba(255,255,255,0.45))", borderTopLeftRadius: d.pending ? 0 : 6, borderTopRightRadius: d.pending ? 0 : 6 }} />
+                  </div>
+                  <span className="w-full truncate text-center text-[10px] text-[var(--color-text-muted)]">{d.period}</span>
+                </div>
+              ))}
             </div>
           ) : (
             <EmptyState
@@ -422,19 +459,19 @@ export default function ZulberaAnalyticsPage() {
           )}
         </div>
 
-        <div className="card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
+        <div className="col-4 card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
           <h3 className="section-title mb-4">Task Status</h3>
           {taskDistribution.length > 0 ? (
             <div className="h-[240px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={taskDistribution} cx="50%" cy="50%" labelLine={false} label outerRadius={80} fill="#8884d8" dataKey="value">
+                  <Pie data={taskDistribution} cx="50%" cy="50%" labelLine={false} innerRadius={58} outerRadius={90} paddingAngle={3} cornerRadius={6} stroke="none" dataKey="value">
                     {taskDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
-                  <Legend wrapperStyle={legendWrapperStyle} />
+                  <Legend wrapperStyle={legendWrapperStyle} iconType="circle" />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -447,20 +484,18 @@ export default function ZulberaAnalyticsPage() {
             />
           )}
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
+        <div className="col-5 card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
           <h3 className="section-title mb-4">Top Clients by Revenue</h3>
           {topClients.length > 0 ? (
             <div className="h-[240px] sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topClients} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text-primary)" strokeOpacity={0.1} />
-                  <XAxis type="number" tick={axisTick} tickFormatter={(v) => formatCurrency(v)} />
-                  <YAxis dataKey="name" type="category" width={100} tick={axisTick} />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
-                  <Bar dataKey="amount" fill="rgba(255,255,255,0.6)" radius={[0, 8, 8, 0]} />
+                <BarChart data={topClients} layout="vertical" barCategoryGap="28%">
+                  <CartesianGrid strokeDasharray="4 4" stroke="var(--color-text-primary)" strokeOpacity={0.07} horizontal={false} />
+                  <XAxis type="number" tick={axisTick} tickFormatter={(v) => formatCurrency(v)} axisLine={false} tickLine={false} />
+                  <YAxis dataKey="name" type="category" width={100} tick={axisTick} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v: number) => formatCurrency(v)} contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} cursor={{ fill: "var(--color-surface-2)" }} />
+                  <Bar dataKey="amount" fill="rgba(255,255,255,0.85)" radius={[0, 8, 8, 0]} maxBarSize={26} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -474,55 +509,8 @@ export default function ZulberaAnalyticsPage() {
           )}
         </div>
 
-        <div className="card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
-          <h3 className="section-title mb-4">Worker Performance</h3>
-          {workerPerformance.length > 0 ? (
-            <div className="h-[240px] sm:h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={workerPerformance}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text-primary)" strokeOpacity={0.1} />
-                  <XAxis dataKey="name" tick={axisTick} />
-                  <YAxis tick={axisTick} />
-                  <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
-                  <Legend wrapperStyle={legendWrapperStyle} />
-                  <Bar dataKey="completed" fill={colors.success} name="Completed" />
-                  <Bar dataKey="total" fill={colors.info} name="Total Tasks" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <EmptyState
-              compact
-              icon={<UserRound className="h-6 w-6" />}
-              title="No worker data"
-              description="Performance appears once tasks are assigned in this period."
-            />
-          )}
-        </div>
-      </div>
-
-      <div className="card-panel p-5 sm:p-6 min-w-0 overflow-hidden">
-        <h3 className="section-title mb-4">Task Completion Trend</h3>
-        <div className="h-[240px] sm:h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={getTaskCompletionTrend()}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-text-primary)" strokeOpacity={0.1} />
-              <XAxis dataKey="date" tick={axisTick} />
-              <YAxis yAxisId="left" tick={axisTick} />
-              <YAxis yAxisId="right" orientation="right" tick={axisTick} tickFormatter={(v) => `${v}%`} />
-              <Tooltip contentStyle={tooltipContentStyle} labelStyle={tooltipLabelStyle} />
-              <Legend wrapperStyle={legendWrapperStyle} />
-              <Line yAxisId="left" type="monotone" dataKey="completed" stroke={colors.success} strokeWidth={2} name="Completed" />
-              <Line yAxisId="left" type="monotone" dataKey="total" stroke={colors.info} strokeWidth={2} name="Total" />
-              <Line yAxisId="right" type="monotone" dataKey="rate" stroke="rgba(255,255,255,0.7)" strokeWidth={2} name="Rate %" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Quick actions + Recent */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="card-panel p-5 sm:p-6">
+        {/* Quick actions + Recent */}
+        <div className="col-7 card-panel p-5 sm:p-6">
           <h3 className="section-title mb-4">Quick Actions</h3>
           <div className="space-y-3">
             <button
@@ -573,7 +561,7 @@ export default function ZulberaAnalyticsPage() {
           </div>
         </div>
 
-        <div className="card-panel p-5 sm:p-6">
+        <div className="col-12 card-panel p-5 sm:p-6">
           <h3 className="section-title mb-4">Recent Invoices</h3>
           {recentInvoices.length > 0 ? (
             <div className="space-y-3">

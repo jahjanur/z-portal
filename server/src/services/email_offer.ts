@@ -37,10 +37,8 @@ export const sendOfferPDF = async (client: Client, offer: Offer): Promise<void> 
       path.join(process.cwd(), "client", "Zulbera-Text-Logo.svg"),
       path.join(__dirname, "..", "client", "Zulbera-Text-Logo.svg"),
       path.join(process.cwd(), "public", "Zulbera-Text-Logo.svg"),
-      path.join(process.cwd(), "public", "ZPortalLogo.svg"),
-      path.join(process.cwd(), "public", "zportallogo.svg"),
-      path.join(process.cwd(), "ZPortalLogo.svg"),
-      path.join(process.cwd(), "public", "ZPortalLogo.png"),
+      path.join(process.cwd(), "..", "client", "public", "Zulbera-Text-Logo.svg"),
+      path.join(process.cwd(), "public", "ZulberaFavicon.svg"),
       path.join(process.cwd(), "public", "logo.svg"),
       path.join(process.cwd(), "public", "logo.png"),
     ];

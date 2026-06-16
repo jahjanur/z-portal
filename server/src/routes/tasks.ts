@@ -5,6 +5,7 @@ import path from "path";
 import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
 import { uploadsDir } from "../lib/uploadsPath";
+import { maskTaskWorkers, workerAlias } from "../lib/workerIdentity";
 
 const router = Router();
 
@@ -163,11 +164,13 @@ router.get("/", verifyJWT, async (req: any, res) => {
     // (worker-channel) files/comments never leak into a client's response, and
     // client-channel content isn't exposed to workers. ADMIN sees everything.
     if (role === "CLIENT" || role === "ERASPHERE") {
-      tasks = (tasks as any[]).map((t: any) => ({
-        ...t,
-        comments: (t.comments ?? []).filter((c: { visibleToClient: boolean }) => c.visibleToClient),
-        files: (t.files ?? []).filter((f: { visibleToClient: boolean }) => f.visibleToClient),
-      }));
+      tasks = (tasks as any[]).map((t: any) =>
+        maskTaskWorkers({
+          ...t,
+          comments: (t.comments ?? []).filter((c: { visibleToClient: boolean }) => c.visibleToClient),
+          files: (t.files ?? []).filter((f: { visibleToClient: boolean }) => f.visibleToClient),
+        })
+      );
     } else if (role === "WORKER") {
       tasks = (tasks as any[]).map((t: any) => ({
         ...t,
@@ -301,6 +304,8 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
         ...f,
         comments: f.comments.filter((c: { visibleToClient: boolean }) => c.visibleToClient),
       }));
+      // Privacy: external viewers see worker codenames + emoji, never real names/emails.
+      maskTaskWorkers(task);
     } else if (role === "WORKER") {
       (task as any).comments = (task as any).comments.filter((c: { visibleToClient: boolean }) => !c.visibleToClient);
       (task as any).files = (task as any).files.filter((f: { visibleToClient: boolean }) => !f.visibleToClient);
@@ -886,12 +891,15 @@ router.post("/:id/comments", verifyJWT, async (req: any, res) => {
     });
 
     try {
-      const commenterName = comment.user && typeof (comment.user as { name?: string }).name === "string"
-        ? (comment.user as { name: string }).name
-        : "Someone";
       const authorRole = comment.user && typeof (comment.user as { role?: string }).role === "string"
         ? (comment.user as { role: string }).role
         : "WORKER";
+      const realName = comment.user && typeof (comment.user as { name?: string }).name === "string"
+        ? (comment.user as { name: string }).name
+        : "Someone";
+      // Privacy: if a worker posts a client-visible comment, the client's
+      // notification must show the codename, not the real name.
+      const commenterName = authorRole === "WORKER" && visibleToClient ? workerAlias(authUserId) : realName;
 
       // Channel-isolated notification routing:
       //   Client channel (visibleToClient=true):

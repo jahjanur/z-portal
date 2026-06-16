@@ -1,4 +1,6 @@
 import nodemailer from "nodemailer";
+import { renderEmail } from "./emailTemplate";
+import { logoAttachment } from "./logoAsset";
 
 const SMTP_CONFIGURED = !!(process.env.SMTP_USER && process.env.SMTP_PASS);
 
@@ -23,31 +25,18 @@ function zulberaEmailTemplate(opts: {
   ctaText: string;
   ctaUrl: string;
   footer?: string;
+  tone?: "brand" | "success" | "warning" | "danger" | "info";
+  badge?: string;
 }): string {
-  return `
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-      <div style="padding: 32px 32px 24px; text-align: center; border-bottom: 3px solid #5B4FFF;">
-        <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: #0b0f14; letter-spacing: -0.5px;">Zulbera</h1>
-      </div>
-      <div style="padding: 32px;">
-        <h2 style="margin: 0 0 16px; font-size: 20px; color: #0b0f14;">${opts.heading}</h2>
-        <p style="margin: 0 0 12px; color: #374151; font-size: 15px;">${opts.greeting}</p>
-        <div style="margin: 0 0 24px; color: #374151; font-size: 15px; line-height: 1.6;">${opts.body}</div>
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${opts.ctaUrl}"
-             style="display: inline-block; padding: 14px 36px; background-color: #5B4FFF; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 15px;">
-            ${opts.ctaText}
-          </a>
-        </div>
-        ${opts.footer || ""}
-      </div>
-      <div style="padding: 20px 32px; background: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
-        <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-          Zulbera &middot; Z-Portal &middot; Secure Client Management
-        </p>
-      </div>
-    </div>
-  `;
+  return renderEmail({
+    heading: opts.heading,
+    greeting: opts.greeting,
+    intro: opts.body,
+    cta: { label: opts.ctaText, url: opts.ctaUrl },
+    note: opts.footer ? opts.footer.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : undefined,
+    tone: opts.tone,
+    badge: opts.badge ? { text: opts.badge, tone: opts.tone } : undefined,
+  });
 }
 
 interface InviteEmailOpts {
@@ -123,6 +112,7 @@ export async function sendInviteEmail(opts: InviteEmailOpts): Promise<void> {
     to,
     subject: `Zulbera — ${heading}`,
     html,
+    attachments: [logoAttachment()],
   });
   console.log(`✅ Invite email sent to ${to} (role: ${role})`);
 }
@@ -180,6 +170,7 @@ export async function sendWelcomeEmailForRole(
     to: user.email,
     subject: `Zulbera — ${heading}`,
     html,
+    attachments: [logoAttachment()],
   });
   console.log(`✅ Welcome email sent to ${user.email} (role: ${role})`);
 }
