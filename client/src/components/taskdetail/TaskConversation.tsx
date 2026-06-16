@@ -326,6 +326,57 @@ function SiblingTasks({ task, p }: { task: any; p: any }) {
   );
 }
 
+/** Task header card — title, status, primary action, and meta. Lives in the left column. */
+function TaskHeaderCard({ task, p }: { task: any; p: any }) {
+  return (
+    <div className="card-panel p-4 sm:p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-extrabold leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[1.5rem]">{task.title}</h1>
+          {task.description && <p className="mt-1 text-sm text-[var(--color-text-muted)]">{task.description}</p>}
+        </div>
+        <StatusBadge status={task.status} className="shrink-0" />
+      </div>
+
+      {/* primary status actions */}
+      <div className="mt-4">
+        {p.currentUserRole === "ADMIN" && <AdminStatusControls currentStatus={task.status} onStatusChange={p.updateStatus} onApproveCompletion={p.approveCompletion} />}
+        {p.currentUserRole === "WORKER" && <WorkerStatusControls currentStatus={task.status} onRequestCompletion={p.requestCompletion} />}
+        {p.currentUserRole === "CLIENT" && <ClientStatusView currentStatus={task.status} />}
+      </div>
+
+      {/* meta: client + due + worker assignment */}
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] pt-4">
+        <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1 text-xs text-[var(--color-text-secondary)]">
+          <span className="flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold" style={avatarTint("CLIENT")}>{initials(task.client?.name)}</span>
+          {task.client?.name ?? "Client removed"}
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1 text-xs text-[var(--color-text-secondary)]">
+          <Calendar className="h-3.5 w-3.5" /> {task.dueDate ? `Due ${new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : "No deadline"}
+        </span>
+        {p.currentUserRole === "ADMIN" ? (
+          <div className="w-full">
+            <WorkerMultiSelect workers={p.workers} value={task.workers?.map((tw: any) => tw.user.id) ?? []} onChange={(ids: number[]) => p.updateWorkers(ids)} placeholder="Assign workers…" autoApply={false} usePortal />
+          </div>
+        ) : task.workers?.length ? (
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            {task.workers.map((tw: any) => (
+              <span key={tw.user.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1 text-xs text-[var(--color-text-secondary)]">
+                {tw.user.avatarEmoji && <span className="text-sm leading-none">{tw.user.avatarEmoji}</span>}
+                {tw.user.name}
+              </span>
+            ))}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1 text-xs text-[var(--color-text-secondary)]">
+            Unassigned
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TaskConversation(p: any) {
   const { task } = p;
   const feedRef = useRef<HTMLDivElement | null>(null);
@@ -366,14 +417,15 @@ export default function TaskConversation(p: any) {
   return (
     <div className="pt-16">
       <div className="mx-auto flex h-[calc(100vh-4rem)] w-full max-w-[1400px] flex-col gap-4 px-3 sm:px-4 lg:flex-row lg:gap-6">
-        {/* INFO sidebar (desktop) — brand & assets + sibling tasks */}
-        <aside className="hidden shrink-0 flex-col gap-3 overflow-y-auto py-4 lg:order-2 lg:flex lg:w-[360px]">
+        {/* LEFT — task header + brand & assets + sibling tasks */}
+        <aside className="shrink-0 space-y-3 overflow-y-auto pt-3 max-h-[46vh] lg:max-h-none lg:w-[380px] lg:pt-4">
+          <TaskHeaderCard task={task} p={p} />
           <BrandAssets task={task} p={p} />
           <SiblingTasks task={task} p={p} />
         </aside>
 
-        {/* MAIN — conversation */}
-        <div className="flex min-w-0 flex-1 flex-col lg:order-1">
+        {/* RIGHT — conversation */}
+        <div className="flex min-w-0 flex-1 flex-col">
         {/* top: breadcrumb */}
         <div className="shrink-0 pt-3">
           <div className="mb-3 flex items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
@@ -393,62 +445,6 @@ export default function TaskConversation(p: any) {
 
         {/* Scrollable conversation — header/brand/switchers scroll away so the chat gets the room */}
         <div ref={feedRef} className="min-h-0 flex-1 overflow-y-auto pb-4 pt-1">
-          <div className="card-panel p-4 sm:p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h1 className="text-xl font-extrabold leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[1.7rem]">{task.title}</h1>
-                {task.description && <p className="mt-1 line-clamp-2 text-sm text-[var(--color-text-muted)]">{task.description}</p>}
-              </div>
-              <StatusBadge status={task.status} className="shrink-0" />
-            </div>
-
-            {/* primary status actions */}
-            <div className="mt-4">
-              {p.currentUserRole === "ADMIN" && <AdminStatusControls currentStatus={task.status} onStatusChange={p.updateStatus} onApproveCompletion={p.approveCompletion} />}
-              {p.currentUserRole === "WORKER" && <WorkerStatusControls currentStatus={task.status} onRequestCompletion={p.requestCompletion} />}
-              {p.currentUserRole === "CLIENT" && <ClientStatusView currentStatus={task.status} />}
-            </div>
-
-            {/* meta: client + due (display), worker assignment last so its menu opens into open space */}
-            <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--color-border)] pt-4">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1 text-xs text-[var(--color-text-secondary)]">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full border text-[9px] font-bold" style={avatarTint("CLIENT")}>{initials(task.client?.name)}</span>
-                {task.client?.name ?? "Client removed"}
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1 text-xs text-[var(--color-text-secondary)]">
-                <Calendar className="h-3.5 w-3.5" /> {task.dueDate ? `Due ${new Date(task.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}` : "No deadline"}
-              </span>
-              {p.currentUserRole === "ADMIN" ? (
-                <div className="w-full sm:ml-auto sm:w-60">
-                  <WorkerMultiSelect workers={p.workers} value={task.workers?.map((tw: any) => tw.user.id) ?? []} onChange={(ids: number[]) => p.updateWorkers(ids)} placeholder="Assign workers…" autoApply={false} usePortal />
-                </div>
-              ) : task.workers?.length ? (
-                <span className="inline-flex flex-wrap items-center gap-1.5">
-                  {task.workers.map((tw: any) => (
-                    <span key={tw.user.id} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1 text-xs text-[var(--color-text-secondary)]">
-                      {tw.user.avatarEmoji && <span className="text-sm leading-none">{tw.user.avatarEmoji}</span>}
-                      {tw.user.name}
-                    </span>
-                  ))}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1 text-xs text-[var(--color-text-secondary)]">
-                  Unassigned
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Brand & assets (mobile only — desktop shows it in the right sidebar) */}
-          <div className="mt-3 lg:hidden">
-            <BrandAssets task={task} p={p} />
-          </div>
-
-          {/* Sibling tasks (mobile only — desktop shows it in the right sidebar) */}
-          <div className="mt-3 lg:hidden">
-            <SiblingTasks task={task} p={p} />
-          </div>
-
           {/* channel toggle */}
           {p.isAdmin && (
             <div className="mt-3 flex justify-center">
