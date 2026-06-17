@@ -436,7 +436,29 @@ function TaskHeaderCard({ task, p, hideTitle }: { task: any; p: any; hideTitle?:
 export default function TaskConversation(p: any) {
   const { task } = p;
   const feedRef = useRef<HTMLDivElement | null>(null);
+  const shellRef = useRef<HTMLDivElement | null>(null);
   const [dragging, setDragging] = useState(false);
+
+  // Mobile keyboard: the chat shell is position:fixed bottom-0. When the on-screen
+  // keyboard opens, iOS/Android keep fixed-bottom elements *behind* the keyboard,
+  // so we lift the shell by the keyboard's overlap using the visualViewport API.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const el = shellRef.current;
+      if (!el) return;
+      const overlap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      el.style.bottom = overlap > 0 ? `${overlap}px` : "";
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
 
   const items = useMemo(() => {
     const comments = (task.comments || []).filter((c: any) =>
@@ -479,8 +501,11 @@ export default function TaskConversation(p: any) {
   let lastDay = "";
 
   return (
-    <div className="pt-16">
-      <div className="mx-auto flex h-[calc(100dvh-4rem)] w-full max-w-[1400px] flex-col gap-4 px-3 sm:px-4 lg:flex-row lg:gap-6">
+    <div className="lg:pt-16">
+      {/* Mobile: pin the whole chat to the real viewport with position:fixed (top-16 → bottom-0)
+          so the composer is ALWAYS visible and never falls off-screen behind the browser
+          toolbar — vh/dvh units are unreliable on mobile. Desktop keeps the centered layout. */}
+      <div ref={shellRef} className="fixed inset-x-0 bottom-0 top-16 z-20 flex flex-col px-3 lg:static lg:z-auto lg:mx-auto lg:h-[calc(100dvh-4rem)] lg:w-full lg:max-w-[1400px] lg:flex-row lg:gap-6 lg:px-4">
         {/* LEFT — task header + brand & assets + sibling tasks (desktop sidebar) */}
         <aside className="hidden shrink-0 flex-col gap-3 overflow-y-auto py-4 lg:flex lg:w-[380px]">
           <TaskHeaderCard task={task} p={p} />
@@ -490,7 +515,7 @@ export default function TaskConversation(p: any) {
 
         {/* RIGHT — conversation (drag a file/image anywhere here to attach it) */}
         <div
-          className="relative flex min-w-0 flex-1 flex-col"
+          className="relative flex min-h-0 min-w-0 flex-1 flex-col"
           onDragOver={(e) => { if (e.dataTransfer.types?.includes("Files")) { e.preventDefault(); if (!dragging) setDragging(true); } }}
           onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
           onDrop={(e) => {
@@ -561,7 +586,7 @@ export default function TaskConversation(p: any) {
           {/* conversation */}
           <div className="mt-4 border-t border-[var(--color-border)] pt-3">
           {items.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center text-center">
+            <div className="flex h-full flex-col items-center justify-center px-6 py-16 text-center">
               <span className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-muted)]"><ImageIcon className="h-6 w-6" /></span>
               <p className="font-semibold text-[var(--color-text-primary)]">Nothing here yet</p>
               <p className="mt-1 max-w-xs text-sm text-[var(--color-text-muted)]">Share the first deliverable or leave a note using the box below.</p>
