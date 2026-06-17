@@ -235,9 +235,10 @@ function BrandAssets({ task, p }: { task: any; p: any }) {
   const projectId: number | undefined = task.project?.id;
   const canEdit = p.currentUserRole === "ADMIN" && !!projectId;
   const hexFrom = (s?: string) => (s ? s.match(/#[0-9a-fA-F]{6}/g) || [] : []);
+  // Note: client.colorHex is excluded — it auto-defaults to #5B4FFF and is just
+  // noise. Show the real palette: the client's brandPattern + the project colors.
   const colors = Array.from(
     new Set<string>([
-      ...hexFrom(c.colorHex),
       ...hexFrom(c.brandPattern),
       ...((Array.isArray(meta.brandColors) ? meta.brandColors : []) as string[]),
     ])

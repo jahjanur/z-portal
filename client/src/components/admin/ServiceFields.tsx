@@ -83,8 +83,7 @@ function ChecklistEditor({ items, onChange }: { items: ChecklistItem[]; onChange
 
 /* ---------------------------------------------------- brand colors editor */
 function ColorsEditor({ colors, onChange }: { colors: string[]; onChange: (v: string[]) => void }) {
-  // Default to the Zulbera brand color so new projects start from it.
-  const [draft, setDraft] = useState("#5B4FFF");
+  const [draft, setDraft] = useState("#");
   const add = () => {
     let v = draft.trim();
     if (!v || v === "#") return;
