@@ -612,8 +612,9 @@ router.post("/complete-profile", uploadFile.array("files", 10), async (req, res)
     const files = req.files as Express.Multer.File[];
     let logoPath = user.logo;
 
-    // NEW: Create profile files directory for this user
-    const profileFilesDir = `uploads/profile-files/${user.id}`;
+    // Profile files live on the persistent uploads volume (so they survive deploys)
+    // and are served by the protected /uploads route.
+    const profileFilesDir = path.join(uploadsDir, "profile-files", String(user.id));
     if (!fs.existsSync(profileFilesDir)) {
       fs.mkdirSync(profileFilesDir, { recursive: true });
     }
@@ -817,8 +818,8 @@ router.get("/profile-files/client/:clientId", verifyJWT, verifyAdmin, async (req
   try {
     const clientId = parseInt(req.params.clientId);
     
-    const profileFilesDir = path.join(__dirname, `../../uploads/profile-files/${clientId}`);
-    
+    const profileFilesDir = path.join(uploadsDir, "profile-files", String(clientId));
+
     if (!fs.existsSync(profileFilesDir)) {
       return res.json([]);
     }
@@ -842,7 +843,7 @@ router.get("/profile-files/client/:clientId", verifyJWT, verifyAdmin, async (req
       return {
         id: `profile-${fileName}`,
         fileName: fileName,
-        fileUrl: `uploads/profile-files/${clientId}/${fileName}`,
+        fileUrl: `/uploads/profile-files/${clientId}/${fileName}`,
         fileType: fileType,
         uploadedAt: stats.birthtime,
         caption: null,
@@ -859,6 +860,50 @@ router.get("/profile-files/client/:clientId", verifyJWT, verifyAdmin, async (req
   } catch (error) {
     console.error("Error fetching profile files:", error);
     res.status(500).json({ error: "Failed to fetch profile files" });
+  }
+});
+
+// Admin/EraSphere upload brand files (and optionally a logo) for a client.
+router.post("/:id/brand-files", verifyJWT, verifyAdminOrEraSphere, uploadFile.array("files", 10), async (req: any, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const { role, userId } = req.user;
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, role: true, referredById: true, logo: true } });
+    if (!target || target.role !== "CLIENT") return res.status(404).json({ error: "Client not found" });
+    if (role === "ERASPHERE" && target.referredById !== userId) return res.status(403).json({ error: "Not authorized to edit this client" });
+
+    const files = (req.files as Express.Multer.File[]) || [];
+    if (files.length === 0) return res.status(400).json({ error: "No files uploaded" });
+
+    const profileFilesDir = path.join(uploadsDir, "profile-files", String(id));
+    fs.mkdirSync(profileFilesDir, { recursive: true });
+    for (const file of files) {
+      try {
+        fs.copyFileSync(path.join(filesDir, file.filename), path.join(profileFilesDir, file.filename));
+      } catch (copyErr) {
+        console.error("Error copying brand file:", copyErr);
+      }
+    }
+
+    // Set the logo: explicit logoIndex, else the first image when none exists yet.
+    let logo = target.logo;
+    const logoIndex = req.body.logoIndex;
+    if (logoIndex !== undefined && logoIndex !== "") {
+      const idx = parseInt(logoIndex, 10);
+      if (idx >= 0 && idx < files.length) logo = `/uploads/files/${files[idx].filename}`;
+    } else if (!target.logo) {
+      const firstImage = files.find((f) => f.mimetype.startsWith("image/"));
+      if (firstImage) logo = `/uploads/files/${firstImage.filename}`;
+    }
+    if (logo !== target.logo) {
+      await prisma.user.update({ where: { id }, data: { logo } });
+    }
+
+    res.status(201).json({ message: "Files uploaded", count: files.length, logo });
+  } catch (error) {
+    console.error("Error uploading brand files:", error);
+    res.status(500).json({ error: "Failed to upload files" });
   }
 });
 

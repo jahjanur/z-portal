@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API, { getFileUrl } from "../api";
 import Modal from "../components/ui/Modal";
@@ -132,6 +132,8 @@ const ClientDetailPage: React.FC = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", company: "", colorHex: "", shortInfo: "", postalAddress: "", address: "", phoneNumber: "" });
   const [editColors, setEditColors] = useState<string[]>([]);
+  const [uploadingBrand, setUploadingBrand] = useState(false);
+  const brandFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (id) {
@@ -178,6 +180,23 @@ const ClientDetailPage: React.FC = () => {
     });
     setEditColors((client.brandPattern || "").match(/#[0-9a-fA-F]{6}/g) || []);
     setShowEdit(true);
+  };
+
+  const handleBrandUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!client || !e.target.files?.length) return;
+    setUploadingBrand(true);
+    try {
+      const fd = new FormData();
+      Array.from(e.target.files).forEach((f) => fd.append("files", f));
+      await API.post(`/users/${client.id}/brand-files`, fd, { headers: { "Content-Type": undefined } });
+      toast.success("Files uploaded");
+      fetchClient();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Upload failed");
+    } finally {
+      setUploadingBrand(false);
+      if (e.target) e.target.value = "";
+    }
   };
 
   const saveEdit = async () => {
@@ -1009,6 +1028,24 @@ const fetchAllFiles = async () => {
           <div>
             <label className="mb-1.5 block text-xs font-semibold text-[var(--color-text-secondary)]">Brand colors</label>
             <ColorsEditor colors={editColors} onChange={setEditColors} />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--color-text-secondary)]">Logo &amp; brand files</label>
+            <div className="flex items-center gap-3">
+              {client.logo ? (
+                <img src={getFileUrl(client.logo)} alt="Logo" className="h-14 w-14 shrink-0 rounded-lg border border-[var(--color-border)] object-cover" />
+              ) : (
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-dashed border-[var(--color-border)] text-[10px] text-[var(--color-text-muted)]">No logo</div>
+              )}
+              <input ref={brandFileRef} type="file" multiple className="hidden" onChange={handleBrandUpload} />
+              <div>
+                <Button variant="secondary" size="sm" onClick={() => brandFileRef.current?.click()} disabled={uploadingBrand}>
+                  {uploadingBrand ? "Uploading…" : "Upload files"}
+                </Button>
+                <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">First image becomes the logo if none is set.</p>
+              </div>
+            </div>
           </div>
 
           <div>
