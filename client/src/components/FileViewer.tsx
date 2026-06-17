@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { X, Download, FileText } from "lucide-react";
+import { X, Download, FileText, ExternalLink } from "lucide-react";
 import { renderAsync } from "docx-preview";
 import { getFileUrl } from "../api";
 import Spinner from "./ui/Spinner";
@@ -82,6 +82,26 @@ const FileViewer: React.FC<FileViewerProps> = ({ isOpen, onClose, file }) => {
       .catch(() => setTextContent("Could not load file content."));
   }, [isOpen, file?.id, isText, fullUrl]);
 
+  // Robust download — fetch with the auth token (in the URL) and save the blob,
+  // so it works even when the server serves the file inline. Falls back to a new tab.
+  const handleDownload = async () => {
+    try {
+      const res = await fetch(fullUrl);
+      if (!res.ok) throw new Error(String(res.status));
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objUrl;
+      a.download = file!.fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objUrl);
+    } catch {
+      window.open(fullUrl, "_blank", "noopener");
+    }
+  };
+
   if (!isOpen || !file) return null;
 
   return (
@@ -105,14 +125,14 @@ const FileViewer: React.FC<FileViewerProps> = ({ isOpen, onClose, file }) => {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            <a
-              href={fullUrl}
-              download={file.fileName}
-              className="btn-ghost h-9 px-3 text-xs"
-            >
+            <a href={fullUrl} target="_blank" rel="noreferrer" className="btn-ghost h-9 px-3 text-xs">
+              <ExternalLink size={13} />
+              Open
+            </a>
+            <button type="button" onClick={handleDownload} className="btn-ghost h-9 px-3 text-xs">
               <Download size={13} />
               Download
-            </a>
+            </button>
             <button
               type="button"
               onClick={onClose}

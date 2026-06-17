@@ -441,6 +441,7 @@ function TaskHeaderCard({ task, p }: { task: any; p: any }) {
 export default function TaskConversation(p: any) {
   const { task } = p;
   const feedRef = useRef<HTMLDivElement | null>(null);
+  const [dragging, setDragging] = useState(false);
 
   const items = useMemo(() => {
     const comments = (task.comments || []).filter((c: any) =>
@@ -485,8 +486,27 @@ export default function TaskConversation(p: any) {
           <SiblingTasks task={task} p={p} />
         </aside>
 
-        {/* RIGHT — conversation */}
-        <div className="flex min-w-0 flex-1 flex-col">
+        {/* RIGHT — conversation (drag a file/image anywhere here to attach it) */}
+        <div
+          className="relative flex min-w-0 flex-1 flex-col"
+          onDragOver={(e) => { if (e.dataTransfer.types?.includes("Files")) { e.preventDefault(); if (!dragging) setDragging(true); } }}
+          onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
+          onDrop={(e) => {
+            if (!e.dataTransfer.files?.length) return;
+            e.preventDefault();
+            setDragging(false);
+            const file = e.dataTransfer.files[0];
+            if (file) p.setSelectedFile(file);
+          }}
+        >
+          {dragging && (
+            <div className="pointer-events-none absolute inset-2 z-30 flex items-center justify-center rounded-2xl border-2 border-dashed border-[var(--card-hover-border)] bg-[var(--color-overlay)] backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-2 text-[var(--color-text-primary)]">
+                <Paperclip className="h-7 w-7" />
+                <p className="text-sm font-semibold">Drop to attach to the chat</p>
+              </div>
+            </div>
+          )}
         {/* top: breadcrumb */}
         <div className="shrink-0 pt-3">
           <div className="mb-3 flex items-center gap-1.5 text-sm text-[var(--color-text-muted)]">
