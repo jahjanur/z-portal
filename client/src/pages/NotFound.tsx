@@ -11,8 +11,6 @@ export default function NotFound() {
         aria-hidden
       />
       <div className="relative z-10 w-full max-w-lg text-center">
-        <img src="/Zulbera-Text-Logo.svg" alt="Zulbera" className="mx-auto mb-8 h-7 w-auto object-contain" />
-
         <div className="relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-8 shadow-elev-lg backdrop-blur-2xl sm:p-10">
           <div
             className="pointer-events-none absolute inset-0 rounded-3xl shadow-[inset_0_1px_0_0_var(--color-border)]"
