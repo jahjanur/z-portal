@@ -1,4 +1,5 @@
-import React, { useMemo, useRef, useEffect } from "react";
+import React, { useMemo, useRef, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import {
   ArrowLeft, Paperclip, Send, Download, Maximize2, Check, RotateCcw,
   Image as ImageIcon, FileText, Palette, File as FileIcon, Calendar, RefreshCw, FolderKanban, ChevronDown, Trash2,
@@ -6,7 +7,9 @@ import {
 import Button from "../ui/Button";
 import StatusBadge from "../ui/StatusBadge";
 import WorkerMultiSelect from "../ui/WorkerMultiSelect";
-import { getFileUrl } from "../../api";
+import API, { getFileUrl } from "../../api";
+import { ServiceTypePicker, ServiceFieldsForm } from "../admin/ServiceFields";
+import type { ServiceType } from "../../utils/serviceTypes";
 import AdminStatusControls from "./AdminStatusControls";
 import WorkerStatusControls from "./WorkerStatusControls";
 import ClientStatusView from "./ClientStatusView";
@@ -218,11 +221,19 @@ function DeliverableCard({ file, p }: { file: any; p: any }) {
 }
 
 /* ------------------------------------------------------------------ main */
-/** Brand & assets panel — collapsible; lives in the task sidebar. Hidden from clients. */
+/** Brand & assets panel — collapsible; lives in the task sidebar. Hidden from clients.
+ *  Admins can edit the project's brand/metadata inline (no need to open Manage Projects). */
 function BrandAssets({ task, p }: { task: any; p: any }) {
+  const [editing, setEditing] = useState(false);
+  const [draftMeta, setDraftMeta] = useState<Record<string, unknown>>({});
+  const [draftSvc, setDraftSvc] = useState<ServiceType>("OTHER");
+  const [saving, setSaving] = useState(false);
+
   if (p.currentUserRole === "CLIENT") return null;
   const c: any = task.client || {};
   const meta: any = task.project?.metadata || {};
+  const projectId: number | undefined = task.project?.id;
+  const canEdit = p.currentUserRole === "ADMIN" && !!projectId;
   const hexFrom = (s?: string) => (s ? s.match(/#[0-9a-fA-F]{6}/g) || [] : []);
   const colors = Array.from(
     new Set<string>([
@@ -234,7 +245,8 @@ function BrandAssets({ task, p }: { task: any; p: any }) {
   const assets = (Array.isArray(meta.assets) ? meta.assets : []).filter((a: any) => a?.url);
   const brief = String(meta.brief || meta.notes || "").trim();
   const hasLogo = !!c.logo;
-  if (!hasLogo && colors.length === 0 && assets.length === 0 && !brief && !c.shortInfo) return null;
+  const isEmpty = !hasLogo && colors.length === 0 && assets.length === 0 && !brief && !c.shortInfo;
+  if (isEmpty && !canEdit) return null;
   const isImg = (a: any) => a.fileType === "image" || /\.(png|jpe?g|gif|webp|svg|avif)$/i.test(a.url || "");
   const openImg = (url: string) =>
     p.openViewer({
@@ -244,14 +256,60 @@ function BrandAssets({ task, p }: { task: any; p: any }) {
       fileType: "image",
       uploadedAt: new Date().toISOString(),
     });
+
+  const startEdit = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraftMeta(meta);
+    setDraftSvc(((task.project?.serviceType as ServiceType) || "OTHER"));
+    setEditing(true);
+  };
+  const save = async () => {
+    if (!projectId) return;
+    setSaving(true);
+    try {
+      await API.patch(`/projects/${projectId}`, { serviceType: draftSvc, metadata: draftMeta });
+      toast.success("Brand assets updated");
+      setEditing(false);
+      p.onRefresh?.();
+    } catch {
+      toast.error("Couldn't save brand assets");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <details className="card-panel overflow-hidden lg:[&[open]]:open">
+    <details className="card-panel overflow-hidden" open={editing ? true : undefined}>
       <summary className="flex cursor-pointer list-none items-center gap-2 p-4 [&::-webkit-details-marker]:hidden">
         <Palette className="h-4 w-4 text-[var(--color-text-muted)]" />
         <span className="text-sm font-bold text-[var(--color-text-primary)]">Brand &amp; assets</span>
-        <ChevronDown className="ml-auto h-4 w-4 text-[var(--color-text-muted)]" />
+        {canEdit && !editing && (
+          <button type="button" onClick={startEdit} className="ml-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-secondary)] transition hover:text-[var(--color-text-primary)]">
+            Edit
+          </button>
+        )}
+        <ChevronDown className={`h-4 w-4 text-[var(--color-text-muted)] ${canEdit && !editing ? "" : "ml-auto"}`} />
       </summary>
       <div className="space-y-4 border-t border-[var(--color-border)] p-4">
+        {editing && (
+          <div className="space-y-3">
+            <div>
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Project type</p>
+              <ServiceTypePicker value={draftSvc} onChange={(t) => setDraftSvc(t)} />
+            </div>
+            <ServiceFieldsForm serviceType={draftSvc} metadata={draftMeta} onChange={setDraftMeta} />
+            <div className="flex justify-end gap-2 border-t border-[var(--color-border)] pt-3">
+              <button type="button" onClick={() => setEditing(false)} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">Cancel</button>
+              <button type="button" onClick={save} disabled={saving} className="rounded-lg bg-[var(--color-nav-active-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--color-nav-active-text)] disabled:opacity-50">{saving ? "Saving…" : "Save"}</button>
+            </div>
+          </div>
+        )}
+        {!editing && isEmpty && (
+          <p className="text-xs text-[var(--color-text-muted)]">No brand assets yet. Click <span className="font-semibold">Edit</span> to add colors, files and a brief.</p>
+        )}
+        {!editing && (
+          <>
         {hasLogo && (
           <div className="flex items-center gap-3">
             <AssetImage url={c.logo} label="logo" onView={() => openImg(c.logo)} />
@@ -293,6 +351,8 @@ function BrandAssets({ task, p }: { task: any; p: any }) {
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Brief</p>
             <p className="whitespace-pre-wrap text-sm text-[var(--color-text-secondary)]">{brief || c.shortInfo}</p>
           </div>
+        )}
+          </>
         )}
       </div>
     </details>

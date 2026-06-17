@@ -19,7 +19,7 @@ export default function AdminTasksPage() {
   const {
     clients, workers, projects, tasks,
     adminOwnClients, adminOwnTasks,
-    createTask, handleCreateProject, updateProject, deleteProject, deleteTask,
+    createTask, handleCreateProject, updateProject, deleteProject, deleteTask, updateTaskStatus,
   } = useAdmin();
 
   const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
@@ -184,7 +184,7 @@ export default function AdminTasksPage() {
 
       {/* Board / list */}
       {filteredTasks.length > 0 ? (
-        <TaskBoard tasks={filteredTasks} onDelete={deleteTask} view={view} />
+        <TaskBoard tasks={filteredTasks} onDelete={deleteTask} view={view} onChangeStatus={updateTaskStatus} />
       ) : (
         <EmptyState
           title={searchQuery || projectFilter !== "all" ? "No matching tasks" : "No tasks yet"}

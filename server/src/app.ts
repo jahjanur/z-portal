@@ -26,6 +26,25 @@ app.use(express.json());
 // Access is verified per-file based on task ownership / worker assignment.
 app.use("/uploads", filesRoutes);
 
+// Production SPA serving. Built assets are served statically; then a browser
+// *navigation* (Accept: text/html) to any path returns index.html so deep links
+// and refreshes (e.g. /tasks/2, /admin/zulbera/tasks) don't collide with the
+// API routes mounted below. XHR/API calls send Accept: application/json and fall
+// through to the real API routes.
+if (process.env.NODE_ENV === "production") {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const nodePath = require("path");
+  const clientDir = nodePath.join(__dirname, "client");
+  const indexHtml = nodePath.join(clientDir, "index.html");
+  app.use(express.static(clientDir));
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (req.method !== "GET") return next();
+    if (req.path.startsWith("/uploads")) return next();
+    if (req.accepts(["html", "json"]) === "html") return res.sendFile(indexHtml);
+    next();
+  });
+}
+
 app.use("/auth", authRoutes);
 app.use("/users", usersRoutes);
 app.use("/tasks", taskRoutes);

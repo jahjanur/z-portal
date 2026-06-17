@@ -153,6 +153,7 @@ interface AdminContextValue {
   updateProject: (id: number, data: { name?: string; description?: string; status?: string; clientId?: string; serviceType?: string; metadata?: Record<string, unknown> }) => Promise<void>;
   deleteProject: (id: number) => Promise<void>;
   deleteTask: (id: number) => Promise<void>;
+  updateTaskStatus: (id: number, status: string) => Promise<void>;
   createInvoice: (formData: FormData) => Promise<void>;
   updateInvoice: (id: number, data: { status?: string; dueDate?: string; paymentLink?: string; notes?: string; paidAt?: string | null }) => Promise<void>;
   deleteInvoice: (id: number) => Promise<void>;
@@ -367,6 +368,17 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     await fetchAll();
   };
 
+  // Optimistic status change (used by drag-and-drop on the task board).
+  const updateTaskStatus = async (id: number, status: string) => {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)) as typeof prev);
+    try {
+      await API.patch(`/tasks/${id}/status`, { status });
+    } catch (err) {
+      await fetchAll(); // revert to server truth on failure
+      throw err;
+    }
+  };
+
   const createInvoice = async (formData: FormData) => {
     await API.post("/invoices", formData, { headers: { "Content-Type": "multipart/form-data" } });
     await fetchAll();
@@ -513,6 +525,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     updateProject,
     deleteProject,
     deleteTask,
+    updateTaskStatus,
     createInvoice,
     updateInvoice,
     deleteInvoice,

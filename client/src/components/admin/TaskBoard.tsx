@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, FolderKanban, Trash2, User as UserIcon } from "lucide-react";
 import type { Task } from "../../contexts/AdminContext";
@@ -7,6 +8,8 @@ interface TaskBoardProps {
   onDelete: (id: number) => void;
   /** "board" = kanban columns, "list" = single dense list */
   view?: "board" | "list";
+  /** When provided, board cards can be dragged between columns to change status. */
+  onChangeStatus?: (id: number, status: string) => void;
 }
 
 type ColumnKey = "pending" | "in_progress" | "completed";
@@ -15,6 +18,7 @@ const COLUMNS: {
   key: ColumnKey;
   label: string;
   match: (t: Task) => boolean;
+  status: string; // canonical status set when a card is dropped here
   dot: string;
   accent: string;
 }[] = [
@@ -22,6 +26,7 @@ const COLUMNS: {
     key: "pending",
     label: "Pending",
     match: (t) => t.status === "PENDING",
+    status: "PENDING",
     dot: "var(--color-warning-text)",
     accent: "var(--color-warning-border)",
   },
@@ -29,6 +34,7 @@ const COLUMNS: {
     key: "in_progress",
     label: "In Progress",
     match: (t) => t.status === "IN_PROGRESS" || t.status === "PENDING_APPROVAL",
+    status: "IN_PROGRESS",
     dot: "var(--color-info-text)",
     accent: "var(--color-info-border)",
   },
@@ -36,6 +42,7 @@ const COLUMNS: {
     key: "completed",
     label: "Completed",
     match: (t) => t.status === "COMPLETED",
+    status: "COMPLETED",
     dot: "var(--color-success-text)",
     accent: "var(--color-success-border)",
   },
@@ -65,11 +72,15 @@ function TaskCard({
   accent,
   onDelete,
   navigate,
+  draggable,
+  onDragStart,
 }: {
   task: Task;
   accent: string;
   onDelete: (id: number) => void;
   navigate: ReturnType<typeof useNavigate>;
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
 }) {
   const completed = task.status === "COMPLETED";
   const dstate = dueState(task.dueDate, completed);
@@ -80,13 +91,15 @@ function TaskCard({
       onClick={() => navigate(`/tasks/${task.id}`)}
       role="button"
       tabIndex={0}
+      draggable={draggable}
+      onDragStart={onDragStart}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           navigate(`/tasks/${task.id}`);
         }
       }}
-      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4 transition-all hover:-translate-y-0.5 hover:border-[var(--card-hover-border)] hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+      className={`group relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4 transition-all hover:-translate-y-0.5 hover:border-[var(--card-hover-border)] hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
     >
       {/* status accent rail */}
       <span aria-hidden className="absolute inset-y-0 left-0 w-1" style={{ background: accent }} />
@@ -166,8 +179,10 @@ function TaskCard({
   );
 }
 
-export default function TaskBoard({ tasks, onDelete, view = "board" }: TaskBoardProps) {
+export default function TaskBoard({ tasks, onDelete, view = "board", onChangeStatus }: TaskBoardProps) {
   const navigate = useNavigate();
+  const [dragOverCol, setDragOverCol] = useState<ColumnKey | null>(null);
+  const dnd = !!onChangeStatus;
 
   if (view === "list") {
     const ordered = [...tasks].sort((a, b) => {
@@ -188,8 +203,20 @@ export default function TaskBoard({ tasks, onDelete, view = "board" }: TaskBoard
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {COLUMNS.map((col) => {
         const colTasks = tasks.filter(col.match);
+        const isOver = dragOverCol === col.key;
         return (
-          <div key={col.key} className="flex min-w-0 flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)]">
+          <div
+            key={col.key}
+            onDragOver={dnd ? (e) => { e.preventDefault(); if (dragOverCol !== col.key) setDragOverCol(col.key); } : undefined}
+            onDragLeave={dnd ? (e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverCol(null); } : undefined}
+            onDrop={dnd ? (e) => {
+              e.preventDefault();
+              const id = Number(e.dataTransfer.getData("text/plain"));
+              setDragOverCol(null);
+              if (id) onChangeStatus?.(id, col.status);
+            } : undefined}
+            className={`flex min-w-0 flex-col rounded-2xl border bg-[var(--color-surface-2)] transition-colors ${isOver ? "border-[var(--card-hover-border)] bg-[var(--color-surface-3)] ring-2 ring-[var(--color-focus-ring)]" : "border-[var(--color-border)]"}`}
+          >
             <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-4 py-3">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: col.dot }} aria-hidden />
@@ -202,11 +229,19 @@ export default function TaskBoard({ tasks, onDelete, view = "board" }: TaskBoard
             <div className="flex flex-1 flex-col gap-3 p-3">
               {colTasks.length === 0 ? (
                 <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] py-10 text-center text-xs text-[var(--color-text-muted)]">
-                  No {col.label.toLowerCase()} tasks
+                  {isOver ? `Drop to mark ${col.label}` : `No ${col.label.toLowerCase()} tasks`}
                 </div>
               ) : (
                 colTasks.map((t) => (
-                  <TaskCard key={t.id} task={t} accent={col.accent} onDelete={onDelete} navigate={navigate} />
+                  <TaskCard
+                    key={t.id}
+                    task={t}
+                    accent={col.accent}
+                    onDelete={onDelete}
+                    navigate={navigate}
+                    draggable={dnd}
+                    onDragStart={dnd ? (e) => { e.dataTransfer.setData("text/plain", String(t.id)); e.dataTransfer.effectAllowed = "move"; } : undefined}
+                  />
                 ))
               )}
             </div>
