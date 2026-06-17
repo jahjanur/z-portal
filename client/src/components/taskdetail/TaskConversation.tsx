@@ -41,13 +41,6 @@ function isImageFile(file: any): boolean {
   return file?.fileType === "screenshot" || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(file?.fileName || "");
 }
 
-function guessType(name: string): string {
-  if (/\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(name)) return "screenshot";
-  if (/\.(pdf|docx?|txt|md|csv|xlsx?)$/i.test(name)) return "document";
-  if (/\.(fig|sketch|psd|ai|xd)$/i.test(name)) return "design";
-  return "other";
-}
-
 function typeIcon(t: string) {
   if (t === "screenshot") return <ImageIcon className="h-4 w-4" />;
   if (t === "document") return <FileText className="h-4 w-4" />;
@@ -462,9 +455,16 @@ export default function TaskConversation(p: any) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [items.length, p.activeChannel]);
 
+  const addFiles = (files: File[]) => {
+    if (!files.length) return;
+    p.setSelectedFiles((prev: File[]) => [...(prev || []), ...files]);
+  };
+  const removeFile = (idx: number) =>
+    p.setSelectedFiles((prev: File[]) => prev.filter((_: File, i: number) => i !== idx));
+
   const send = () => {
-    if (p.selectedFile) {
-      p.uploadFile({ caption: p.newComment.trim(), fileType: guessType(p.selectedFile.name) });
+    if (p.selectedFiles?.length) {
+      p.uploadFiles({ caption: p.newComment.trim() });
       p.setNewComment("");
     } else if (p.newComment.trim()) {
       p.addComment();
@@ -480,7 +480,7 @@ export default function TaskConversation(p: any) {
 
   return (
     <div className="pt-16">
-      <div className="mx-auto flex h-[calc(100vh-4rem)] w-full max-w-[1400px] flex-col gap-4 px-3 sm:px-4 lg:flex-row lg:gap-6">
+      <div className="mx-auto flex h-[calc(100dvh-4rem)] w-full max-w-[1400px] flex-col gap-4 px-3 sm:px-4 lg:flex-row lg:gap-6">
         {/* LEFT — task header + brand & assets + sibling tasks (desktop sidebar) */}
         <aside className="hidden shrink-0 flex-col gap-3 overflow-y-auto py-4 lg:flex lg:w-[380px]">
           <TaskHeaderCard task={task} p={p} />
@@ -497,8 +497,7 @@ export default function TaskConversation(p: any) {
             if (!e.dataTransfer.files?.length) return;
             e.preventDefault();
             setDragging(false);
-            const file = e.dataTransfer.files[0];
-            if (file) p.setSelectedFile(file);
+            addFiles(Array.from(e.dataTransfer.files));
           }}
         >
           {dragging && (
@@ -620,12 +619,30 @@ export default function TaskConversation(p: any) {
 
         {/* composer */}
         <div className="shrink-0 border-t border-[var(--color-border)] py-3" style={{ paddingBottom: "calc(env(safe-area-inset-bottom,0px) + 0.75rem)" }}>
-          <input ref={p.fileInputRef} type="file" className="hidden" onChange={(e) => p.setSelectedFile(e.target.files?.[0] || null)} />
-          {p.selectedFile && (
-            <div className="mb-2 inline-flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-3)] px-3 py-1.5 text-xs">
-              <Paperclip className="h-3.5 w-3.5 text-[var(--color-text-muted)]" />
-              <span className="max-w-[200px] truncate">{p.selectedFile.name}</span>
-              <button onClick={() => { p.setSelectedFile(null); if (p.fileInputRef.current) p.fileInputRef.current.value = ""; }} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">✕</button>
+          <input
+            ref={p.fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              addFiles(Array.from(e.target.files || []));
+              if (p.fileInputRef.current) p.fileInputRef.current.value = "";
+            }}
+          />
+          {p.selectedFiles?.length > 0 && (
+            <div className="mb-2 flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
+              {p.selectedFiles.map((f: File, i: number) => (
+                <span key={`${f.name}-${i}`} className="inline-flex max-w-full items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-3)] px-3 py-1.5 text-xs">
+                  <Paperclip className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
+                  <span className="max-w-[160px] truncate">{f.name}</span>
+                  <button type="button" onClick={() => removeFile(i)} aria-label={`Remove ${f.name}`} className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">✕</button>
+                </span>
+              ))}
+              {p.selectedFiles.length > 1 && (
+                <button type="button" onClick={() => p.setSelectedFiles([])} className="inline-flex items-center rounded-xl px-2 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-destructive-text)]">
+                  Clear all
+                </button>
+              )}
             </div>
           )}
           <div className="flex items-end gap-2 rounded-2xl border border-[var(--color-border-hover)] bg-[var(--color-surface-2)] py-1.5 pl-3 pr-1.5">
@@ -634,14 +651,14 @@ export default function TaskConversation(p: any) {
               value={p.newComment}
               onChange={(e) => p.setNewComment(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder={p.selectedFile ? "Add a note for this file… (optional)" : "Write a message, or attach a deliverable…"}
+              placeholder={p.selectedFiles?.length ? "Add a note… (optional)" : "Write a message, or attach a deliverable…"}
               className="max-h-32 min-h-[24px] flex-1 resize-none !border-0 !bg-transparent !p-0 py-1.5 text-sm !shadow-none !ring-0 focus:!ring-0"
             />
-            <button type="button" onClick={() => p.fileInputRef.current?.click()} aria-label="Attach file" className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]">
+            <button type="button" onClick={() => p.fileInputRef.current?.click()} aria-label="Attach file" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]">
               <Paperclip className="h-[18px] w-[18px]" />
             </button>
-            <button type="button" onClick={send} disabled={p.uploadingFile || p.addingComment || (!p.newComment.trim() && !p.selectedFile)} aria-label="Send"
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-nav-active-bg)] text-[var(--color-nav-active-text)] transition disabled:opacity-40">
+            <button type="button" onClick={send} disabled={p.uploadingFile || p.addingComment || (!p.newComment.trim() && !p.selectedFiles?.length)} aria-label="Send"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-nav-active-bg)] text-[var(--color-nav-active-text)] transition disabled:opacity-40">
               {p.uploadingFile ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-[17px] w-[17px]" />}
             </button>
           </div>

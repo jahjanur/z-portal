@@ -89,11 +89,8 @@ const TaskDetailPage: React.FC = () => {
   const [addingFileComment, setAddingFileComment] = useState<{ [fileId: number]: boolean }>({});
 
   const [uploadingFile, setUploadingFile] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [fileSection, setFileSection] = useState("");
-  const [fileCaption, setFileCaption] = useState("");
-  const [fileType, setFileType] = useState("screenshot");
   const [refreshing, setRefreshing] = useState(false);
   const [activeChannel, setActiveChannel] = useState<"worker" | "client">("worker");
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -424,37 +421,55 @@ const TaskDetailPage: React.FC = () => {
     }
   };
 
-  const uploadFile = async (opts?: { caption?: string; fileType?: string; section?: string }) => {
-    if (!selectedFile) {
+  const guessFileType = (name: string): string => {
+    if (/\.(png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(name)) return "screenshot";
+    if (/\.(pdf|docx?|txt|md|csv|xlsx?|pptx?)$/i.test(name)) return "document";
+    if (/\.(fig|sketch|psd|ai|xd)$/i.test(name)) return "design";
+    return "other";
+  };
+
+  // Upload every selected file (one request each, sequential). The optional note
+  // is attached to the first file only so it isn't duplicated on every upload.
+  const uploadFiles = async (opts?: { caption?: string }) => {
+    if (!selectedFiles.length) {
       toast.error("Please select a file");
       return;
     }
 
+    setUploadingFile(true);
+    let ok = 0;
+    const failed: string[] = [];
     try {
-      setUploadingFile(true);
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("section", opts?.section ?? fileSection);
-      formData.append("caption", opts?.caption ?? fileCaption);
-      formData.append("fileType", opts?.fileType ?? fileType);
-      formData.append("uploadedBy", currentUserId.toString());
-      if (isAdmin) {
-        formData.append("visibleToClient", activeChannel === "client" ? "true" : "false");
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("section", "");
+          formData.append("caption", i === 0 ? (opts?.caption ?? "") : "");
+          formData.append("fileType", guessFileType(file.name));
+          formData.append("uploadedBy", currentUserId.toString());
+          if (isAdmin) {
+            formData.append("visibleToClient", activeChannel === "client" ? "true" : "false");
+          }
+          await API.post(`/tasks/${id}/files`, formData, {
+            headers: { "Content-Type": undefined },
+          });
+          ok++;
+        } catch {
+          failed.push(file.name);
+        }
       }
 
-      await API.post(`/tasks/${id}/files`, formData, {
-        headers: { "Content-Type": undefined },
-      });
-
-      setSelectedFile(null);
-      setFileSection("");
-      setFileCaption("");
-      setFileType("screenshot");
+      setSelectedFiles([]);
       fetchTask();
-      toast.success("File uploaded successfully!");
-    } catch (err) {
-      console.error("Error uploading file:", err);
-      toast.error("Failed to upload file");
+      if (failed.length === 0) {
+        toast.success(ok > 1 ? `${ok} files uploaded` : "File uploaded successfully!");
+      } else if (ok > 0) {
+        toast.error(`Uploaded ${ok}, but ${failed.length} failed`);
+      } else {
+        toast.error("Failed to upload files");
+      }
     } finally {
       setUploadingFile(false);
     }
@@ -552,9 +567,9 @@ const TaskDetailPage: React.FC = () => {
         addingComment={addingComment}
         deleteComment={deleteComment}
         deleteFile={deleteFile}
-        selectedFile={selectedFile}
-        setSelectedFile={setSelectedFile}
-        uploadFile={uploadFile}
+        selectedFiles={selectedFiles}
+        setSelectedFiles={setSelectedFiles}
+        uploadFiles={uploadFiles}
         uploadingFile={uploadingFile}
         fileInputRef={fileInputRef}
         updateStatus={updateStatus}

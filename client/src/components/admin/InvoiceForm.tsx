@@ -179,6 +179,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients }) => {
               value={formData.issueDate}
               onChange={(issueDate) => setFormData({ ...formData, issueDate })}
               placeholder="yyyy/mm/dd"
+              usePortal
             />
           </div>
 
@@ -190,6 +191,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients }) => {
               value={formData.dueDate}
               onChange={(dueDate) => setFormData({ ...formData, dueDate })}
               placeholder="yyyy/mm/dd"
+              usePortal
             />
           </div>
         </div>

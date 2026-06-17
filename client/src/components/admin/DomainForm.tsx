@@ -305,6 +305,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
               value={formData.activationDate}
               onChange={(activationDate) => setFormData((prev) => ({ ...prev, activationDate }))}
               placeholder="yyyy/mm/dd"
+              usePortal
             />
           </div>
 
@@ -339,6 +340,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
               value={formData.hostingExpiry}
               onChange={(hostingExpiry) => setFormData((prev) => ({ ...prev, hostingExpiry }))}
               placeholder="yyyy/mm/dd"
+              usePortal
             />
           </div>
 

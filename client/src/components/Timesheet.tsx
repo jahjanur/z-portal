@@ -724,6 +724,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 onChange={setEntryDate}
                 placeholder="yyyy/mm/dd"
                 className="input-dark w-full rounded-lg px-3 py-2 text-sm min-h-[40px]"
+                usePortal
               />
             </div>
 
@@ -823,7 +824,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
                               <div>
                                 <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Date</label>
-                                <DatePicker value={editEntryDate} onChange={setEditEntryDate} placeholder="yyyy/mm/dd" className="input-dark w-full rounded-lg px-2 py-1.5 text-xs min-h-[34px]" />
+                                <DatePicker value={editEntryDate} onChange={setEditEntryDate} placeholder="yyyy/mm/dd" className="input-dark w-full rounded-lg px-2 py-1.5 text-xs min-h-[34px]" usePortal />
                               </div>
                               <div>
                                 <label className="mb-0.5 block text-xs font-medium text-[var(--color-text-secondary)]">Hours</label>

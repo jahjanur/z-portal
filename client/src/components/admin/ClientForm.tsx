@@ -209,6 +209,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onInviteSent, hideDomainAndHost
                 onChange={(domainExpiry) => setFormData({ ...formData, domainExpiry: domainExpiry || "" })}
                 placeholder="yyyy/mm/dd"
                 className={CONTROL_INPUT}
+                usePortal
               />
             </div>
             <div>
@@ -227,6 +228,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onInviteSent, hideDomainAndHost
                 onChange={(hostingExpiry) => setFormData({ ...formData, hostingExpiry: hostingExpiry || "" })}
                 placeholder="yyyy/mm/dd"
                 className={CONTROL_INPUT}
+                usePortal
               />
             </div>
           </div>

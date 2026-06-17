@@ -78,12 +78,37 @@ const DatePicker: React.FC<DatePickerProps> = ({
 
   useEffect(() => {
     if (!open || !containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setDropdownRect({
-      top: rect.bottom + 6,
-      left: rect.left,
-      width: Math.max(rect.width, 280),
-    });
+    const reposition = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const margin = 8;
+      const calHeight = 380; // approx calendar height
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const width = Math.min(Math.max(rect.width, 280), vw - margin * 2);
+
+      // Flip above the field if it would overflow the bottom and there's room above.
+      let top = rect.bottom + 6;
+      if (top + calHeight > vh - margin && rect.top - calHeight - 6 > margin) {
+        top = rect.top - calHeight - 6;
+      }
+      top = Math.max(margin, Math.min(top, vh - calHeight - margin));
+
+      // Keep the calendar within the horizontal viewport bounds.
+      let left = rect.left;
+      if (left + width > vw - margin) left = vw - width - margin;
+      left = Math.max(margin, left);
+
+      setDropdownRect({ top, left, width });
+    };
+    reposition();
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -113,7 +138,7 @@ const DatePicker: React.FC<DatePickerProps> = ({
   const calendarContent = (
     <div
       data-datepicker-dropdown
-      className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-xl shadow-black/25 p-4 min-w-[280px]"
+      className="max-h-[85vh] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)] shadow-xl shadow-black/25 p-4 min-w-[280px]"
       style={
         usePortal
           ? {
