@@ -33,6 +33,7 @@ import ZulberaAnalyticsPage from "./pages/admin/ZulberaAnalyticsPage";
 import ServiceDetailPage from "./pages/admin/ServiceDetailPage";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import NotFound from "./pages/NotFound";
 import { MobileMenuProvider } from "./contexts/MobileMenuContext";
 
 function App() {
@@ -208,21 +209,8 @@ function App() {
             <Route path="/complete-profile" element={<CompleteProfile />} />
             <Route path="/invite/accept" element={<InviteAcceptPage />} />
             
-            {/* Redirect based on auth status — Admin lands on Analytics (main page) */}
-            <Route
-              path="*"
-              element={
-                token && isAdmin ? (
-                  <Navigate to="/" />
-                ) : token && isEraSphere ? (
-                  <Navigate to="/admin/erasphere-dashboard" />
-                ) : token ? (
-                  <Navigate to="/dashboard" />
-                ) : (
-                  <Navigate to="/login" />
-                )
-              }
-            />
+            {/* Unknown route → branded 404 page (mascot). "Back to home" routes by role. */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <Footer />
