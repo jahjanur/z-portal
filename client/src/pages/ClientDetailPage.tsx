@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import API, { getFileUrl } from "../api";
 import Modal from "../components/ui/Modal";
+import { ColorsEditor } from "../components/admin/ServiceFields";
+import toast from "react-hot-toast";
 import Button from "../components/ui/Button";
 import StatusBadge from "../components/ui/StatusBadge";
 import StatCard from "../components/ui/StatCard";
@@ -125,6 +127,12 @@ const ClientDetailPage: React.FC = () => {
   const [allFiles, setAllFiles] = useState<TaskFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
 
+  // Edit client modal state
+  const [showEdit, setShowEdit] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", company: "", colorHex: "", shortInfo: "", postalAddress: "", address: "", phoneNumber: "" });
+  const [editColors, setEditColors] = useState<string[]>([]);
+
   useEffect(() => {
     if (id) {
       fetchClient();
@@ -154,6 +162,39 @@ const ClientDetailPage: React.FC = () => {
       setError("Failed to load client information");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openEdit = () => {
+    if (!client) return;
+    setEditForm({
+      name: client.name || "",
+      company: client.company || "",
+      colorHex: client.colorHex || "",
+      shortInfo: client.shortInfo || "",
+      postalAddress: client.postalAddress || "",
+      address: client.address || "",
+      phoneNumber: client.phoneNumber || "",
+    });
+    setEditColors((client.brandPattern || "").match(/#[0-9a-fA-F]{6}/g) || []);
+    setShowEdit(true);
+  };
+
+  const saveEdit = async () => {
+    if (!client) return;
+    setSavingEdit(true);
+    try {
+      await API.patch(`/users/${client.id}`, {
+        ...editForm,
+        brandPattern: editColors.join(", "),
+      });
+      toast.success("Client updated");
+      setShowEdit(false);
+      fetchClient();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't update client");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -396,6 +437,9 @@ const fetchAllFiles = async () => {
               </Button>
               <Button variant="secondary" size="md" onClick={() => navigate(invoicesPath)}>
                 Generate Invoice
+              </Button>
+              <Button variant="secondary" size="md" onClick={openEdit}>
+                Edit client
               </Button>
             </div>
           </div>
@@ -946,6 +990,52 @@ const fetchAllFiles = async () => {
             ))}
           </div>
         )}
+      </Modal>
+
+      {/* Edit client modal */}
+      <Modal isOpen={showEdit} onClose={() => setShowEdit(false)} title="Edit client" maxWidth="lg">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-[var(--color-text-secondary)]">Name</label>
+              <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className="w-full" placeholder="Client name" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-[var(--color-text-secondary)]">Company</label>
+              <input value={editForm.company} onChange={(e) => setEditForm({ ...editForm, company: e.target.value })} className="w-full" placeholder="Company" />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--color-text-secondary)]">Brand colors</label>
+            <ColorsEditor colors={editColors} onChange={setEditColors} />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold text-[var(--color-text-secondary)]">Short info / notes</label>
+            <textarea value={editForm.shortInfo} onChange={(e) => setEditForm({ ...editForm, shortInfo: e.target.value })} rows={2} className="w-full resize-y" placeholder="A short description of the client" />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-[var(--color-text-secondary)]">Phone</label>
+              <input value={editForm.phoneNumber} onChange={(e) => setEditForm({ ...editForm, phoneNumber: e.target.value })} className="w-full" placeholder="Phone number" />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-[var(--color-text-secondary)]">Address</label>
+              <input value={editForm.address} onChange={(e) => setEditForm({ ...editForm, address: e.target.value })} className="w-full" placeholder="Address" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1.5 block text-xs font-semibold text-[var(--color-text-secondary)]">Postal address</label>
+              <input value={editForm.postalAddress} onChange={(e) => setEditForm({ ...editForm, postalAddress: e.target.value })} className="w-full" placeholder="Postal address" />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-[var(--color-border)] pt-4">
+            <Button variant="secondary" size="sm" onClick={() => setShowEdit(false)}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={saveEdit} disabled={savingEdit}>{savingEdit ? "Saving…" : "Save changes"}</Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

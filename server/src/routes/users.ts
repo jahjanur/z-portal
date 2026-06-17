@@ -862,4 +862,47 @@ router.get("/profile-files/client/:clientId", verifyJWT, verifyAdmin, async (req
   }
 });
 
+// Admin/EraSphere edit a client's profile: brand colors + contact details.
+router.patch("/:id", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const { role, userId } = req.user;
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true, referredById: true },
+    });
+    if (!target || target.role !== "CLIENT") return res.status(404).json({ error: "Client not found" });
+    if (role === "ERASPHERE" && target.referredById !== userId) {
+      return res.status(403).json({ error: "Not authorized to edit this client" });
+    }
+
+    const { name, company, colorHex, brandPattern, shortInfo, postalAddress, address, phoneNumber } = req.body;
+    const data: any = {};
+    if (name !== undefined) data.name = String(name).trim();
+    if (company !== undefined) data.company = company || null;
+    if (colorHex !== undefined) data.colorHex = colorHex || null;
+    if (brandPattern !== undefined) data.brandPattern = brandPattern || null;
+    if (shortInfo !== undefined) data.shortInfo = shortInfo || null;
+    if (postalAddress !== undefined) data.postalAddress = postalAddress || null;
+    if (address !== undefined) data.address = address || null;
+    if (phoneNumber !== undefined) data.phoneNumber = phoneNumber || null;
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true, name: true, email: true, company: true, colorHex: true,
+        brandPattern: true, shortInfo: true, postalAddress: true, address: true,
+        phoneNumber: true, logo: true, role: true, profileStatus: true,
+      },
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating client:", error);
+    res.status(500).json({ error: "Failed to update client" });
+  }
+});
+
 export default router;

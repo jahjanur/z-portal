@@ -82,7 +82,7 @@ function ChecklistEditor({ items, onChange }: { items: ChecklistItem[]; onChange
 }
 
 /* ---------------------------------------------------- brand colors editor */
-function ColorsEditor({ colors, onChange }: { colors: string[]; onChange: (v: string[]) => void }) {
+export function ColorsEditor({ colors, onChange }: { colors: string[]; onChange: (v: string[]) => void }) {
   const [draft, setDraft] = useState("#");
   const add = () => {
     let v = draft.trim();
