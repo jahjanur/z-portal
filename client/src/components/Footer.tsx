@@ -9,15 +9,10 @@ export default function Footer() {
   }
 
   return (
-    <footer className="relative z-10 hidden w-full border-t border-[var(--color-border)] bg-[var(--color-bg)] md:block">
-      <div className="mx-auto flex max-w-[1920px] flex-col items-center justify-between gap-2 px-6 py-5 text-center sm:flex-row sm:text-left">
-        <p className="text-xs text-[var(--color-text-muted)]">
-          © {new Date().getFullYear()} Zulbera. All rights reserved.
-        </p>
-        <p className="text-xs text-[var(--color-text-muted)]">
-          Made with <span aria-hidden="true">❤️</span> by Zulbera
-        </p>
-      </div>
+    <footer className="relative z-10 hidden w-full bg-transparent py-5 md:block">
+      <p className="text-center text-xs text-[var(--color-text-muted)]">
+        © {new Date().getFullYear()} Zulbera · Made with <span aria-hidden="true">❤️</span> by Zulbera
+      </p>
     </footer>
   );
 }

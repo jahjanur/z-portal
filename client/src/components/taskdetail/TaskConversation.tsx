@@ -388,19 +388,21 @@ function SiblingTasks({ task, p }: { task: any; p: any }) {
 }
 
 /** Task header card — title, status, primary action, and meta. Lives in the left column. */
-function TaskHeaderCard({ task, p }: { task: any; p: any }) {
+function TaskHeaderCard({ task, p, hideTitle }: { task: any; p: any; hideTitle?: boolean }) {
   return (
     <div className="card-panel p-4 sm:p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-xl font-extrabold leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[1.5rem]">{task.title}</h1>
-          {task.description && <p className="mt-1 text-sm text-[var(--color-text-muted)]">{task.description}</p>}
+      {!hideTitle && (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-extrabold leading-tight tracking-tight text-[var(--color-text-primary)] sm:text-[1.5rem]">{task.title}</h1>
+            {task.description && <p className="mt-1 text-sm text-[var(--color-text-muted)]">{task.description}</p>}
+          </div>
+          <StatusBadge status={task.status} className="shrink-0" />
         </div>
-        <StatusBadge status={task.status} className="shrink-0" />
-      </div>
+      )}
 
       {/* primary status actions */}
-      <div className="mt-4">
+      <div className={hideTitle ? "" : "mt-4"}>
         {p.currentUserRole === "ADMIN" && <AdminStatusControls currentStatus={task.status} onStatusChange={p.updateStatus} onApproveCompletion={p.approveCompletion} />}
         {p.currentUserRole === "WORKER" && <WorkerStatusControls currentStatus={task.status} onRequestCompletion={p.requestCompletion} />}
         {p.currentUserRole === "CLIENT" && <ClientStatusView currentStatus={task.status} />}
@@ -479,8 +481,8 @@ export default function TaskConversation(p: any) {
   return (
     <div className="pt-16">
       <div className="mx-auto flex h-[calc(100vh-4rem)] w-full max-w-[1400px] flex-col gap-4 px-3 sm:px-4 lg:flex-row lg:gap-6">
-        {/* LEFT — task header + brand & assets + sibling tasks */}
-        <aside className="shrink-0 space-y-3 overflow-y-auto pt-3 max-h-[46vh] lg:max-h-none lg:w-[380px] lg:pt-4">
+        {/* LEFT — task header + brand & assets + sibling tasks (desktop sidebar) */}
+        <aside className="hidden shrink-0 flex-col gap-3 overflow-y-auto py-4 lg:flex lg:w-[380px]">
           <TaskHeaderCard task={task} p={p} />
           <BrandAssets task={task} p={p} />
           <SiblingTasks task={task} p={p} />
@@ -523,6 +525,21 @@ export default function TaskConversation(p: any) {
             )}
           </div>
         </div>
+
+        {/* Mobile task details — desktop shows these in the left sidebar. Collapsed by
+            default so the chat fills the screen; tap to reveal actions/brand. */}
+        <details className="mb-2 shrink-0 lg:hidden">
+          <summary className="card-panel flex cursor-pointer list-none items-center gap-2 p-3 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0 flex-1 truncate text-sm font-bold text-[var(--color-text-primary)]">{task.title}</span>
+            <StatusBadge status={task.status} className="shrink-0" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
+          </summary>
+          <div className="mt-2 space-y-2">
+            <TaskHeaderCard task={task} p={p} hideTitle />
+            <BrandAssets task={task} p={p} />
+            <SiblingTasks task={task} p={p} />
+          </div>
+        </details>
 
         {/* Scrollable conversation — header/brand/switchers scroll away so the chat gets the room */}
         <div ref={feedRef} className="min-h-0 flex-1 overflow-y-auto pb-4 pt-1">
