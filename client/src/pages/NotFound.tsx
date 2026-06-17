@@ -5,7 +5,7 @@ export default function NotFound() {
   const token = typeof localStorage !== "undefined" ? localStorage.getItem("token") : null;
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4 py-16">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-auto bg-[var(--color-bg)] px-4 py-16">
       <div
         className="pointer-events-none fixed inset-0 z-0 bg-gradient-to-b from-[var(--color-overlay)]/40 via-transparent to-[var(--color-overlay)]/40"
         aria-hidden
