@@ -189,11 +189,64 @@ export default function TaskBoard({ tasks, onDelete, view = "board", onChangeSta
       const order = { PENDING: 0, IN_PROGRESS: 1, PENDING_APPROVAL: 1, COMPLETED: 2 } as Record<string, number>;
       return (order[a.status] ?? 3) - (order[b.status] ?? 3);
     });
+    if (ordered.length === 0) {
+      return (
+        <div className="rounded-2xl border border-dashed border-[var(--color-border)] py-12 text-center text-sm text-[var(--color-text-muted)]">
+          No tasks found
+        </div>
+      );
+    }
     return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)]">
         {ordered.map((t) => {
           const col = COLUMNS.find((c) => c.match(t)) ?? COLUMNS[0];
-          return <TaskCard key={t.id} task={t} accent={col.accent} onDelete={onDelete} navigate={navigate} />;
+          const completed = t.status === "COMPLETED";
+          const dstate = dueState(t.dueDate, completed);
+          const workers = t.workers ?? [];
+          return (
+            <div
+              key={t.id}
+              onClick={() => navigate(`/tasks/${t.id}`)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); navigate(`/tasks/${t.id}`); } }}
+              className="group flex cursor-pointer items-center gap-3 border-b border-[var(--color-border)] px-3 py-3 transition-colors last:border-0 hover:bg-[var(--color-surface-2)] sm:px-4"
+            >
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: col.dot }} title={col.label} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{t.title}</p>
+                <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-[var(--color-text-muted)]">
+                  <span className="truncate">{t.client?.name ?? `Client #${t.clientId}`}</span>
+                  {t.project && (<><span className="opacity-40">·</span><span className="inline-flex min-w-0 items-center gap-1"><FolderKanban className="h-3 w-3 shrink-0" /><span className="truncate">{t.project.name}</span></span></>)}
+                </p>
+              </div>
+              {/* workers */}
+              <div className="hidden shrink-0 sm:flex sm:-space-x-2">
+                {workers.slice(0, 3).map((tw, i) => (
+                  <span key={i} title={tw.user.name} className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-panel-solid)] bg-[var(--color-surface-3)] text-[0.625rem] font-bold text-[var(--color-text-secondary)]">{initials(tw.user.name)}</span>
+                ))}
+                {workers.length > 3 && (
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-panel-solid)] bg-[var(--color-surface-3)] text-[0.625rem] font-bold text-[var(--color-text-muted)]">+{workers.length - 3}</span>
+                )}
+              </div>
+              {/* due */}
+              {t.dueDate && (
+                <span className={`hidden shrink-0 items-center gap-1 text-xs font-medium md:inline-flex ${dstate === "overdue" ? "text-[var(--color-destructive-text)]" : dstate === "soon" ? "text-[var(--color-warning-text)]" : "text-[var(--color-text-muted)]"}`}>
+                  <Calendar className="h-3.5 w-3.5" />
+                  {new Date(t.dueDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                </span>
+              )}
+              <span className="shrink-0 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">{col.label}</span>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); if (confirm(`Delete task "${t.title}"?`)) onDelete(t.id); }}
+                aria-label={`Delete task: ${t.title}`}
+                className="shrink-0 rounded-lg p-1.5 text-[var(--color-text-muted)] opacity-0 transition hover:bg-[var(--color-destructive-bg)] hover:text-[var(--color-destructive-text)] focus-visible:opacity-100 group-hover:opacity-100"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          );
         })}
       </div>
     );
