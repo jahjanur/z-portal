@@ -41,4 +41,12 @@ app.use("/comments", commentsRoutes);
 
 app.get("/api", (req, res) => res.send("API is running"));
 
+// Global error handler — return JSON instead of leaving the request hanging or
+// crashing the process when a route throws unexpectedly.
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("[express error]", err?.stack || err);
+  if (res.headersSent) return;
+  res.status(err?.status || 500).json({ error: "Server error" });
+});
+
 export default app;

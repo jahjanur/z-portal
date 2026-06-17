@@ -13,6 +13,15 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+// Resilience: a stray async error must not take the whole server down (which would
+// cause a Docker restart and make users hit a transient failure). Log and keep serving.
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection]", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException]", err);
+});
+
 import app from "./app";
 import { scheduleDomainRenewalReminders } from "./jobs/domainRenewalReminder";
 
