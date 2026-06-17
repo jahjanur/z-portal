@@ -33,6 +33,9 @@ export interface DomainFormPayload {
   expirationDate?: string;
   lifespanYears?: number | null;
   status?: string;
+  hostingProvider?: string;
+  hostingPlan?: string;
+  hostingExpiry?: string;
 }
 
 interface DomainFormProps {
@@ -49,6 +52,9 @@ interface DomainFormProps {
     expirationDate?: string | null;
     lifespanYears?: number | null;
     status?: string;
+    hostingProvider?: string | null;
+    hostingPlan?: string | null;
+    hostingExpiry?: string | null;
     activationEmailSentAt?: string | null;
     renewalReminderSentAt?: string | null;
   } | null;
