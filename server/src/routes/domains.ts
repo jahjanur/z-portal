@@ -93,6 +93,9 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
       expirationDate: expirationDateRaw,
       lifespanYears,
       status: statusBody,
+      hostingProvider,
+      hostingPlan,
+      hostingExpiry: hostingExpiryRaw,
     } = req.body;
 
     if (!clientId || !domainName) {
@@ -127,6 +130,9 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
         activationDate,
         expirationDate,
         lifespanYears: lifespanYearsNum,
+        hostingProvider: hostingProvider || null,
+        hostingPlan: hostingPlan || null,
+        hostingExpiry: hostingExpiryRaw ? new Date(hostingExpiryRaw) : null,
         status,
         isActive: status === "ACTIVE" || status === "RENEWED" || status === "RENEWAL_DUE",
       },
@@ -174,6 +180,9 @@ router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
       expirationDate: expirationDateRaw,
       lifespanYears,
       status: statusBody,
+      hostingProvider,
+      hostingPlan,
+      hostingExpiry: hostingExpiryRaw,
     } = req.body;
 
     const existingDomain = await prisma.domain.findUnique({
@@ -232,6 +241,9 @@ router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
       activationDate?: Date | null;
       expirationDate?: Date | null;
       lifespanYears?: number | null;
+      hostingProvider?: string | null;
+      hostingPlan?: string | null;
+      hostingExpiry?: Date | null;
       status?: string;
       activationEmailSentAt?: Date | null;
       renewalReminderSentAt?: Date | null;
@@ -243,6 +255,9 @@ router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
       activationDate,
       expirationDate,
       lifespanYears: lifespanYearsNum,
+      hostingProvider: hostingProvider !== undefined ? (hostingProvider || null) : existingDomain.hostingProvider,
+      hostingPlan: hostingPlan !== undefined ? (hostingPlan || null) : existingDomain.hostingPlan,
+      hostingExpiry: hostingExpiryRaw !== undefined ? (hostingExpiryRaw ? new Date(hostingExpiryRaw) : null) : existingDomain.hostingExpiry,
       status,
     };
 

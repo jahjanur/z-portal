@@ -71,6 +71,9 @@ model Domain {
   activationDate          DateTime?
   expirationDate          DateTime?
   lifespanYears           Int?
+  hostingProvider         String?
+  hostingPlan             String?
+  hostingExpiry           DateTime?
   status                  String    @default("PENDING")
   activationEmailSentAt   DateTime?
   renewalReminderSentAt   DateTime?

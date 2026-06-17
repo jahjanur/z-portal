@@ -87,6 +87,8 @@ const DomainForm: React.FC<DomainFormProps> = ({
     lifespan: "1",
     customLifespanYears: "" as string,
     status: "PENDING",
+    hostingPlan: "",
+    hostingExpiry: "",
   });
 
   useEffect(() => {
@@ -116,6 +118,8 @@ const DomainForm: React.FC<DomainFormProps> = ({
             ? String(editingDomain.lifespanYears)
             : "",
         status: editingDomain.status || "PENDING",
+        hostingPlan: editingDomain.hostingPlan || "",
+        hostingExpiry: toDateInputValue(editingDomain.hostingExpiry),
       });
     } else {
       setFormData({
@@ -127,6 +131,8 @@ const DomainForm: React.FC<DomainFormProps> = ({
         lifespan: "1",
         customLifespanYears: "",
         status: "PENDING",
+        hostingPlan: "",
+        hostingExpiry: "",
       });
     }
   }, [editingDomain]);
@@ -180,6 +186,8 @@ const DomainForm: React.FC<DomainFormProps> = ({
       expirationDate: expirationDate || undefined,
       lifespanYears: lifespanYears ?? undefined,
       status: formData.status,
+      hostingPlan: formData.hostingPlan || undefined,
+      hostingExpiry: formData.hostingExpiry || undefined,
     };
     if (editingDomain) {
       await onUpdate(editingDomain.id, payload);
@@ -197,6 +205,8 @@ const DomainForm: React.FC<DomainFormProps> = ({
         expirationDate: payload.expirationDate,
         lifespanYears: payload.lifespanYears,
         status: payload.status,
+        hostingPlan: payload.hostingPlan,
+        hostingExpiry: payload.hostingExpiry,
       });
       setFormData({
         clientId: "",
@@ -207,6 +217,8 @@ const DomainForm: React.FC<DomainFormProps> = ({
         lifespan: "1",
         customLifespanYears: "",
         status: "PENDING",
+        hostingPlan: "",
+        hostingExpiry: "",
       });
     }
   };
@@ -280,6 +292,28 @@ const DomainForm: React.FC<DomainFormProps> = ({
             <DatePicker
               value={formData.activationDate}
               onChange={(activationDate) => setFormData((prev) => ({ ...prev, activationDate }))}
+              placeholder="yyyy/mm/dd"
+            />
+          </div>
+
+          {/* Hosting (tracked alongside the domain) */}
+          <div className="w-full">
+            <label className={CONTROL_LABEL}>Hosting Plan</label>
+            <input
+              type="text"
+              name="hostingPlan"
+              value={formData.hostingPlan}
+              onChange={handleChange}
+              placeholder="e.g. Business · 20 GB"
+              className={CONTROL_INPUT}
+            />
+          </div>
+
+          <div className="w-full">
+            <label className={CONTROL_LABEL}>Hosting Expiry</label>
+            <DatePicker
+              value={formData.hostingExpiry}
+              onChange={(hostingExpiry) => setFormData((prev) => ({ ...prev, hostingExpiry }))}
               placeholder="yyyy/mm/dd"
             />
           </div>
