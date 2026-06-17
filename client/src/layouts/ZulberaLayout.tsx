@@ -59,7 +59,7 @@ function WorkspaceOverviewCard() {
 
   if (loading || !data) {
     return (
-      <div className="mt-auto hidden px-4 pb-5 lg:block">
+      <div className="hidden px-4 pb-5 pt-3 lg:block">
         <div className="space-y-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
           <div className="skeleton h-3 w-24" />
           <div className="skeleton h-3 w-32" />
@@ -162,7 +162,7 @@ function ZulberaLayoutInner() {
     <div className="flex min-h-[calc(100vh-4rem)] pt-16">
       {/* Sidebar: icon rail on tablet (md), full at lg+ */}
       <aside className="app-sidebar sticky top-16 hidden h-[calc(100vh-4rem)] w-[72px] shrink-0 flex-col self-start overflow-y-auto overflow-x-hidden md:flex lg:w-[252px]">
-        <nav className="flex-1 space-y-4 px-3 pt-6" aria-label="Zulbera">
+        <nav className="space-y-4 px-3 pt-6" aria-label="Zulbera">
           {ZULBERA_NAV_SECTIONS.map((section) => (
             <div key={section.label} className="space-y-1">
               <p className="nav-section-label mb-1 hidden lg:block">{section.label}</p>
