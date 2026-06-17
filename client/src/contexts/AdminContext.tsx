@@ -80,6 +80,7 @@ export interface Domain {
   domainExpiry?: string;
   hostingPlan?: string;
   hostingExpiry?: string;
+  hostingProvider?: string;
   isPrimary: boolean;
   client: { id: number; name: string; company?: string };
   createdAt: string;
@@ -97,6 +98,7 @@ interface EditingDomain {
   domainExpiry?: string;
   hostingPlan?: string;
   hostingExpiry?: string;
+  hostingProvider?: string;
   clientId: number;
   activationDate?: string | null;
   expirationDate?: string | null;
@@ -145,6 +147,7 @@ interface AdminContextValue {
     domainExpiry?: string;
     hostingPlan?: string;
     hostingExpiry?: string;
+    hostingProvider?: string;
     sslExpiry?: string;
   }) => void;
   resendInvite: (clientId: number) => Promise<void>;
@@ -164,6 +167,7 @@ interface AdminContextValue {
     domainExpiry?: string;
     hostingPlan?: string;
     hostingExpiry?: string;
+    hostingProvider?: string;
     notes?: string;
     activationDate?: string;
     expirationDate?: string;
@@ -175,6 +179,7 @@ interface AdminContextValue {
     domainExpiry?: string;
     hostingPlan?: string;
     hostingExpiry?: string;
+    hostingProvider?: string;
     notes?: string;
     activationDate?: string;
     expirationDate?: string;
@@ -300,6 +305,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     domainExpiry?: string;
     hostingPlan?: string;
     hostingExpiry?: string;
+    hostingProvider?: string;
     sslExpiry?: string;
   }) => {
     await API.post("/users", {
@@ -310,6 +316,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       domainExpiry: data.domainExpiry || undefined,
       hostingPlan: data.hostingPlan || undefined,
       hostingExpiry: data.hostingExpiry || undefined,
+      hostingProvider: data.hostingProvider || undefined,
       sslExpiry: data.sslExpiry || undefined,
     });
     await fetchAll();
@@ -406,6 +413,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     domainExpiry?: string;
     hostingPlan?: string;
     hostingExpiry?: string;
+    hostingProvider?: string;
     notes?: string;
     activationDate?: string;
     expirationDate?: string;
@@ -418,6 +426,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       domainExpiry: data.domainExpiry || null,
       hostingPlan: data.hostingPlan || null,
       hostingExpiry: data.hostingExpiry || null,
+      hostingProvider: data.hostingProvider || null,
       notes: data.notes || null,
       activationDate: data.activationDate || null,
       expirationDate: data.expirationDate || null,
@@ -435,6 +444,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       domainExpiry?: string;
       hostingPlan?: string;
       hostingExpiry?: string;
+    hostingProvider?: string;
       notes?: string;
       activationDate?: string;
       expirationDate?: string;
@@ -447,6 +457,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       domainExpiry: data.domainExpiry || null,
       hostingPlan: data.hostingPlan || null,
       hostingExpiry: data.hostingExpiry || null,
+      hostingProvider: data.hostingProvider || null,
       notes: data.notes || null,
       activationDate: data.activationDate || null,
       expirationDate: data.expirationDate || null,

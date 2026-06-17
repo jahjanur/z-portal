@@ -46,12 +46,74 @@ export async function runDomainRenewalReminders(): Promise<void> {
   }
 }
 
+/**
+ * Notify the client + all admins (in-app) about hosting plans expiring within
+ * ~30 days. Deduped by checking for an existing notification for that domain in
+ * the last 25 days (so it doesn't fire every day).
+ */
+export async function runHostingExpiryReminders(): Promise<void> {
+  const now = new Date();
+  const in30 = new Date(now);
+  in30.setDate(in30.getDate() + 30);
+  const cutoff = new Date(now);
+  cutoff.setDate(cutoff.getDate() - 25);
+
+  const domains = await prisma.domain.findMany({
+    where: { hostingExpiry: { gt: now, lte: in30 } },
+    include: { client: { select: { id: true, name: true } } },
+  });
+  if (domains.length === 0) return;
+
+  const admins = await prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true } });
+
+  for (const domain of domains) {
+    if (!domain.hostingExpiry) continue;
+    const dateStr = domain.hostingExpiry.toLocaleDateString();
+    const provider = domain.hostingProvider ? ` (${domain.hostingProvider})` : "";
+    const message = `Hosting for ${domain.domainName}${provider} expires on ${dateStr}`;
+    const recipients: { userId: number; link: string }[] = [
+      { userId: domain.clientId, link: "/dashboard?tab=domains" },
+      ...admins.map((a) => ({ userId: a.id, link: "/admin/zulbera/domains" })),
+    ];
+
+    for (const r of recipients) {
+      try {
+        const existing = await prisma.notification.findFirst({
+          where: {
+            userId: r.userId,
+            type: "DOMAIN_HOSTING_EXPIRING",
+            message: { contains: domain.domainName },
+            createdAt: { gt: cutoff },
+          },
+          select: { id: true },
+        });
+        if (existing) continue;
+        await prisma.notification.create({
+          data: {
+            userId: r.userId,
+            type: "DOMAIN_HOSTING_EXPIRING",
+            title: "Hosting expiring soon",
+            message,
+            link: r.link,
+            read: false,
+          },
+        });
+      } catch (err) {
+        console.error(`Hosting expiry reminder failed for domain ${domain.id}, user ${r.userId}:`, err);
+      }
+    }
+  }
+}
+
 /** Schedule daily at 9:00 AM. */
 export function scheduleDomainRenewalReminders(): void {
   cron.schedule("0 9 * * *", () => {
     runDomainRenewalReminders().catch((err) =>
       console.error("Domain renewal reminder job error:", err)
     );
+    runHostingExpiryReminders().catch((err) =>
+      console.error("Hosting expiry reminder job error:", err)
+    );
   });
-  console.log("Domain renewal reminder cron scheduled (daily at 9:00 AM).");
+  console.log("Domain + hosting renewal reminder cron scheduled (daily at 9:00 AM).");
 }

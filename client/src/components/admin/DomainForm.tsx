@@ -87,6 +87,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
     lifespan: "1",
     customLifespanYears: "" as string,
     status: "PENDING",
+    hostingProvider: "",
     hostingPlan: "",
     hostingExpiry: "",
   });
@@ -118,6 +119,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
             ? String(editingDomain.lifespanYears)
             : "",
         status: editingDomain.status || "PENDING",
+        hostingProvider: editingDomain.hostingProvider || "",
         hostingPlan: editingDomain.hostingPlan || "",
         hostingExpiry: toDateInputValue(editingDomain.hostingExpiry),
       });
@@ -131,6 +133,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
         lifespan: "1",
         customLifespanYears: "",
         status: "PENDING",
+        hostingProvider: "",
         hostingPlan: "",
         hostingExpiry: "",
       });
@@ -186,6 +189,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
       expirationDate: expirationDate || undefined,
       lifespanYears: lifespanYears ?? undefined,
       status: formData.status,
+      hostingProvider: formData.hostingProvider || undefined,
       hostingPlan: formData.hostingPlan || undefined,
       hostingExpiry: formData.hostingExpiry || undefined,
     };
@@ -205,6 +209,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
         expirationDate: payload.expirationDate,
         lifespanYears: payload.lifespanYears,
         status: payload.status,
+        hostingProvider: payload.hostingProvider,
         hostingPlan: payload.hostingPlan,
         hostingExpiry: payload.hostingExpiry,
       });
@@ -217,6 +222,7 @@ const DomainForm: React.FC<DomainFormProps> = ({
         lifespan: "1",
         customLifespanYears: "",
         status: "PENDING",
+        hostingProvider: "",
         hostingPlan: "",
         hostingExpiry: "",
       });
@@ -297,6 +303,18 @@ const DomainForm: React.FC<DomainFormProps> = ({
           </div>
 
           {/* Hosting (tracked alongside the domain) */}
+          <div className="w-full">
+            <label className={CONTROL_LABEL}>Hosting Provider</label>
+            <input
+              type="text"
+              name="hostingProvider"
+              value={formData.hostingProvider}
+              onChange={handleChange}
+              placeholder="e.g. Hetzner · cPanel"
+              className={CONTROL_INPUT}
+            />
+          </div>
+
           <div className="w-full">
             <label className={CONTROL_LABEL}>Hosting Plan</label>
             <input
