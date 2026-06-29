@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import {
   ArrowLeft, Paperclip, Send, Download, Maximize2, Check, RotateCcw,
   Image as ImageIcon, FileText, Palette, File as FileIcon, Calendar, RefreshCw, FolderKanban, ChevronDown, Trash2,
+  Copy, CornerUpRight,
 } from "lucide-react";
 import Button from "../ui/Button";
 import StatusBadge from "../ui/StatusBadge";
@@ -493,6 +494,17 @@ export default function TaskConversation(p: any) {
     }
   };
 
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const copyText = async (key: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(key);
+      setTimeout(() => setCopiedId((k) => (k === key ? null : k)), 1500);
+    } catch {
+      toast.error("Couldn't copy");
+    }
+  };
+
   const channels = [
     { key: "worker", label: "Worker channel", unseen: p.hasUnseen?.worker, count: p.unreadByTaskThread?.internal },
     { key: "client", label: "Client channel", unseen: p.hasUnseen?.client, count: p.unreadByTaskThread?.client },
@@ -613,6 +625,40 @@ export default function TaskConversation(p: any) {
                         <span className="text-[13px] font-bold text-[var(--color-text-primary)]">{name}</span>
                         <StatusBadge dot={false} tone={roleTone(role)} className="!px-1.5 !py-0 text-[9px] uppercase tracking-wide">{roleLabel(role)}</StatusBadge>
                         <span className="ml-auto text-[11px] text-[var(--color-text-muted)]">{fmtTime(it.at)}</span>
+                        {/* per-message actions: copy (everyone) + forward to the other channel (admin) */}
+                        {(() => {
+                          const text = it.kind === "msg" ? d.content : (d.caption || "");
+                          if (!text) return null;
+                          const copyKey = `${it.kind}-${d.id}`;
+                          const isCopied = copiedId === copyKey;
+                          return (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => copyText(copyKey, text)}
+                                title={isCopied ? "Copied!" : "Copy text"}
+                                aria-label="Copy message text"
+                                className="text-[var(--color-text-muted)] opacity-0 transition hover:text-[var(--color-text-primary)] focus:opacity-100 group-hover:opacity-100"
+                              >
+                                {isCopied ? <Check className="h-3.5 w-3.5 text-[var(--color-success-text)]" /> : <Copy className="h-3.5 w-3.5" />}
+                              </button>
+                              {p.isAdmin && it.kind === "msg" && p.forwardComment && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const toClient = !d.visibleToClient;
+                                    p.forwardComment(`↪ Forwarded from ${name}:\n${d.content}`, toClient);
+                                  }}
+                                  title={`Forward to ${d.visibleToClient ? "worker" : "client"} channel`}
+                                  aria-label="Forward message to the other channel"
+                                  className="text-[var(--color-text-muted)] opacity-0 transition hover:text-[var(--color-info-text)] focus:opacity-100 group-hover:opacity-100"
+                                >
+                                  <CornerUpRight className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </>
+                          );
+                        })()}
                         {it.kind === "msg" && (p.isAdmin || d.userId === p.currentUserId) && (
                           <button
                             type="button"

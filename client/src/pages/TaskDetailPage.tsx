@@ -345,6 +345,25 @@ const TaskDetailPage: React.FC = () => {
     }
   };
 
+  /** Admin: re-post a message into the other channel (e.g. a client note → the
+   *  worker/team channel) so it doesn't have to be copy-pasted by hand. */
+  const forwardComment = async (content: string, toClient: boolean) => {
+    if (!content.trim()) return;
+    try {
+      await API.post(`/tasks/${id}/comments`, {
+        userId: currentUserId,
+        content,
+        visibleToClient: toClient,
+      });
+      setActiveChannel(toClient ? "client" : "worker");
+      toast.success(`Forwarded to ${toClient ? "client" : "worker"} channel`);
+      fetchTask();
+      if (isAdmin) fetchUnreadByTask();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't forward message");
+    }
+  };
+
   const deleteFile = async (fileId: number) => {
     try {
       await API.delete(`/tasks/${id}/files/${fileId}`);
@@ -566,6 +585,7 @@ const TaskDetailPage: React.FC = () => {
         addComment={addComment}
         addingComment={addingComment}
         deleteComment={deleteComment}
+        forwardComment={forwardComment}
         deleteFile={deleteFile}
         selectedFiles={selectedFiles}
         setSelectedFiles={setSelectedFiles}
