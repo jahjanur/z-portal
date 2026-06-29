@@ -1403,8 +1403,9 @@ router.get("/:id/milestones", verifyJWT, async (req: any, res) => {
   }
 });
 
-// create a milestone (optional images)
-router.post("/:id/milestones", verifyJWT, upload.array("images", 10), async (req: any, res) => {
+// create a milestone (optional images). upload.any() accepts files under any
+// field name ("images", "image", …) so an older cached client still works.
+router.post("/:id/milestones", verifyJWT, upload.any(), async (req: any, res) => {
   try {
     const taskId = Number(req.params.id);
     if (!Number.isInteger(taskId)) return res.status(400).json({ error: "Invalid task id" });
@@ -1468,7 +1469,7 @@ router.post("/:id/milestones", verifyJWT, upload.array("images", 10), async (req
 });
 
 // add more images to an existing to-do
-router.post("/:id/milestones/:mid/images", verifyJWT, upload.array("images", 10), async (req: any, res) => {
+router.post("/:id/milestones/:mid/images", verifyJWT, upload.any(), async (req: any, res) => {
   try {
     const taskId = Number(req.params.id);
     const mid = Number(req.params.mid);
