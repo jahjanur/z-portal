@@ -32,6 +32,9 @@ model User {
   referredById   Int?
   referredBy     User?              @relation("ReferredClients", fields: [referredById], references: [id])
   referredClients User[]            @relation("ReferredClients")
+  companyOwnerId Int?
+  companyOwner   User?              @relation("CompanyTeam", fields: [companyOwnerId], references: [id])
+  teamMembers    User[]             @relation("CompanyTeam")
   domains        Domain[]           @relation("ClientDomains")
   fileComments   FileComment[]
   invoices       Invoice[]          @relation("ClientInvoices")
@@ -282,6 +285,7 @@ model Invite {
   tokenHash     String    @unique
   name          String
   company       String?
+  companyOwnerId Int?
   domainName    String?
   domainExpiry  String?
   hostingPlan   String?

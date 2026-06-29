@@ -7,6 +7,9 @@ import prisma from "../lib/prisma";
 import { uploadsDir } from "../lib/uploadsPath";
 import { maskTaskWorkers, workerAlias } from "../lib/workerIdentity";
 import { sendMilestoneDoneEmail } from "../services/milestoneEmail";
+import { clientScopeId } from "../lib/clientScope";
+
+type ReqUser = { userId: number; role: string; companyOwnerId?: number | null };
 
 const router = Router();
 
@@ -147,8 +150,8 @@ router.get("/", verifyJWT, async (req: any, res) => {
         } 
       });
     } else if (role === "CLIENT") {
-      tasks = await prisma.task.findMany({ 
-        where: { clientId: userId }, 
+      tasks = await prisma.task.findMany({
+        where: { clientId: clientScopeId(req.user) },
         include: { 
           ...workersInclude,
           project: {
@@ -283,7 +286,7 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
     if (role === "WORKER" && !isAssignedWorker) {
       return res.status(403).json({ error: "Not authorized to view this task" });
     }
-    if (role === "CLIENT" && task.clientId !== userId) {
+    if (role === "CLIENT" && task.clientId !== clientScopeId(req.user)) {
       return res.status(403).json({ error: "Not authorized to view this task" });
     }
     if (role === "ERASPHERE") {
@@ -598,7 +601,7 @@ router.post("/:id/files", verifyJWT, upload.single("file"), async (req: any, res
     let canUpload =
       role === "ADMIN" ||
       (role === "WORKER" && isAssignedWorker) ||
-      (role === "CLIENT" && task.clientId === userId);
+      (role === "CLIENT" && task.clientId === clientScopeId(req.user));
     if (role === "ERASPHERE" && task.clientId) {
       const referredClientIds = await prisma.user
         .findMany({ where: { role: "CLIENT", referredById: userId }, select: { id: true } })
@@ -753,7 +756,7 @@ router.post("/:taskId/files/:fileId/comments", verifyJWT, async (req: any, res) 
         return res.status(403).json({ error: "Not authorized to comment on this task" });
       }
     } else if (role === "CLIENT") {
-      if (Number(task.clientId) !== authUserId) {
+      if (Number(task.clientId) !== clientScopeId(req.user)) {
         return res.status(403).json({ error: "Not authorized to comment on this task" });
       }
     } else if (role === "ERASPHERE") {
@@ -881,7 +884,7 @@ router.post("/:id/comments", verifyJWT, async (req: any, res) => {
       const canComment = task.workers.some((w) => w.userId === authUserId);
       if (!canComment) return res.status(403).json({ error: "Not authorized to comment on this task" });
     }
-    if (role === "CLIENT" && Number(task.clientId) !== authUserId) {
+    if (role === "CLIENT" && Number(task.clientId) !== clientScopeId(req.user)) {
       return res.status(403).json({ error: "Not authorized to comment on this task" });
     }
     if (role === "ERASPHERE") {
@@ -1364,19 +1367,19 @@ async function loadTaskForMilestone(taskId: number): Promise<MiniTask | null> {
 
 /** Can this user see/add milestones on the task? (admin, assigned worker, the
  *  task's client, or an EraSphere partner who referred the client.) */
-async function canAccessMilestones(task: MiniTask, userId: number, role: string): Promise<boolean> {
-  if (role === "ADMIN") return true;
-  if (role === "WORKER") return task.workers.some((w) => w.userId === userId);
-  if (role === "CLIENT") return task.clientId === userId;
-  if (role === "ERASPHERE" && task.clientId) {
-    return (await getReferredClientIds(userId)).includes(task.clientId);
+async function canAccessMilestones(task: MiniTask, user: ReqUser): Promise<boolean> {
+  if (user.role === "ADMIN") return true;
+  if (user.role === "WORKER") return task.workers.some((w) => w.userId === user.userId);
+  if (user.role === "CLIENT") return task.clientId === clientScopeId(user);
+  if (user.role === "ERASPHERE" && task.clientId) {
+    return (await getReferredClientIds(user.userId)).includes(task.clientId);
   }
   return false;
 }
 
 /** Only admins and assigned workers can mark milestones done. */
-function canCompleteMilestones(task: MiniTask, userId: number, role: string): boolean {
-  return role === "ADMIN" || (role === "WORKER" && task.workers.some((w) => w.userId === userId));
+function canCompleteMilestones(task: MiniTask, user: ReqUser): boolean {
+  return user.role === "ADMIN" || (user.role === "WORKER" && task.workers.some((w) => w.userId === user.userId));
 }
 
 // list milestones for a task
@@ -1386,7 +1389,7 @@ router.get("/:id/milestones", verifyJWT, async (req: any, res) => {
     if (!Number.isInteger(taskId)) return res.status(400).json({ error: "Invalid task id" });
     const task = await loadTaskForMilestone(taskId);
     if (!task) return res.status(404).json({ error: "Task not found" });
-    if (!(await canAccessMilestones(task, req.user.userId, req.user.role))) {
+    if (!(await canAccessMilestones(task, req.user))) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const milestones = await prisma.milestone.findMany({
@@ -1410,7 +1413,7 @@ router.post("/:id/milestones", verifyJWT, upload.single("image"), async (req: an
 
     const task = await loadTaskForMilestone(taskId);
     if (!task) return res.status(404).json({ error: "Task not found" });
-    if (!(await canAccessMilestones(task, req.user.userId, req.user.role))) {
+    if (!(await canAccessMilestones(task, req.user))) {
       return res.status(403).json({ error: "Not authorized to add to-dos to this task" });
     }
 
@@ -1448,14 +1451,14 @@ router.patch("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
       select: { id: true, title: true, clientId: true, workers: { select: { userId: true } }, client: { select: { id: true, name: true, email: true } } },
     });
     if (!task) return res.status(404).json({ error: "Task not found" });
-    if (!(await canAccessMilestones(task as any, userId, role))) {
+    if (!(await canAccessMilestones(task as any, req.user))) {
       return res.status(403).json({ error: "Not authorized" });
     }
     const milestone = await prisma.milestone.findFirst({ where: { id: mid, taskId } });
     if (!milestone) return res.status(404).json({ error: "To-do not found" });
 
     const data: any = {};
-    const isStaff = canCompleteMilestones(task as any, userId, role);
+    const isStaff = canCompleteMilestones(task as any, req.user);
 
     if ("title" in req.body || "description" in req.body) {
       if (!isStaff && milestone.createdById !== userId) {

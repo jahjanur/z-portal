@@ -4,6 +4,7 @@ import fs from "fs";
 import jwt from "jsonwebtoken";
 import prisma from "../lib/prisma";
 import { uploadsDir } from "../lib/uploadsPath";
+import { clientScopeId } from "../lib/clientScope";
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
@@ -11,6 +12,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "secret";
 interface AuthUser {
   userId: number;
   role: string;
+  companyOwnerId?: number | null;
 }
 
 /**
@@ -28,7 +30,7 @@ function authFromReq(req: any): { ok: true; user: AuthUser } | { ok: false; stat
   try {
     const decoded: any = jwt.verify(token, JWT_SECRET);
     const role = typeof decoded?.role === "string" ? decoded.role.toUpperCase() : decoded?.role;
-    return { ok: true, user: { userId: decoded.userId, role } };
+    return { ok: true, user: { userId: decoded.userId, role, companyOwnerId: decoded.companyOwnerId ?? null } };
   } catch {
     return { ok: false, status: 403 };
   }
@@ -55,6 +57,7 @@ router.get(/.*/, async (req: any, res) => {
     const auth = authFromReq(req);
     if (!auth.ok) return res.status(auth.status).json({ error: auth.status === 401 ? "Unauthorized" : "Forbidden" });
     const { role, userId } = auth.user;
+    const scopeId = clientScopeId(auth.user); // company scope for CLIENT team members
 
     // Normalise the requested subpath and resolve it safely inside uploadsDir.
     const rel = decodeURIComponent(req.path).replace(/^\/+/, "");
@@ -72,7 +75,7 @@ router.get(/.*/, async (req: any, res) => {
     } else if (rel.startsWith("invoices/")) {
       const invoice = await prisma.invoice.findFirst({ where: { fileUrl }, select: { clientId: true } });
       if (invoice) {
-        if (role === "CLIENT") authorized = invoice.clientId === userId;
+        if (role === "CLIENT") authorized = invoice.clientId === scopeId;
         else if (role === "ERASPHERE") authorized = (await referredClientIds(userId)).includes(invoice.clientId);
         else if (role === "WORKER") {
           const t = await prisma.task.findFirst({
@@ -87,7 +90,7 @@ router.get(/.*/, async (req: any, res) => {
       authorized = role === "ERASPHERE" || role === "WORKER"; // ADMIN already authorized above
     } else if (rel.startsWith("profile-files/")) {
       const ownerId = Number(rel.split("/")[1]);
-      if (role === "CLIENT") authorized = ownerId === userId;
+      if (role === "CLIENT") authorized = ownerId === scopeId;
       else if (role === "ERASPHERE") authorized = (await referredClientIds(userId)).includes(ownerId);
       else if (role === "WORKER") {
         // A worker may see a client's brand files only for a client they're assigned to.
@@ -102,7 +105,7 @@ router.get(/.*/, async (req: any, res) => {
       });
       if (taskFile) {
         const task = taskFile.task;
-        if (role === "CLIENT") authorized = task.clientId === userId;
+        if (role === "CLIENT") authorized = task.clientId === scopeId;
         else if (role === "WORKER") authorized = task.workers.some((w) => w.userId === userId);
         else if (role === "ERASPHERE")
           authorized = task.clientId !== null && (await referredClientIds(userId)).includes(task.clientId);
@@ -115,7 +118,7 @@ router.get(/.*/, async (req: any, res) => {
             const t = await prisma.task.findFirst({ where: { clientId: owner.id, workers: { some: { userId } } }, select: { id: true } });
             authorized = !!t;
           } else {
-            authorized = owner.id === userId;
+            authorized = owner.id === scopeId;
           }
         }
       }

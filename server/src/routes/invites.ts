@@ -135,6 +135,63 @@ router.post("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   }
 });
 
+// POST /invites/team-member — admin invites an extra founder/member to a company.
+// The new user is a CLIENT linked to the company via companyOwnerId, so they
+// share all of that company's tasks, invoices, domains and feedback.
+router.post("/team-member", verifyJWT, verifyAdmin, async (req: any, res) => {
+  try {
+    const { companyOwnerId, email, name } = req.body;
+    const ownerId = Number(companyOwnerId);
+    if (!Number.isInteger(ownerId)) return res.status(400).json({ error: "companyOwnerId is required" });
+    if (!email || !name) return res.status(400).json({ error: "Email and name are required" });
+
+    const company = await prisma.user.findUnique({
+      where: { id: ownerId },
+      select: { id: true, role: true, company: true, companyOwnerId: true, name: true },
+    });
+    if (!company || company.role !== "CLIENT") return res.status(404).json({ error: "Company not found" });
+    // Always anchor to the primary account (in case an admin passed a member's id).
+    const primaryId = company.companyOwnerId ?? company.id;
+
+    const emailNorm = String(email).toLowerCase().trim();
+    const existingUser = await prisma.user.findUnique({ where: { email: emailNorm }, select: { id: true, role: true } });
+    if (existingUser) return res.status(400).json({ error: "A user with this email already exists" });
+
+    await prisma.invite.updateMany({
+      where: { email: emailNorm, role: "CLIENT", used: false, cancelled: false },
+      data: { cancelled: true },
+    });
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const invite = await prisma.invite.create({
+      data: {
+        email: emailNorm,
+        name: String(name).trim(),
+        role: "CLIENT",
+        tokenHash: hashToken(rawToken),
+        invitedById: req.user.userId,
+        company: company.company || null,
+        companyOwnerId: primaryId,
+        expiresAt: new Date(Date.now() + INVITE_EXPIRY_HOURS * 60 * 60 * 1000),
+      },
+    });
+
+    const clientUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || "http://localhost:5173";
+    const inviteLink = `${clientUrl}/invite/accept?token=${rawToken}`;
+    try {
+      await sendInviteEmail({ to: invite.email, name: invite.name, role: "CLIENT", company: invite.company, inviteLink, expiresInHours: INVITE_EXPIRY_HOURS });
+    } catch (emailErr) {
+      console.error("Failed to send team-member invite email:", emailErr);
+      console.log(`[TEAM INVITE LINK - EMAIL FAILED]: ${inviteLink}`);
+    }
+
+    return res.status(201).json({ id: invite.id, email: invite.email, name: invite.name, inviteLink });
+  } catch (error: any) {
+    console.error("Error inviting team member:", error);
+    return res.status(500).json({ error: "Failed to invite team member" });
+  }
+});
+
 // GET /invites — list invites (admin only)
 router.get("/", verifyJWT, verifyAdmin, async (_req, res) => {
   try {
@@ -239,6 +296,8 @@ router.post("/accept", acceptLimiter, async (req, res) => {
       userData.company = invite.company || null;
       userData.colorHex = "#5B4FFF";
       userData.profileStatus = "COMPLETE";
+      // Team member of an existing company → shares that company's data.
+      if (invite.companyOwnerId) userData.companyOwnerId = invite.companyOwnerId;
     }
 
     if (invite.role === "ERASPHERE") {
@@ -283,7 +342,7 @@ router.post("/accept", acceptLimiter, async (req, res) => {
       }
     }
 
-    const jwtToken = jwt.sign({ userId: newUser.id, role: newUser.role }, JWT_SECRET, { expiresIn: "7d" });
+    const jwtToken = jwt.sign({ userId: newUser.id, role: newUser.role, companyOwnerId: newUser.companyOwnerId ?? null }, JWT_SECRET, { expiresIn: "7d" });
 
     // Emit account-created notification
     const eventTypeMap: Record<string, string> = {

@@ -29,7 +29,7 @@ router.post("/login", async (req, res) => {
 
     const role = String(user.role || "").toUpperCase();
     const token = jwt.sign(
-      { userId: user.id, role },
+      { userId: user.id, role, companyOwnerId: user.companyOwnerId ?? null },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -45,6 +45,7 @@ router.post("/login", async (req, res) => {
         avatarEmoji: user.avatarEmoji,
         skills: user.skills,
         company: user.company,
+        companyOwnerId: user.companyOwnerId,
         logo: user.logo,
         colorHex: user.colorHex
       }
@@ -81,6 +82,7 @@ router.get("/verify", async (req, res) => {
         avatarEmoji: true,
         skills: true,
         company: true,
+        companyOwnerId: true,
         logo: true,
         colorHex: true,
         createdAt: true

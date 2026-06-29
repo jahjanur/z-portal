@@ -7,6 +7,7 @@ import nodemailer from "nodemailer";
 import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
 import { uploadsDir } from "../lib/uploadsPath";
+import { clientScopeId } from "../lib/clientScope";
 
 const router = Router();
 
@@ -104,7 +105,7 @@ router.get("/", verifyJWT, async (req: any, res) => {
       });
     } else if (role === "CLIENT") {
       invoices = await prisma.invoice.findMany({
-        where: { clientId: userId },
+        where: { clientId: clientScopeId(req.user) },
         include: {
           client: { select: clientSelectWithContact },
           lineItems: { orderBy: { sortOrder: 'asc' } },
@@ -172,7 +173,7 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
       if (!hasTask) {
         return res.status(403).json({ error: "Not authorized to view this invoice" });
       }
-    } else if (role === "CLIENT" && invoice.clientId !== userId) {
+    } else if (role === "CLIENT" && invoice.clientId !== clientScopeId(req.user)) {
       return res.status(403).json({ error: "Not authorized to view this invoice" });
     } else if (role === "ERASPHERE") {
       // Partners may only view invoices of clients they referred.

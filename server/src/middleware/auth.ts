@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
 interface AuthRequest extends Request {
-  user?: { userId: number; role: string};
+  user?: { userId: number; role: string; companyOwnerId?: number | null };
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
@@ -24,7 +24,7 @@ export function verifyJWT(req: AuthRequest, res: Response, next: NextFunction) {
         .json({ message: expired ? "Session expired" : "Invalid token", code: expired ? "TOKEN_EXPIRED" : "TOKEN_INVALID" });
     }
     const role = typeof decoded?.role === "string" ? decoded.role.toUpperCase() : decoded?.role;
-    req.user = { userId: decoded.userId, role };
+    req.user = { userId: decoded.userId, role, companyOwnerId: decoded.companyOwnerId ?? null };
     next();
   });
 }

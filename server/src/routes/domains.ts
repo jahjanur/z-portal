@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { verifyJWT, verifyAdmin } from "../middleware/auth";
 import prisma from "../lib/prisma";
+import { clientScopeId } from "../lib/clientScope";
 import {
   sendDomainActivationEmail,
   sendDomainRenewalConfirmationEmail,
@@ -26,20 +27,21 @@ function addYears(date: Date, years: number): Date {
 router.get("/client/:clientId", verifyJWT, async (req: any, res) => {
   try {
     const { clientId } = req.params;
-    const authUserId = req.user?.userId;
     const role = req.user?.role;
 
-    // Admin can access any client's domains; CLIENT can only access their own
+    // Admin can access any client's domains. A CLIENT (incl. team members)
+    // always sees their own company's domains, regardless of the path id.
+    let effectiveClientId: number;
     if (role === "CLIENT") {
-      if (Number(clientId) !== authUserId) {
-        return res.status(403).json({ error: "Not authorized to view these domains" });
-      }
-    } else if (role !== "ADMIN") {
+      effectiveClientId = clientScopeId(req.user);
+    } else if (role === "ADMIN") {
+      effectiveClientId = Number(clientId);
+    } else {
       return res.status(403).json({ error: "Only admins can view other clients' domains" });
     }
 
     const domains = await prisma.domain.findMany({
-      where: { clientId: Number(clientId) },
+      where: { clientId: effectiveClientId },
       include: {
         client: {
           select: clientSelect,

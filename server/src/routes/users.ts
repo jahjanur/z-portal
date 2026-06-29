@@ -50,10 +50,12 @@ const transporter = nodemailer.createTransport({
 router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   try {
     const { role, userId } = req.user;
+    // Exclude company team members (companyOwnerId set) from the main lists —
+    // they show under their company's "Team members" section, not as their own row.
     const whereClause =
       role === "ERASPHERE"
-        ? { role: "CLIENT" as const, referredById: userId }
-        : {};
+        ? { role: "CLIENT" as const, referredById: userId, companyOwnerId: null }
+        : { companyOwnerId: null };
     const users = await prisma.user.findMany({
       where: whereClause,
       select: {
@@ -79,6 +81,23 @@ router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// List the team members (extra founders) linked to a company. Admin only.
+router.get("/:id/team-members", verifyJWT, verifyAdmin, async (req: any, res) => {
+  try {
+    const companyId = Number(req.params.id);
+    if (!Number.isInteger(companyId)) return res.status(400).json({ error: "Invalid id" });
+    const members = await prisma.user.findMany({
+      where: { companyOwnerId: companyId },
+      select: { id: true, name: true, email: true, profileStatus: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json(members);
+  } catch (error) {
+    console.error("Error listing team members:", error);
+    res.status(500).json({ error: "Failed to load team members" });
   }
 });
 
@@ -749,6 +768,8 @@ router.delete("/:id", verifyJWT, verifyAdmin, async (req, res) => {
 
       // 5. If EraSphere: unlink referred clients so we can delete this user
       await tx.user.updateMany({ where: { referredById: id }, data: { referredById: null } });
+      // Unlink any team members of this company so the FK doesn't block deletion.
+      await tx.user.updateMany({ where: { companyOwnerId: id }, data: { companyOwnerId: null } });
 
       // 6. Notifications and preferences (may already cascade via schema; safe to delete explicitly)
       await tx.notification.deleteMany({ where: { userId: id } });

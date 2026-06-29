@@ -10,6 +10,7 @@ import StatCard from "../components/ui/StatCard";
 import EmptyState from "../components/ui/EmptyState";
 import Spinner from "../components/ui/Spinner";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
+import ClientTeamMembers from "../components/admin/ClientTeamMembers";
 
 interface Task {
   id: number;
@@ -632,6 +633,8 @@ const fetchAllFiles = async () => {
                     })}
                 </div>
               </div>
+
+              {!isEraSphere && <ClientTeamMembers clientId={client.id} companyName={client.company || client.name} />}
             </div>
           )}
 
