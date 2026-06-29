@@ -33,6 +33,7 @@ interface Task {
   createdAt: string;
   workers?: { user: Worker }[];
   files?: TaskFile[];
+  milestones?: { id: number; isDone: boolean }[];
 }
 
 interface TaskFile {

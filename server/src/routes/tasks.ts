@@ -6,6 +6,7 @@ import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
 import { uploadsDir } from "../lib/uploadsPath";
 import { maskTaskWorkers, workerAlias } from "../lib/workerIdentity";
+import { sendMilestoneDoneEmail } from "../services/milestoneEmail";
 
 const router = Router();
 
@@ -56,7 +57,9 @@ router.get("/", verifyJWT, async (req: any, res) => {
                 }
               }
             }
-          }
+          },
+          // compact milestone stats for progress bars on task cards
+          milestones: { select: { id: true, isDone: true } }
         };
     if (role === "ADMIN") {
       tasks = await prisma.task.findMany({
@@ -267,7 +270,8 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
               }
             }
           }
-        }
+        },
+        milestones: { orderBy: [{ order: "asc" }, { id: "asc" }] }
       }
     });
 
@@ -1342,6 +1346,198 @@ router.patch("/:taskId/files/:fileId/review", verifyJWT, verifyAdmin, async (req
   } catch (error) {
     console.error("Error submitting file review:", error);
     res.status(500).json({ error: "Failed to submit file review" });
+  }
+});
+
+// ============================ Milestones ============================
+// Progress steps within a task. Admin/worker/client can add them; admin or an
+// assigned worker marks them done; progress = % done (equal weight).
+
+type MiniTask = { id: number; clientId: number | null; workers: { userId: number }[] };
+
+async function loadTaskForMilestone(taskId: number): Promise<MiniTask | null> {
+  return prisma.task.findUnique({
+    where: { id: taskId },
+    select: { id: true, clientId: true, workers: { select: { userId: true } } },
+  });
+}
+
+/** Can this user see/add milestones on the task? (admin, assigned worker, the
+ *  task's client, or an EraSphere partner who referred the client.) */
+async function canAccessMilestones(task: MiniTask, userId: number, role: string): Promise<boolean> {
+  if (role === "ADMIN") return true;
+  if (role === "WORKER") return task.workers.some((w) => w.userId === userId);
+  if (role === "CLIENT") return task.clientId === userId;
+  if (role === "ERASPHERE" && task.clientId) {
+    return (await getReferredClientIds(userId)).includes(task.clientId);
+  }
+  return false;
+}
+
+/** Only admins and assigned workers can mark milestones done. */
+function canCompleteMilestones(task: MiniTask, userId: number, role: string): boolean {
+  return role === "ADMIN" || (role === "WORKER" && task.workers.some((w) => w.userId === userId));
+}
+
+// list milestones for a task
+router.get("/:id/milestones", verifyJWT, async (req: any, res) => {
+  try {
+    const taskId = Number(req.params.id);
+    if (!Number.isInteger(taskId)) return res.status(400).json({ error: "Invalid task id" });
+    const task = await loadTaskForMilestone(taskId);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    if (!(await canAccessMilestones(task, req.user.userId, req.user.role))) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const milestones = await prisma.milestone.findMany({
+      where: { taskId },
+      orderBy: [{ order: "asc" }, { id: "asc" }],
+    });
+    res.json(milestones);
+  } catch (error) {
+    console.error("Error listing milestones:", error);
+    res.status(500).json({ error: "Failed to load milestones" });
+  }
+});
+
+// create a milestone (optional image)
+router.post("/:id/milestones", verifyJWT, upload.single("image"), async (req: any, res) => {
+  try {
+    const taskId = Number(req.params.id);
+    if (!Number.isInteger(taskId)) return res.status(400).json({ error: "Invalid task id" });
+    const title = String(req.body.title || "").trim();
+    if (!title) return res.status(400).json({ error: "Title is required" });
+
+    const task = await loadTaskForMilestone(taskId);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    if (!(await canAccessMilestones(task, req.user.userId, req.user.role))) {
+      return res.status(403).json({ error: "Not authorized to add milestones to this task" });
+    }
+
+    const last = await prisma.milestone.findFirst({
+      where: { taskId },
+      orderBy: { order: "desc" },
+      select: { order: true },
+    });
+    const milestone = await prisma.milestone.create({
+      data: {
+        taskId,
+        title: title.slice(0, 160),
+        description: req.body.description ? String(req.body.description).trim() : null,
+        imageUrl: req.file ? `/uploads/${req.file.filename}` : null,
+        createdById: req.user.userId,
+        order: (last?.order ?? 0) + 1,
+      },
+    });
+    res.status(201).json(milestone);
+  } catch (error) {
+    console.error("Error creating milestone:", error);
+    res.status(500).json({ error: "Failed to create milestone" });
+  }
+});
+
+// update a milestone (toggle done by staff; edit title/description by staff or creator)
+router.patch("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
+  try {
+    const taskId = Number(req.params.id);
+    const mid = Number(req.params.mid);
+    const { userId, role } = req.user;
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { id: true, title: true, clientId: true, workers: { select: { userId: true } }, client: { select: { id: true, name: true, email: true } } },
+    });
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    if (!(await canAccessMilestones(task as any, userId, role))) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    const milestone = await prisma.milestone.findFirst({ where: { id: mid, taskId } });
+    if (!milestone) return res.status(404).json({ error: "Milestone not found" });
+
+    const data: any = {};
+    const isStaff = canCompleteMilestones(task as any, userId, role);
+
+    if ("title" in req.body || "description" in req.body) {
+      if (!isStaff && milestone.createdById !== userId) {
+        return res.status(403).json({ error: "You can only edit milestones you created" });
+      }
+      if (typeof req.body.title === "string" && req.body.title.trim()) data.title = req.body.title.trim().slice(0, 160);
+      if ("description" in req.body) data.description = req.body.description ? String(req.body.description).trim() : null;
+    }
+
+    let justCompleted = false;
+    if (typeof req.body.isDone === "boolean") {
+      if (!isStaff) return res.status(403).json({ error: "Only admins and assigned workers can complete milestones" });
+      data.isDone = req.body.isDone;
+      data.doneAt = req.body.isDone ? new Date() : null;
+      data.doneBy = req.body.isDone ? userId : null;
+      justCompleted = req.body.isDone && !milestone.isDone;
+    }
+
+    if (Object.keys(data).length === 0) return res.status(400).json({ error: "Nothing to update" });
+
+    const updated = await prisma.milestone.update({ where: { id: mid }, data });
+
+    // On completion: notify + email the client with overall progress.
+    if (justCompleted) {
+      const all = await prisma.milestone.findMany({ where: { taskId }, select: { isDone: true } });
+      const total = all.length;
+      const done = all.filter((m) => m.isDone).length;
+      const clientId = (task as any).clientId as number | null;
+      const client = (task as any).client as { id: number; name: string | null; email: string } | null;
+
+      if (clientId && clientId !== userId) {
+        const percent = total ? Math.round((done / total) * 100) : 0;
+        prisma.notification
+          .create({
+            data: {
+              userId: clientId,
+              type: "MILESTONE_COMPLETED",
+              title: "Milestone completed",
+              message: `"${updated.title}" was completed on "${(task as any).title}" — ${done}/${total} (${percent}%) done`,
+              link: `/tasks/${taskId}`,
+              read: false,
+            },
+          })
+          .catch((e) => console.error("Failed milestone notification:", e));
+
+        if (client?.email) {
+          sendMilestoneDoneEmail({
+            to: client.email,
+            clientName: client.name,
+            taskId,
+            taskTitle: (task as any).title,
+            milestoneTitle: updated.title,
+            done,
+            total,
+          }).catch((e) => console.error("Failed milestone email:", e));
+        }
+      }
+    }
+
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating milestone:", error);
+    res.status(500).json({ error: "Failed to update milestone" });
+  }
+});
+
+// delete a milestone (admin or its creator)
+router.delete("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
+  try {
+    const taskId = Number(req.params.id);
+    const mid = Number(req.params.mid);
+    const { userId, role } = req.user;
+    const milestone = await prisma.milestone.findFirst({ where: { id: mid, taskId } });
+    if (!milestone) return res.status(404).json({ error: "Milestone not found" });
+    if (role !== "ADMIN" && milestone.createdById !== userId) {
+      return res.status(403).json({ error: "Not authorized to delete this milestone" });
+    }
+    await prisma.milestone.delete({ where: { id: mid } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting milestone:", error);
+    res.status(500).json({ error: "Failed to delete milestone" });
   }
 });
 

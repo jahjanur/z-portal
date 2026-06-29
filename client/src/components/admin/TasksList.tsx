@@ -2,6 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Pagination from "../ui/Pagination";
 import StatusBadge from "../ui/StatusBadge";
+import ProgressBar from "../ui/ProgressBar";
+import { milestoneProgress } from "../../utils/milestones";
 import EmptyState from "../ui/EmptyState";
 import Button from "../ui/Button";
 
@@ -27,6 +29,7 @@ interface Task {
   client?: User;
   workers?: { user: User }[];
   project?: Project;
+  milestones?: { id: number; isDone: boolean }[];
 }
 
 interface TasksListProps {
@@ -113,6 +116,17 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
               </h4>
               <StatusBadge status={task.status} />
             </div>
+
+            {/* Milestone progress */}
+            {task.milestones && task.milestones.length > 0 && (() => {
+              const { done, total, percent } = milestoneProgress(task.milestones);
+              return (
+                <div className="mb-2 flex max-w-xs items-center gap-2">
+                  <ProgressBar percent={percent} size="xs" className="flex-1" />
+                  <span className="shrink-0 text-xs font-medium tabular-nums text-[var(--color-text-muted)]">{done}/{total}</span>
+                </div>
+              );
+            })()}
 
             {/* Project Badge (if in project) */}
             {task.project && effectiveViewMode === "all" && (

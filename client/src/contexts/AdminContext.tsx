@@ -44,6 +44,7 @@ export interface Task {
   workers?: { user: User }[];
   client?: User;
   project?: Project;
+  milestones?: { id: number; isDone: boolean }[];
 }
 
 export interface InvoiceLineItem {

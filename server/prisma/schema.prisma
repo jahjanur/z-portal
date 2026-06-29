@@ -103,8 +103,26 @@ model Task {
   workers     TaskWorker[]
   comments    TaskComment[]
   files       TaskFile[]
+  milestones  Milestone[]
 
   @@index([projectId])
+}
+
+model Milestone {
+  id          Int       @id @default(autoincrement())
+  taskId      Int
+  title       String
+  description String?
+  imageUrl    String?
+  isDone      Boolean   @default(false)
+  doneAt      DateTime?
+  doneBy      Int?
+  createdById Int
+  order       Int       @default(0)
+  createdAt   DateTime  @default(now())
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
 }
 
 model TaskWorker {

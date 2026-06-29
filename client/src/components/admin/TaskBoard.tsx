@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Calendar, FolderKanban, Trash2, User as UserIcon } from "lucide-react";
 import type { Task } from "../../contexts/AdminContext";
 import { avatarGlyph } from "../../constants/workerProfile";
+import ProgressBar from "../ui/ProgressBar";
+import { milestoneProgress } from "../../utils/milestones";
 
 interface TaskBoardProps {
   tasks: Task[];
@@ -126,6 +128,16 @@ function TaskCard({
         <UserIcon className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{task.client?.name ?? `Client #${task.clientId}`}</span>
       </div>
+
+      {task.milestones && task.milestones.length > 0 && (() => {
+        const { done, total, percent } = milestoneProgress(task.milestones);
+        return (
+          <div className="mt-3 flex items-center gap-2 pl-1.5">
+            <ProgressBar percent={percent} size="xs" className="flex-1" />
+            <span className="shrink-0 text-[0.6875rem] font-medium tabular-nums text-[var(--color-text-muted)]">{done}/{total}</span>
+          </div>
+        );
+      })()}
 
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--color-border)] pl-1.5 pt-3">
         {/* worker avatars */}

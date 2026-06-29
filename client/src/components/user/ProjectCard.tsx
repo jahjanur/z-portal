@@ -1,5 +1,7 @@
 import React from "react";
 import StatusBadge from "../ui/StatusBadge";
+import ProgressBar from "../ui/ProgressBar";
+import { milestoneProgress } from "../../utils/milestones";
 
 interface Task {
   id: number;
@@ -10,6 +12,7 @@ interface Task {
   createdAt: string;
   worker?: { name: string } | null;
   files?: unknown[];
+  milestones?: { id: number; isDone: boolean }[];
 }
 
 interface ProjectCardProps {
@@ -87,6 +90,18 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
         </div>
         <StatusBadge status={task.status} className="shrink-0 self-start" />
       </div>
+      {task.milestones && task.milestones.length > 0 && (() => {
+        const { done, total, percent } = milestoneProgress(task.milestones);
+        return (
+          <div className="mt-4 flex items-center gap-3">
+            <ProgressBar percent={percent} size="sm" className="flex-1" />
+            <span className={`shrink-0 text-sm font-bold tabular-nums ${percent >= 100 ? "text-[var(--color-success-text)]" : "text-[var(--color-text-secondary)]"}`}>
+              {percent}%
+            </span>
+            <span className="shrink-0 text-xs text-[var(--color-text-muted)]">{done}/{total}</span>
+          </div>
+        );
+      })()}
       <div className="mt-4 flex flex-col gap-3 border-t border-[var(--color-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-sm text-[var(--color-text-muted)]">
           {(task.files || []).length} files attached
