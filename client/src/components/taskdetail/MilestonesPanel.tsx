@@ -275,32 +275,54 @@ function TodoDetailModal({
     }
   };
 
+  const created = new Date(milestone.createdAt);
+  const createdLabel = isNaN(created.getTime())
+    ? null
+    : created.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+
   return (
-    <Modal isOpen onClose={onClose} maxWidth="2xl" title={milestone.title}>
+    <Modal isOpen onClose={onClose} maxWidth="xl" title={milestone.title}>
       <div className="space-y-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${milestone.isDone ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)]" : "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]"}`}>
-            {milestone.isDone ? <><Check className="h-3.5 w-3.5" /> Done</> : "To do"}
+        {/* status + done toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+              milestone.isDone
+                ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)] ring-1 ring-inset ring-[var(--color-success-border)]"
+                : "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]"
+            }`}
+          >
+            {milestone.isDone ? <><Check className="h-3.5 w-3.5" strokeWidth={3} /> Done</> : <>● To do</>}
           </span>
           {canComplete && (
             <button
               type="button"
               onClick={onToggle}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+              className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition ${
+                milestone.isDone
+                  ? "border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                  : "bg-[var(--color-success-text)] text-white hover:brightness-110"
+              }`}
             >
-              {milestone.isDone ? "Mark as not done" : "Mark as done"}
+              {milestone.isDone ? "Mark as not done" : "✓ Mark as done"}
             </button>
           )}
         </div>
 
-        {milestone.description && (
-          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-secondary)]">{milestone.description}</p>
+        {/* description */}
+        {milestone.description ? (
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-secondary)]">{milestone.description}</p>
+          </div>
+        ) : (
+          <p className="text-sm italic text-[var(--color-text-muted)]">No description.</p>
         )}
 
+        {/* images */}
         <div>
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-2.5 flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
-              Images {imgs.length > 0 && `(${imgs.length})`}
+              Images{imgs.length > 0 ? ` · ${imgs.length}` : ""}
             </p>
             {canEdit && (
               <>
@@ -309,58 +331,80 @@ function TodoDetailModal({
                   type="button"
                   onClick={() => addRef.current?.click()}
                   disabled={uploading}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
                 >
-                  <ImagePlus className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Add images"}
+                  <ImagePlus className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Add"}
                 </button>
               </>
             )}
           </div>
           {imgs.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
               {imgs.map((url) => (
-                <div key={url} className="group relative aspect-square overflow-hidden rounded-xl border border-[var(--color-border)]">
+                <div key={url} className="group relative aspect-square overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)]">
                   <img
                     src={getFileUrl(url)}
                     alt=""
+                    loading="lazy"
                     onClick={() => setLightbox(url)}
-                    className="h-full w-full cursor-zoom-in object-cover transition group-hover:scale-105"
+                    className="h-full w-full cursor-zoom-in object-cover transition duration-300 group-hover:scale-105"
                   />
                   {canEdit && (
                     <button
                       type="button"
-                      onClick={() => removeImage(url)}
+                      onClick={(e) => { e.stopPropagation(); removeImage(url); }}
                       aria-label="Remove image"
-                      className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition group-hover:opacity-100 hover:bg-[var(--color-destructive-text)]"
+                      className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur-sm transition hover:bg-[var(--color-destructive-text)] group-hover:opacity-100"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
               ))}
+              {canEdit && (
+                <button
+                  type="button"
+                  onClick={() => addRef.current?.click()}
+                  disabled={uploading}
+                  className="flex aspect-square flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--color-border-hover)] text-[var(--color-text-muted)] transition hover:border-[var(--color-focus-ring)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
+                >
+                  <ImagePlus className="h-5 w-5" />
+                  <span className="text-[11px] font-semibold">{uploading ? "Uploading…" : "Add image"}</span>
+                </button>
+              )}
             </div>
           ) : (
-            <p className="text-sm text-[var(--color-text-muted)]">No images yet.</p>
+            <button
+              type="button"
+              onClick={() => canEdit && addRef.current?.click()}
+              disabled={!canEdit || uploading}
+              className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--color-border-hover)] py-8 text-[var(--color-text-muted)] transition ${canEdit ? "hover:border-[var(--color-focus-ring)] hover:text-[var(--color-text-secondary)]" : "cursor-default"}`}
+            >
+              <ImagePlus className="h-6 w-6" />
+              <span className="text-sm font-medium">{canEdit ? "Add images to this to-do" : "No images"}</span>
+            </button>
           )}
         </div>
 
-        {canEdit && (
-          <div className="flex justify-end border-t border-[var(--color-border)] pt-4">
+        {/* footer: meta + delete */}
+        <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-4">
+          <span className="text-xs text-[var(--color-text-muted)]">{createdLabel ? `Created ${createdLabel}` : ""}</span>
+          {canEdit && (
             <button
               type="button"
               onClick={onDelete}
               className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-destructive-text)] transition hover:bg-[var(--color-destructive-bg)]"
             >
-              <Trash2 className="h-4 w-4" /> Delete to-do
+              <Trash2 className="h-4 w-4" /> Delete
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {lightbox && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4 animate-fade-in" onClick={() => setLightbox(null)}>
-          <img src={getFileUrl(lightbox)} alt="" className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain" />
-          <button type="button" aria-label="Close image" className="absolute right-4 top-4 rounded-lg p-2 text-white/80 hover:text-white">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 animate-fade-in" onClick={() => setLightbox(null)}>
+          <img src={getFileUrl(lightbox)} alt="" className="max-h-[90vh] max-w-[92vw] rounded-xl object-contain shadow-elev-lg" onClick={(e) => e.stopPropagation()} />
+          <button type="button" aria-label="Close image" onClick={() => setLightbox(null)} className="absolute right-4 top-4 rounded-full bg-black/40 p-2 text-white/80 transition hover:bg-black/60 hover:text-white">
             <X className="h-6 w-6" />
           </button>
         </div>
