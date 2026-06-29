@@ -35,4 +35,32 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
+const AUTH_PATHS = ["/login", "/complete-profile", "/invite"];
+function onAuthPage(path: string): boolean {
+  return AUTH_PATHS.some((p) => path === p || path.startsWith(p));
+}
+
+/**
+ * If a request fails with 401 while we believe we're logged in, the session has
+ * expired (or the token is invalid). Clear it and bounce to /login with a
+ * redirect back — so the user is never stuck "logged in but broken".
+ */
+API.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    const status = error?.response?.status;
+    const hadToken = !!localStorage.getItem("token");
+    const requestUrl: string = error?.config?.url || "";
+    const isLoginRequest = requestUrl.includes("/auth/login");
+    const path = window.location.pathname;
+
+    if (status === 401 && hadToken && !isLoginRequest && !onAuthPage(path)) {
+      localStorage.clear();
+      const back = encodeURIComponent(path + window.location.search);
+      window.location.replace(`/login?redirect=${back}`);
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default API;

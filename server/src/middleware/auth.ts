@@ -14,7 +14,15 @@ export function verifyJWT(req: AuthRequest, res: Response, next: NextFunction) {
   if (!token) return res.status(401).json({ message: "Unauthorized" });
 
   jwt.verify(token, JWT_SECRET, (err, decoded: any) => {
-    if (err) return res.status(403).json({ message: "Forbidden" });
+    // Expired or otherwise invalid token → 401 (unauthenticated), so the
+    // client knows to clear the session and send the user back to login.
+    // (Role/permission failures stay 403 below — those are *authenticated*.)
+    if (err) {
+      const expired = err.name === "TokenExpiredError";
+      return res
+        .status(401)
+        .json({ message: expired ? "Session expired" : "Invalid token", code: expired ? "TOKEN_EXPIRED" : "TOKEN_INVALID" });
+    }
     const role = typeof decoded?.role === "string" ? decoded.role.toUpperCase() : decoded?.role;
     req.user = { userId: decoded.userId, role };
     next();
