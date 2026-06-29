@@ -1219,7 +1219,10 @@ router.post("/:taskId/files/:fileId/forward", verifyJWT, verifyAdmin, async (req
     const { userId: adminId } = req.user;
     const toClient = Boolean(req.body.toClient);
 
-    const src = await prisma.taskFile.findFirst({ where: { id: fileId, taskId } });
+    const src = await prisma.taskFile.findFirst({
+      where: { id: fileId, taskId },
+      include: { comments: { orderBy: { createdAt: "asc" } } },
+    });
     if (!src) return res.status(404).json({ error: "File not found in this task" });
 
     // Reference the same file on disk; just a new row in the target channel.
@@ -1235,6 +1238,19 @@ router.post("/:taskId/files/:fileId/forward", verifyJWT, verifyAdmin, async (req
         uploadedBy: adminId,
       },
     });
+
+    // Carry over the file's description/discussion (its reply comments) so the
+    // forwarded deliverable arrives with its context, in the target channel.
+    if (src.comments.length) {
+      await prisma.fileComment.createMany({
+        data: src.comments.map((c) => ({
+          fileId: clone.id,
+          userId: c.userId,
+          content: c.content,
+          visibleToClient: toClient,
+        })),
+      });
+    }
     res.status(201).json(clone);
   } catch (error) {
     console.error("Error forwarding file:", error);
