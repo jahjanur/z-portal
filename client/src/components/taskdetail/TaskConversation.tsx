@@ -505,6 +505,19 @@ export default function TaskConversation(p: any) {
     }
   };
 
+  // which message's "forward to…" picker is open (key = `${kind}-${id}`)
+  const [forwardFor, setForwardFor] = useState<string | null>(null);
+  /** Forward a text message (quoted) or a file deliverable to a target channel. */
+  const doForward = (item: any, fromName: string, toClient: boolean) => {
+    if (item.kind === "msg") {
+      const quoted = item.data.content.split("\n").map((l: string) => `> ${l}`).join("\n");
+      p.forwardComment?.(`↪ Forwarded from ${fromName}:\n${quoted}`, toClient);
+    } else {
+      p.forwardFile?.(item.data.id, toClient);
+    }
+    setForwardFor(null);
+  };
+
   const channels = [
     { key: "worker", label: "Worker channel", unseen: p.hasUnseen?.worker, count: p.unreadByTaskThread?.internal },
     { key: "client", label: "Client channel", unseen: p.hasUnseen?.client, count: p.unreadByTaskThread?.client },
@@ -625,36 +638,66 @@ export default function TaskConversation(p: any) {
                         <span className="text-[13px] font-bold text-[var(--color-text-primary)]">{name}</span>
                         <StatusBadge dot={false} tone={roleTone(role)} className="!px-1.5 !py-0 text-[9px] uppercase tracking-wide">{roleLabel(role)}</StatusBadge>
                         <span className="ml-auto text-[11px] text-[var(--color-text-muted)]">{fmtTime(it.at)}</span>
-                        {/* per-message actions: copy (everyone) + forward to the other channel (admin) */}
+                        {/* per-message actions: copy (everyone) + forward picker (admin) */}
                         {(() => {
                           const text = it.kind === "msg" ? d.content : (d.caption || "");
-                          if (!text) return null;
                           const copyKey = `${it.kind}-${d.id}`;
                           const isCopied = copiedId === copyKey;
+                          // text messages need content; files are always forwardable (the file itself)
+                          const canForward = p.isAdmin && (p.forwardComment || p.forwardFile) && (it.kind === "file" || !!d.content);
+                          const fwdOpen = forwardFor === copyKey;
                           return (
                             <>
-                              <button
-                                type="button"
-                                onClick={() => copyText(copyKey, text)}
-                                title={isCopied ? "Copied!" : "Copy text"}
-                                aria-label="Copy message text"
-                                className="text-[var(--color-text-muted)] opacity-0 transition hover:text-[var(--color-text-primary)] focus:opacity-100 group-hover:opacity-100"
-                              >
-                                {isCopied ? <Check className="h-3.5 w-3.5 text-[var(--color-success-text)]" /> : <Copy className="h-3.5 w-3.5" />}
-                              </button>
-                              {p.isAdmin && it.kind === "msg" && p.forwardComment && (
+                              {text && (
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    const toClient = !d.visibleToClient;
-                                    p.forwardComment(`↪ Forwarded from ${name}:\n${d.content}`, toClient);
-                                  }}
-                                  title={`Forward to ${d.visibleToClient ? "worker" : "client"} channel`}
-                                  aria-label="Forward message to the other channel"
-                                  className="text-[var(--color-text-muted)] opacity-0 transition hover:text-[var(--color-info-text)] focus:opacity-100 group-hover:opacity-100"
+                                  onClick={() => copyText(copyKey, text)}
+                                  title={isCopied ? "Copied!" : "Copy text"}
+                                  aria-label="Copy message text"
+                                  className="text-[var(--color-text-muted)] opacity-0 transition hover:text-[var(--color-text-primary)] focus:opacity-100 group-hover:opacity-100"
                                 >
-                                  <CornerUpRight className="h-3.5 w-3.5" />
+                                  {isCopied ? <Check className="h-3.5 w-3.5 text-[var(--color-success-text)]" /> : <Copy className="h-3.5 w-3.5" />}
                                 </button>
+                              )}
+                              {canForward && (
+                                <div className="relative">
+                                  <button
+                                    type="button"
+                                    onClick={() => setForwardFor(fwdOpen ? null : copyKey)}
+                                    title="Forward to another channel"
+                                    aria-label="Forward to another channel"
+                                    aria-expanded={fwdOpen}
+                                    className={`transition focus:opacity-100 group-hover:opacity-100 ${fwdOpen ? "text-[var(--color-info-text)] opacity-100" : "text-[var(--color-text-muted)] opacity-0 hover:text-[var(--color-info-text)]"}`}
+                                  >
+                                    <CornerUpRight className="h-3.5 w-3.5" />
+                                  </button>
+                                  {fwdOpen && (
+                                    <>
+                                      <div className="fixed inset-0 z-40" onClick={() => setForwardFor(null)} aria-hidden />
+                                      <div className="absolute right-0 top-6 z-50 w-44 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-panel-solid)] p-1 shadow-elev-lg animate-scale-in">
+                                        <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Forward to</p>
+                                        {[
+                                          { toClient: false, label: "Worker channel" },
+                                          { toClient: true, label: "Client channel" },
+                                        ].map((opt) => {
+                                          const here = !!d.visibleToClient === opt.toClient;
+                                          return (
+                                            <button
+                                              key={opt.label}
+                                              type="button"
+                                              onClick={() => doForward(it, name, opt.toClient)}
+                                              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
+                                            >
+                                              <CornerUpRight className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-muted)]" />
+                                              <span className="flex-1 truncate">{opt.label}</span>
+                                              {here && <span className="text-[10px] text-[var(--color-text-muted)]">here</span>}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                               )}
                             </>
                           );

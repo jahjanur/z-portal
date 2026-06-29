@@ -364,6 +364,19 @@ const TaskDetailPage: React.FC = () => {
     }
   };
 
+  /** Admin: clone a deliverable into the other channel (same file, new channel). */
+  const forwardFile = async (fileId: number, toClient: boolean) => {
+    try {
+      await API.post(`/tasks/${id}/files/${fileId}/forward`, { toClient });
+      setActiveChannel(toClient ? "client" : "worker");
+      toast.success(`Deliverable forwarded to ${toClient ? "client" : "worker"} channel`);
+      fetchTask();
+      if (isAdmin) fetchUnreadByTask();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't forward deliverable");
+    }
+  };
+
   const deleteFile = async (fileId: number) => {
     try {
       await API.delete(`/tasks/${id}/files/${fileId}`);
@@ -586,6 +599,7 @@ const TaskDetailPage: React.FC = () => {
         addingComment={addingComment}
         deleteComment={deleteComment}
         forwardComment={forwardComment}
+        forwardFile={forwardFile}
         deleteFile={deleteFile}
         selectedFiles={selectedFiles}
         setSelectedFiles={setSelectedFiles}

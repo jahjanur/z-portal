@@ -1210,6 +1210,38 @@ router.delete("/:id", verifyJWT, async (req: any, res) => {
 });
 
 // PATCH /tasks/:taskId/files/:fileId/review — admin submits a review decision on a file
+// POST /tasks/:taskId/files/:fileId/forward — admin clones a deliverable into the
+// other channel (worker <-> client) so it doesn't have to be re-uploaded by hand.
+router.post("/:taskId/files/:fileId/forward", verifyJWT, verifyAdmin, async (req: any, res) => {
+  try {
+    const taskId = Number(req.params.taskId);
+    const fileId = Number(req.params.fileId);
+    const { userId: adminId } = req.user;
+    const toClient = Boolean(req.body.toClient);
+
+    const src = await prisma.taskFile.findFirst({ where: { id: fileId, taskId } });
+    if (!src) return res.status(404).json({ error: "File not found in this task" });
+
+    // Reference the same file on disk; just a new row in the target channel.
+    const clone = await prisma.taskFile.create({
+      data: {
+        taskId,
+        fileName: src.fileName,
+        fileUrl: src.fileUrl,
+        fileType: src.fileType,
+        section: src.section,
+        caption: src.caption ? `↪ Forwarded · ${src.caption}` : "↪ Forwarded deliverable",
+        visibleToClient: toClient,
+        uploadedBy: adminId,
+      },
+    });
+    res.status(201).json(clone);
+  } catch (error) {
+    console.error("Error forwarding file:", error);
+    res.status(500).json({ error: "Failed to forward file" });
+  }
+});
+
 router.patch("/:taskId/files/:fileId/review", verifyJWT, verifyAdmin, async (req: any, res) => {
   try {
     const taskId = Number(req.params.taskId);
