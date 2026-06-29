@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import AuthPage from "./pages/Authpage";
 import Dashboard from "./pages/Dashboard";
@@ -36,20 +36,29 @@ import Footer from "./components/Footer";
 import NotFound from "./pages/NotFound";
 import { MobileMenuProvider } from "./contexts/MobileMenuContext";
 
-function App() {
+function AppShell() {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
   const isAdmin = role === "ADMIN";
   const isEraSphere = role === "ERASPHERE";
   const isAdminOrEraSphere = isAdmin || isEraSphere;
 
+  // Auth screens (login / invite / complete-profile) render bare — no nav/footer.
+  const { pathname } = useLocation();
+  const isAuthScreen =
+    pathname === "/login" ||
+    pathname === "/complete-profile" ||
+    pathname.startsWith("/invite");
+
+  // Sidebar layouts render their own footer inside the content column (so it
+  // sits beside the full-height sidebar), so suppress the global one there.
+  const hasOwnFooter =
+    pathname.startsWith("/admin/zulbera") || pathname.startsWith("/admin/erasphere");
+
   return (
-    <Router>
-      <MobileMenuProvider>
-      <Toaster position="top-right" />
       <div className="flex w-full max-w-full min-w-0 min-h-screen flex-col bg-app-grid [overflow-x:clip]">
-        <Navbar />
-        <main className="relative z-10 flex-grow min-h-0 min-w-0 [overflow-x:clip]">
+        {!isAuthScreen && <Navbar />}
+        <main className="relative z-10 flex flex-col flex-grow min-h-0 min-w-0 [overflow-x:clip]">
           <Routes>
             {/* Home page - Admin only (EraSphere redirects to their dashboard) */}
             <Route
@@ -213,8 +222,17 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
-        <Footer />
+        {!isAuthScreen && !hasOwnFooter && <Footer />}
       </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <MobileMenuProvider>
+        <Toaster position="top-right" />
+        <AppShell />
       </MobileMenuProvider>
     </Router>
   );

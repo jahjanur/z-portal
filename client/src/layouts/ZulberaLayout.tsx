@@ -19,6 +19,7 @@ import { useMobileMenu } from "../contexts/MobileMenuContext";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
 import MobileTabBar from "../components/MobileTabBar";
 import MobileNavSheet from "../components/MobileNavSheet";
+import Footer from "../components/Footer";
 
 const ZULBERA_TABS = [
   { to: "/admin/zulbera/analytics", label: "Analytics", icon: LayoutDashboard, end: true },
@@ -80,7 +81,7 @@ function WorkspaceOverviewCard() {
   ];
 
   return (
-    <div className="mt-auto hidden px-4 pb-5 lg:block">
+    <div className="hidden px-4 pb-5 pt-3 lg:block">
       <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
         <p className="text-[0.6875rem] font-bold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
           Workspace
@@ -159,9 +160,13 @@ function ZulberaLayoutInner() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] pt-16">
-      {/* Sidebar: icon rail on tablet (md), full at lg+ */}
-      <aside className="app-sidebar sticky top-16 hidden h-[calc(100vh-4rem)] w-[72px] shrink-0 flex-col self-start overflow-y-auto overflow-x-hidden md:flex lg:w-[252px]">
+    <div className="flex grow min-h-[calc(100vh-4rem)] pt-16">
+      {/* Sidebar: icon rail on tablet (md), full at lg+.
+          The <aside> stretches to the full layout height (so its background +
+          right border always reach the footer — no dead gap), while the inner
+          wrapper is sticky so the nav stays pinned as the page scrolls. */}
+      <aside className="app-sidebar hidden w-[72px] shrink-0 self-stretch min-h-[calc(100vh-4rem)] md:block lg:w-[252px]">
+        <div className="sticky top-16 flex max-h-[calc(100vh-4rem)] flex-col overflow-y-auto overflow-x-hidden">
         <nav className="space-y-4 px-3 pt-6" aria-label="Zulbera">
           {ZULBERA_NAV_SECTIONS.map((section) => (
             <div key={section.label} className="space-y-1">
@@ -196,13 +201,17 @@ function ZulberaLayoutInner() {
           ))}
         </nav>
         <WorkspaceOverviewCard />
+        </div>
       </aside>
 
-      {/* Main content */}
-      <main className="min-w-0 flex-1 [overflow-x:clip]">
-        <div className="mx-auto max-w-[1400px] px-4 py-6 pb-28 sm:px-6 md:pb-8 lg:px-8 lg:py-8">
+      {/* Main content — flex column so the footer sits at the bottom of the
+          content area (beside the full-height sidebar), not as a full-width
+          band below it. */}
+      <main className="flex min-w-0 flex-1 flex-col [overflow-x:clip]">
+        <div className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 pb-28 sm:px-6 md:pb-8 lg:px-8 lg:py-8">
           <Outlet />
         </div>
+        <Footer />
       </main>
 
       <MobileTabBar items={ZULBERA_TABS} onMore={() => setNavSheetOpen(true)} moreActive={navSheetOpen} />
