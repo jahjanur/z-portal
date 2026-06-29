@@ -17,6 +17,7 @@ import SectionCard from "./ui/SectionCard";
 import { SkeletonDashboard } from "./ui/Skeleton";
 import { useNotifications } from "../hooks/useNotifications";
 import { getStatusColor, formatDate, formatCurrency, getDaysUntilDue, isInvoiceOverdue } from "../utils";
+import ClientCollaborators from "./user/ClientCollaborators";
 
 interface Worker {
   id: number;
@@ -75,6 +76,7 @@ const TABS = [
   { key: "invoices", label: "Invoices" },
   { key: "files", label: "Files" },
   { key: "domains", label: "Domains" },
+  { key: "team", label: "Team" },
 ] as const;
 
 const RoleUser: React.FC = () => {
@@ -87,9 +89,9 @@ const RoleUser: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab: "overview" | "tasks" | "invoices" | "files" | "domains" =
-    (["overview", "tasks", "invoices", "files", "domains"] as const).includes(tabParam as any)
-      ? (tabParam as "overview" | "tasks" | "invoices" | "files" | "domains")
+  const activeTab: "overview" | "tasks" | "invoices" | "files" | "domains" | "team" =
+    (["overview", "tasks", "invoices", "files", "domains", "team"] as const).includes(tabParam as any)
+      ? (tabParam as "overview" | "tasks" | "invoices" | "files" | "domains" | "team")
       : "overview";
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -825,6 +827,8 @@ const fetchAll = async () => {
           )}
         </div>
       )}
+
+      {activeTab === "team" && <ClientCollaborators />}
     </div>
   );
 };

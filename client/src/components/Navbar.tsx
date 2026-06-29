@@ -33,13 +33,14 @@ const ZULBERA_NAV_LINKS = [
   { path: "timesheets", label: "Timesheets", icon: CalendarClock },
 ];
 
-const CLIENT_TABS = ["overview", "tasks", "invoices", "files", "domains"] as const;
+const CLIENT_TABS = ["overview", "tasks", "invoices", "files", "domains", "team"] as const;
 const CLIENT_TAB_META: Record<string, { label: string; icon: typeof LayoutDashboard }> = {
   overview: { label: "Overview", icon: LayoutDashboard },
   tasks: { label: "Tasks", icon: SquareKanban },
   invoices: { label: "Invoices", icon: Receipt },
   files: { label: "Files", icon: ImageIcon },
   domains: { label: "Domains", icon: Globe },
+  team: { label: "Team", icon: UsersRound },
 };
 
 function initials(fullName: string | null): string {

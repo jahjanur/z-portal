@@ -8,6 +8,7 @@ import prisma from "../lib/prisma";
 import { sendInviteEmail, sendWelcomeEmailForRole } from "../services/inviteEmails";
 import { emit, EventType } from "../services/notificationEngine";
 import { sanitizeNickname, sanitizeEmoji, sanitizeSkills } from "../constants/workerProfile";
+import { clientScopeId } from "../lib/clientScope";
 
 const router = Router();
 const SALT_ROUNDS = 10;
@@ -189,6 +190,57 @@ router.post("/team-member", verifyJWT, verifyAdmin, async (req: any, res) => {
   } catch (error: any) {
     console.error("Error inviting team member:", error);
     return res.status(500).json({ error: "Failed to invite team member" });
+  }
+});
+
+// POST /invites/my-team-member — a CLIENT invites a collaborator to their OWN
+// company. The company is taken from the caller's scope (never a param), so a
+// client can only add people to their own company.
+router.post("/my-team-member", verifyJWT, async (req: any, res) => {
+  try {
+    if (req.user.role !== "CLIENT") return res.status(403).json({ error: "Only clients can add collaborators" });
+    const { email, name } = req.body;
+    if (!email || !name) return res.status(400).json({ error: "Email and name are required" });
+
+    const companyId = clientScopeId(req.user);
+    const company = await prisma.user.findUnique({ where: { id: companyId }, select: { id: true, company: true } });
+    if (!company) return res.status(404).json({ error: "Company not found" });
+
+    const emailNorm = String(email).toLowerCase().trim();
+    const existingUser = await prisma.user.findUnique({ where: { email: emailNorm }, select: { id: true } });
+    if (existingUser) return res.status(400).json({ error: "A user with this email already exists" });
+
+    await prisma.invite.updateMany({
+      where: { email: emailNorm, role: "CLIENT", used: false, cancelled: false },
+      data: { cancelled: true },
+    });
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const invite = await prisma.invite.create({
+      data: {
+        email: emailNorm,
+        name: String(name).trim(),
+        role: "CLIENT",
+        tokenHash: hashToken(rawToken),
+        invitedById: req.user.userId,
+        company: company.company || null,
+        companyOwnerId: companyId,
+        expiresAt: new Date(Date.now() + INVITE_EXPIRY_HOURS * 60 * 60 * 1000),
+      },
+    });
+
+    const clientUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || "http://localhost:5173";
+    const inviteLink = `${clientUrl}/invite/accept?token=${rawToken}`;
+    try {
+      await sendInviteEmail({ to: invite.email, name: invite.name, role: "CLIENT", company: invite.company, inviteLink, expiresInHours: INVITE_EXPIRY_HOURS });
+    } catch (emailErr) {
+      console.error("Failed to send collaborator invite email:", emailErr);
+      console.log(`[COLLABORATOR INVITE LINK - EMAIL FAILED]: ${inviteLink}`);
+    }
+    return res.status(201).json({ id: invite.id, email: invite.email, name: invite.name, inviteLink });
+  } catch (error: any) {
+    console.error("Error inviting collaborator:", error);
+    return res.status(500).json({ error: "Failed to invite collaborator" });
   }
 });
 

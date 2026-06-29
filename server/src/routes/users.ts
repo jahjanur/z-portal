@@ -10,6 +10,7 @@ import { notifyProfileCompleted } from "../services/notifications";
 import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
 import { uploadsDir } from "../lib/uploadsPath";
+import { clientScopeId } from "../lib/clientScope";
 import { sanitizeNickname, sanitizeEmoji, sanitizeSkills } from "../constants/workerProfile";
 
 const router = Router();
@@ -98,6 +99,49 @@ router.get("/:id/team-members", verifyJWT, verifyAdmin, async (req: any, res) =>
   } catch (error) {
     console.error("Error listing team members:", error);
     res.status(500).json({ error: "Failed to load team members" });
+  }
+});
+
+// A CLIENT lists their own company's collaborators (team members).
+router.get("/my-team-members", verifyJWT, async (req: any, res) => {
+  try {
+    if (req.user.role !== "CLIENT") return res.status(403).json({ error: "Not authorized" });
+    const companyId = clientScopeId(req.user);
+    // Everyone on the company except the caller themselves.
+    const members = await prisma.user.findMany({
+      where: { OR: [{ companyOwnerId: companyId }, { id: companyId }], NOT: { id: req.user.userId } },
+      select: { id: true, name: true, email: true, profileStatus: true, createdAt: true, companyOwnerId: true },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json(members);
+  } catch (error) {
+    console.error("Error listing collaborators:", error);
+    res.status(500).json({ error: "Failed to load collaborators" });
+  }
+});
+
+// A CLIENT removes a collaborator from their own company.
+router.delete("/my-team-members/:id", verifyJWT, async (req: any, res) => {
+  try {
+    if (req.user.role !== "CLIENT") return res.status(403).json({ error: "Not authorized" });
+    const targetId = Number(req.params.id);
+    const companyId = clientScopeId(req.user);
+    const target = await prisma.user.findUnique({ where: { id: targetId }, select: { id: true, companyOwnerId: true, role: true } });
+    // Can only remove an actual member of the caller's own company (not the primary, not self).
+    if (!target || target.role !== "CLIENT" || target.companyOwnerId !== companyId || target.id === req.user.userId) {
+      return res.status(403).json({ error: "Not allowed to remove this user" });
+    }
+    await prisma.$transaction(async (tx) => {
+      await tx.fileComment.deleteMany({ where: { userId: targetId } });
+      await tx.taskComment.deleteMany({ where: { userId: targetId } });
+      await tx.notification.deleteMany({ where: { userId: targetId } });
+      await tx.notificationPreference.deleteMany({ where: { userId: targetId } });
+      await tx.user.delete({ where: { id: targetId } });
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error removing collaborator:", error);
+    res.status(500).json({ error: "Failed to remove collaborator" });
   }
 });
 
