@@ -1396,7 +1396,7 @@ router.get("/:id/milestones", verifyJWT, async (req: any, res) => {
     res.json(milestones);
   } catch (error) {
     console.error("Error listing milestones:", error);
-    res.status(500).json({ error: "Failed to load milestones" });
+    res.status(500).json({ error: "Failed to load to-dos" });
   }
 });
 
@@ -1411,7 +1411,7 @@ router.post("/:id/milestones", verifyJWT, upload.single("image"), async (req: an
     const task = await loadTaskForMilestone(taskId);
     if (!task) return res.status(404).json({ error: "Task not found" });
     if (!(await canAccessMilestones(task, req.user.userId, req.user.role))) {
-      return res.status(403).json({ error: "Not authorized to add milestones to this task" });
+      return res.status(403).json({ error: "Not authorized to add to-dos to this task" });
     }
 
     const last = await prisma.milestone.findFirst({
@@ -1432,7 +1432,7 @@ router.post("/:id/milestones", verifyJWT, upload.single("image"), async (req: an
     res.status(201).json(milestone);
   } catch (error) {
     console.error("Error creating milestone:", error);
-    res.status(500).json({ error: "Failed to create milestone" });
+    res.status(500).json({ error: "Failed to create to-do" });
   }
 });
 
@@ -1452,14 +1452,14 @@ router.patch("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
       return res.status(403).json({ error: "Not authorized" });
     }
     const milestone = await prisma.milestone.findFirst({ where: { id: mid, taskId } });
-    if (!milestone) return res.status(404).json({ error: "Milestone not found" });
+    if (!milestone) return res.status(404).json({ error: "To-do not found" });
 
     const data: any = {};
     const isStaff = canCompleteMilestones(task as any, userId, role);
 
     if ("title" in req.body || "description" in req.body) {
       if (!isStaff && milestone.createdById !== userId) {
-        return res.status(403).json({ error: "You can only edit milestones you created" });
+        return res.status(403).json({ error: "You can only edit to-dos you created" });
       }
       if (typeof req.body.title === "string" && req.body.title.trim()) data.title = req.body.title.trim().slice(0, 160);
       if ("description" in req.body) data.description = req.body.description ? String(req.body.description).trim() : null;
@@ -1467,7 +1467,7 @@ router.patch("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
 
     let justCompleted = false;
     if (typeof req.body.isDone === "boolean") {
-      if (!isStaff) return res.status(403).json({ error: "Only admins and assigned workers can complete milestones" });
+      if (!isStaff) return res.status(403).json({ error: "Only admins and assigned workers can complete to-dos" });
       data.isDone = req.body.isDone;
       data.doneAt = req.body.isDone ? new Date() : null;
       data.doneBy = req.body.isDone ? userId : null;
@@ -1478,28 +1478,29 @@ router.patch("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
 
     const updated = await prisma.milestone.update({ where: { id: mid }, data });
 
-    // On completion: notify + email the client with overall progress.
+    // Notify + email the client ONLY when every to-do is complete (100%),
+    // not on each individual one.
     if (justCompleted) {
       const all = await prisma.milestone.findMany({ where: { taskId }, select: { isDone: true } });
       const total = all.length;
       const done = all.filter((m) => m.isDone).length;
+      const allDone = total > 0 && done === total;
       const clientId = (task as any).clientId as number | null;
       const client = (task as any).client as { id: number; name: string | null; email: string } | null;
 
-      if (clientId && clientId !== userId) {
-        const percent = total ? Math.round((done / total) * 100) : 0;
+      if (allDone && clientId && clientId !== userId) {
         prisma.notification
           .create({
             data: {
               userId: clientId,
-              type: "MILESTONE_COMPLETED",
-              title: "Milestone completed",
-              message: `"${updated.title}" was completed on "${(task as any).title}" — ${done}/${total} (${percent}%) done`,
+              type: "TASK_TODOS_COMPLETE",
+              title: "All to-dos complete",
+              message: `All to-dos are done on "${(task as any).title}" — 100% complete 🎉`,
               link: `/tasks/${taskId}`,
               read: false,
             },
           })
-          .catch((e) => console.error("Failed milestone notification:", e));
+          .catch((e) => console.error("Failed to-dos-complete notification:", e));
 
         if (client?.email) {
           sendMilestoneDoneEmail({
@@ -1507,10 +1508,9 @@ router.patch("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
             clientName: client.name,
             taskId,
             taskTitle: (task as any).title,
-            milestoneTitle: updated.title,
             done,
             total,
-          }).catch((e) => console.error("Failed milestone email:", e));
+          }).catch((e) => console.error("Failed to-dos-complete email:", e));
         }
       }
     }
@@ -1518,7 +1518,7 @@ router.patch("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
     res.json(updated);
   } catch (error) {
     console.error("Error updating milestone:", error);
-    res.status(500).json({ error: "Failed to update milestone" });
+    res.status(500).json({ error: "Failed to update to-do" });
   }
 });
 
@@ -1529,15 +1529,15 @@ router.delete("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
     const mid = Number(req.params.mid);
     const { userId, role } = req.user;
     const milestone = await prisma.milestone.findFirst({ where: { id: mid, taskId } });
-    if (!milestone) return res.status(404).json({ error: "Milestone not found" });
+    if (!milestone) return res.status(404).json({ error: "To-do not found" });
     if (role !== "ADMIN" && milestone.createdById !== userId) {
-      return res.status(403).json({ error: "Not authorized to delete this milestone" });
+      return res.status(403).json({ error: "Not authorized to delete this to-do" });
     }
     await prisma.milestone.delete({ where: { id: mid } });
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting milestone:", error);
-    res.status(500).json({ error: "Failed to delete milestone" });
+    res.status(500).json({ error: "Failed to delete to-do" });
   }
 });
 

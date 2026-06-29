@@ -44,7 +44,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
       resetForm();
       onChanged();
     } catch (err: any) {
-      toast.error(err?.response?.data?.error ?? "Couldn't add milestone");
+      toast.error(err?.response?.data?.error ?? "Couldn't add to-do");
     } finally {
       setBusy(false);
     }
@@ -57,19 +57,19 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
       await API.patch(`/tasks/${taskId}/milestones/${m.id}`, { isDone: !m.isDone });
       onChanged();
     } catch (err: any) {
-      toast.error(err?.response?.data?.error ?? "Couldn't update milestone");
+      toast.error(err?.response?.data?.error ?? "Couldn't update to-do");
     } finally {
       setTogglingId(null);
     }
   };
 
   const remove = async (m: Milestone) => {
-    if (!window.confirm("Delete this milestone?")) return;
+    if (!window.confirm("Delete this to-do?")) return;
     try {
       await API.delete(`/tasks/${taskId}/milestones/${m.id}`);
       onChanged();
     } catch (err: any) {
-      toast.error(err?.response?.data?.error ?? "Couldn't delete milestone");
+      toast.error(err?.response?.data?.error ?? "Couldn't delete to-do");
     }
   };
 
@@ -78,7 +78,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
       <div className="mb-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-[var(--color-text-primary)]">
           <Flag className="h-4 w-4 text-[var(--color-text-muted)]" />
-          <h3 className="text-sm font-bold">Milestones</h3>
+          <h3 className="text-sm font-bold">To-dos</h3>
           {total > 0 && (
             <span className="text-xs font-medium text-[var(--color-text-muted)]">{done}/{total}</span>
           )}
@@ -104,7 +104,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
                   onClick={() => toggle(m)}
                   disabled={!canComplete || togglingId === m.id}
                   aria-label={m.isDone ? "Mark not done" : "Mark done"}
-                  title={canComplete ? (m.isDone ? "Mark not done" : "Mark done") : "Only staff can complete milestones"}
+                  title={canComplete ? (m.isDone ? "Mark not done" : "Mark done") : "Only staff can complete to-dos"}
                   className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
                     m.isDone
                       ? "border-[var(--color-success-text)] bg-[var(--color-success-text)] text-white"
@@ -135,7 +135,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
                   <button
                     type="button"
                     onClick={() => remove(m)}
-                    aria-label="Delete milestone"
+                    aria-label="Delete to-do"
                     className="mt-0.5 shrink-0 text-[var(--color-text-muted)] opacity-0 transition hover:text-[var(--color-destructive-text)] focus:opacity-100 group-hover:opacity-100"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -146,7 +146,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
           })}
         </ul>
       ) : (
-        !adding && <p className="text-xs text-[var(--color-text-muted)]">No milestones yet. Break this task into steps to track progress.</p>
+        !adding && <p className="text-xs text-[var(--color-text-muted)]">No to-dos yet. Break this task into smaller to-dos to track progress.</p>
       )}
 
       {/* add */}
@@ -156,7 +156,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
             autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Milestone title"
+            placeholder="To-do title"
             maxLength={160}
             className="input-dark w-full px-3 py-2 text-sm"
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); create(); } }}
@@ -188,7 +188,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
                 disabled={!title.trim() || busy}
                 className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
               >
-                {busy ? "Adding…" : "Add milestone"}
+                {busy ? "Adding…" : "Add to-do"}
               </button>
             </div>
           </div>
@@ -199,7 +199,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
           onClick={() => setAdding(true)}
           className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-dashed border-[var(--color-border-hover)] px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
         >
-          <Plus className="h-3.5 w-3.5" /> Add milestone
+          <Plus className="h-3.5 w-3.5" /> Add to-do
         </button>
       )}
     </div>
