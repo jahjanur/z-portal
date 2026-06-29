@@ -92,40 +92,43 @@ export function renderEmail(opts: RenderEmailOpts): string {
     body { margin:0; padding:0; background:#ffffff; -webkit-font-smoothing:antialiased; }
     table { border-collapse:collapse; }
     a { text-decoration:none; }
-    .zp-wrap { width:100%; background:#ffffff; padding:0; }
-    .zp-card { width:600px; max-width:100%; margin:0 auto; }
+    .zp-wrap { padding:24px 12px; }
+    .zp-card { width:600px; max-width:100%; }
     @media only screen and (max-width:620px) {
+      .zp-wrap { padding:14px 10px !important; }
       .zp-card { width:100% !important; }
-      .zp-pad { padding-left:22px !important; padding-right:22px !important; }
+      .zp-pad { padding-left:24px !important; padding-right:24px !important; }
       .zp-h1 { font-size:22px !important; }
     }
   </style>
 </head>
 <body>
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preheader)}</div>
-  <div class="zp-wrap">
-    <table role="presentation" class="zp-card" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-      <!-- header -->
-      <tr><td style="background:#ffffff;padding:30px 40px 24px;text-align:center;border-bottom:1px solid #EEF0F5;" class="zp-pad">
-        <img src="cid:zulberalogo" alt="Zulbera" height="28" style="height:28px;width:auto;border:0;display:inline-block;" />
-      </td></tr>
-      <!-- body -->
-      <tr><td style="background:#ffffff;padding:36px 40px 40px;" class="zp-pad">
-        ${badge ? `<div style="margin:0 0 16px;">${badge}</div>` : ""}
-        <h1 class="zp-h1" style="margin:0 0 14px;font-size:26px;line-height:1.25;font-weight:800;color:#0B0F14;letter-spacing:-.02em;">${esc(opts.heading)}</h1>
-        ${greeting}
-        ${intro}
-        ${rows}
-        ${cta}
-        ${note}
-      </td></tr>
-      <!-- footer -->
-      <tr><td style="background:#ffffff;padding:28px 40px;text-align:center;border-top:1px solid #EEF0F5;" class="zp-pad">
-        <p style="margin:0;font-size:13px;color:#475569;">Powered by <a href="https://zulbera.com" target="_blank" style="color:#0B0F14;font-weight:700;text-decoration:none;">Zulbera</a></p>
-        <p style="margin:8px 0 0;font-size:12px;color:#94A3B8;"><a href="https://zulbera.com" target="_blank" style="color:#64748B;text-decoration:none;">zulbera.com</a> &middot; &copy; ${new Date().getFullYear()} Zulbera</p>
-      </td></tr>
-    </table>
-  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
+    <tr><td align="center" class="zp-wrap" style="padding:24px 12px;">
+      <table role="presentation" align="center" class="zp-card" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;border-collapse:separate;border-spacing:0;background:#ffffff;border:1px solid #DCE1E8;border-radius:18px;box-shadow:0 8px 28px -18px rgba(15,23,42,.18);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+        <!-- header -->
+        <tr><td style="background:#ffffff;padding:30px 40px 24px;text-align:center;border-bottom:1px solid #EEF0F5;border-radius:18px 18px 0 0;" class="zp-pad">
+          <img src="cid:zulberalogo" alt="Zulbera" height="28" style="height:28px;width:auto;border:0;display:inline-block;" />
+        </td></tr>
+        <!-- body -->
+        <tr><td style="background:#ffffff;padding:36px 40px 40px;" class="zp-pad">
+          ${badge ? `<div style="margin:0 0 16px;">${badge}</div>` : ""}
+          <h1 class="zp-h1" style="margin:0 0 14px;font-size:26px;line-height:1.25;font-weight:800;color:#0B0F14;letter-spacing:-.02em;">${esc(opts.heading)}</h1>
+          ${greeting}
+          ${intro}
+          ${rows}
+          ${cta}
+          ${note}
+        </td></tr>
+        <!-- footer -->
+        <tr><td style="background:#ffffff;padding:28px 40px;text-align:center;border-top:1px solid #EEF0F5;border-radius:0 0 18px 18px;" class="zp-pad">
+          <p style="margin:0;font-size:13px;color:#475569;">Powered by <a href="https://zulbera.com" target="_blank" style="color:#0B0F14;font-weight:700;text-decoration:none;">Zulbera</a></p>
+          <p style="margin:8px 0 0;font-size:12px;color:#94A3B8;"><a href="https://zulbera.com" target="_blank" style="color:#64748B;text-decoration:none;">zulbera.com</a> &middot; &copy; ${new Date().getFullYear()} Zulbera</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`;
 }
