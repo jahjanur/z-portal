@@ -44,7 +44,9 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
       fd.append("title", title.trim());
       if (description.trim()) fd.append("description", description.trim());
       images.forEach((f) => fd.append("images", f));
-      await API.post(`/tasks/${taskId}/milestones`, fd);
+      // Content-Type:undefined lets the browser set multipart/form-data + boundary
+      // (the API instance defaults to application/json, which breaks file uploads).
+      await API.post(`/tasks/${taskId}/milestones`, fd, { headers: { "Content-Type": undefined } });
       resetForm();
       onChanged();
     } catch (err: any) {
@@ -256,7 +258,7 @@ function TodoDetailModal({
     try {
       const fd = new FormData();
       files.forEach((f) => fd.append("images", f));
-      await API.post(`/tasks/${taskId}/milestones/${milestone.id}/images`, fd);
+      await API.post(`/tasks/${taskId}/milestones/${milestone.id}/images`, fd, { headers: { "Content-Type": undefined } });
       onChanged();
     } catch (err: any) {
       toast.error(err?.response?.data?.error ?? "Couldn't add images");
