@@ -1,26 +1,21 @@
 import Button from "../ui/Button";
 import EmptyState from "../ui/EmptyState";
+import SkillBadges from "../ui/SkillBadges";
+import { avatarGlyph } from "../../constants/workerProfile";
 
 interface User {
   id: number;
   name: string;
   email: string;
+  nickname?: string | null;
+  avatarEmoji?: string | null;
+  skills?: string[];
 }
 
 interface WorkersListProps {
   workers: User[];
   onDelete: (id: number) => void;
   canDelete?: boolean;
-}
-
-function getInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .map((part) => part.charAt(0))
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "?";
 }
 
 const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete, canDelete = true }) => {
@@ -47,12 +42,18 @@ const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete, canDelete 
           className="card-panel row-hover flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4"
         >
           <div className="flex min-w-0 flex-1 items-center gap-4">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] text-sm font-medium text-[var(--color-text-primary)]">
-              {getInitials(w.name)}
+            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] text-[var(--color-text-primary)] ${w.avatarEmoji ? "text-xl" : "text-sm font-medium"}`}>
+              {avatarGlyph(w)}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold text-[var(--color-text-primary)]">{w.name}</p>
+              <p className="truncate font-semibold text-[var(--color-text-primary)]">
+                {w.name}
+                {w.nickname && (
+                  <span className="ml-2 text-sm font-medium text-[var(--color-text-muted)]">“{w.nickname}”</span>
+                )}
+              </p>
               <p className="truncate text-sm text-[var(--color-text-muted)]">{w.email}</p>
+              <SkillBadges skills={w.skills} max={5} className="mt-2" />
             </div>
           </div>
           {canDelete && (

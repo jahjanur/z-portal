@@ -7,6 +7,9 @@ export interface User {
   email: string;
   role: string;
   name: string;
+  nickname?: string | null;
+  avatarEmoji?: string | null;
+  skills?: string[];
   company?: string;
   colorHex?: string;
   createdAt: string;

@@ -6,6 +6,7 @@ interface User {
   id: number;
   name: string;
   email?: string;
+  avatarEmoji?: string | null;
 }
 
 interface WorkerMultiSelectProps {
@@ -144,6 +145,7 @@ const WorkerMultiSelect: React.FC<WorkerMultiSelectProps> = ({
                     </svg>
                   )}
                 </span>
+                {w.avatarEmoji && <span className="shrink-0 text-base leading-none">{w.avatarEmoji}</span>}
                 <span className="truncate text-[var(--color-text-primary)]">{w.name}</span>
                 {w.email && (
                   <span className="truncate text-xs text-[var(--color-text-muted)]">{w.email}</span>
@@ -193,7 +195,7 @@ const WorkerMultiSelect: React.FC<WorkerMultiSelectProps> = ({
         <span className="truncate">
           {selectedUsers.length === 0
             ? placeholder
-            : selectedUsers.map((u) => u.name).join(", ")}
+            : selectedUsers.map((u) => `${u.avatarEmoji ? u.avatarEmoji + " " : ""}${u.name}`).join(", ")}
         </span>
         <svg
           className={`h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform ${open ? "rotate-180" : ""}`}
@@ -219,6 +221,7 @@ const WorkerMultiSelect: React.FC<WorkerMultiSelectProps> = ({
               key={u.id}
               className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-primary)]"
             >
+              {u.avatarEmoji && <span className="text-sm leading-none">{u.avatarEmoji}</span>}
               {u.name}
               {autoApply && (
                 <button

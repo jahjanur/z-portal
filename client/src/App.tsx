@@ -6,6 +6,7 @@ import HomePage from "./pages/Homepage";
 import CompleteProfile from "./pages/CompleteProfile";
 import InviteAcceptPage from "./pages/InviteAcceptPage";
 import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
+import ProfileSettingsPage from "./pages/ProfileSettingsPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import TaskDetailPage from "./pages/TaskDetailPage";
 import ClientDetailPage from "./pages/ClientDetailPage";
@@ -144,6 +145,10 @@ function AppShell() {
             <Route
               path="/settings/notifications"
               element={token ? <NotificationPreferencesPage /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/settings/profile"
+              element={token ? <ProfileSettingsPage /> : <Navigate to="/login" />}
             />
 
             {/* Task Detail Page - All authenticated users */}

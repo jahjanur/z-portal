@@ -41,10 +41,13 @@ router.post("/login", async (req, res) => {
         email: user.email,
         role,
         name: user.name,
+        nickname: user.nickname,
+        avatarEmoji: user.avatarEmoji,
+        skills: user.skills,
         company: user.company,
         logo: user.logo,
         colorHex: user.colorHex
-      } 
+      }
     });
   } catch (err) {
     console.error("Login error:", err);
@@ -74,6 +77,9 @@ router.get("/verify", async (req, res) => {
         email: true,
         role: true,
         name: true,
+        nickname: true,
+        avatarEmoji: true,
+        skills: true,
         company: true,
         logo: true,
         colorHex: true,

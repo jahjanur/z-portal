@@ -23,6 +23,9 @@ model User {
   extraEmails    String?
   brandPattern   String?
   shortInfo      String?
+  nickname       String?
+  avatarEmoji    String?
+  skills         String[]           @default([])
   profileStatus  String?            @default("INCOMPLETE")
   inviteToken    String?            @unique
   inviteExpires  DateTime?

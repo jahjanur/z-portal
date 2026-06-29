@@ -55,6 +55,9 @@ export default function Navbar() {
   const role = localStorage.getItem("role");
   const token = localStorage.getItem("token");
   const name = localStorage.getItem("name");
+  const nickname = localStorage.getItem("nickname");
+  const avatarEmoji = localStorage.getItem("avatarEmoji");
+  const displayLabel = nickname || name;
   const isAdmin = role === "ADMIN";
   const isEraSphere = role === "ERASPHERE";
   const isWorker = role === "WORKER";
@@ -233,11 +236,11 @@ export default function Navbar() {
                     aria-expanded={userMenuOpen}
                     aria-label="Account menu"
                   >
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-nav-active-bg)] text-xs font-bold text-[var(--color-nav-active-text)]">
-                      {initials(name)}
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-nav-active-bg)] text-[var(--color-nav-active-text)] ${avatarEmoji ? "text-base" : "text-xs font-bold"}`}>
+                      {avatarEmoji || initials(name)}
                     </span>
                     <span className="max-w-[120px] truncate text-sm font-medium text-[var(--color-text-secondary)]">
-                      {name}
+                      {displayLabel}
                     </span>
                     <svg
                       className={`h-3.5 w-3.5 text-[var(--color-text-muted)] transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
@@ -255,12 +258,26 @@ export default function Navbar() {
                       role="menu"
                     >
                       <div className="border-b border-[var(--color-border)] px-4 py-3">
-                        <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{name}</p>
+                        <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">{displayLabel}</p>
                         <p className="mt-0.5 text-xs capitalize text-[var(--color-text-muted)]">
-                          {role?.toLowerCase()}
+                          {nickname ? `${name} · ${role?.toLowerCase()}` : role?.toLowerCase()}
                         </p>
                       </div>
                       <div className="p-1.5">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            navigate("/settings/profile");
+                          }}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                          </svg>
+                          My profile
+                        </button>
                         <button
                           type="button"
                           role="menuitem"

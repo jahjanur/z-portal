@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, FolderKanban, Trash2, User as UserIcon } from "lucide-react";
 import type { Task } from "../../contexts/AdminContext";
+import { avatarGlyph } from "../../constants/workerProfile";
 
 interface TaskBoardProps {
   tasks: Task[];
@@ -47,15 +48,6 @@ const COLUMNS: {
     accent: "var(--color-success-border)",
   },
 ];
-
-function initials(name?: string): string {
-  if (!name) return "?";
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p.charAt(0).toUpperCase())
-    .join("");
-}
 
 function dueState(dueDate?: string, completed?: boolean): "none" | "overdue" | "soon" | "ok" {
   if (!dueDate) return "none";
@@ -145,10 +137,10 @@ function TaskCard({
               {workers.slice(0, 3).map((tw, i) => (
                 <span
                   key={i}
-                  title={tw.user.name}
-                  className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-panel-solid)] bg-[var(--color-surface-3)] text-[0.625rem] font-bold text-[var(--color-text-secondary)]"
+                  title={tw.user.nickname ? `${tw.user.name} (“${tw.user.nickname}”)` : tw.user.name}
+                  className={`flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-panel-solid)] bg-[var(--color-surface-3)] text-[var(--color-text-secondary)] ${tw.user.avatarEmoji ? "text-xs" : "text-[0.625rem] font-bold"}`}
                 >
-                  {initials(tw.user.name)}
+                  {avatarGlyph(tw.user)}
                 </span>
               ))}
               {workers.length > 3 && (
@@ -223,7 +215,7 @@ export default function TaskBoard({ tasks, onDelete, view = "board", onChangeSta
               {/* workers */}
               <div className="hidden shrink-0 sm:flex sm:-space-x-2">
                 {workers.slice(0, 3).map((tw, i) => (
-                  <span key={i} title={tw.user.name} className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-panel-solid)] bg-[var(--color-surface-3)] text-[0.625rem] font-bold text-[var(--color-text-secondary)]">{initials(tw.user.name)}</span>
+                  <span key={i} title={tw.user.nickname ? `${tw.user.name} (“${tw.user.nickname}”)` : tw.user.name} className={`flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-panel-solid)] bg-[var(--color-surface-3)] text-[var(--color-text-secondary)] ${tw.user.avatarEmoji ? "text-xs" : "text-[0.625rem] font-bold"}`}>{avatarGlyph(tw.user)}</span>
                 ))}
                 {workers.length > 3 && (
                   <span className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--color-panel-solid)] bg-[var(--color-surface-3)] text-[0.625rem] font-bold text-[var(--color-text-muted)]">+{workers.length - 3}</span>

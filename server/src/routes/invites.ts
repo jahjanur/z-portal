@@ -7,6 +7,7 @@ import { verifyJWT, verifyAdmin, verifyAdminOrEraSphere } from "../middleware/au
 import prisma from "../lib/prisma";
 import { sendInviteEmail, sendWelcomeEmailForRole } from "../services/inviteEmails";
 import { emit, EventType } from "../services/notificationEngine";
+import { sanitizeNickname, sanitizeEmoji, sanitizeSkills } from "../constants/workerProfile";
 
 const router = Router();
 const SALT_ROUNDS = 10;
@@ -227,6 +228,13 @@ router.post("/accept", acceptLimiter, async (req, res) => {
       profileStatus: invite.role === "WORKER" ? "COMPLETE" : "COMPLETE",
     };
 
+    // Workers pick a personal nickname + emoji + skills during onboarding.
+    if (invite.role === "WORKER") {
+      userData.nickname = sanitizeNickname(req.body.nickname) ?? null;
+      userData.avatarEmoji = sanitizeEmoji(req.body.avatarEmoji) ?? null;
+      userData.skills = sanitizeSkills(req.body.skills);
+    }
+
     if (invite.role === "CLIENT") {
       userData.company = invite.company || null;
       userData.colorHex = "#5B4FFF";
@@ -315,6 +323,9 @@ router.post("/accept", acceptLimiter, async (req, res) => {
         email: newUser.email,
         role: newUser.role,
         name: newUser.name,
+        nickname: newUser.nickname,
+        avatarEmoji: newUser.avatarEmoji,
+        skills: newUser.skills,
         company: newUser.company,
       },
     });

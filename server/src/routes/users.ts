@@ -10,6 +10,7 @@ import { notifyProfileCompleted } from "../services/notifications";
 import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
 import { uploadsDir } from "../lib/uploadsPath";
+import { sanitizeNickname, sanitizeEmoji, sanitizeSkills } from "../constants/workerProfile";
 
 const router = Router();
 const SALT_ROUNDS = 10;
@@ -60,6 +61,9 @@ router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
         email: true,
         role: true,
         name: true,
+        nickname: true,
+        avatarEmoji: true,
+        skills: true,
         company: true,
         logo: true,
         colorHex: true,
@@ -75,6 +79,35 @@ router.get("/", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) => {
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// Self-service: the logged-in user updates their own display profile
+// (nickname / emoji / skills). Used by the onboarding + settings screens.
+router.patch("/me/profile", verifyJWT, async (req: any, res) => {
+  try {
+    const { userId } = req.user;
+    const data: any = {};
+    if ("nickname" in req.body) data.nickname = sanitizeNickname(req.body.nickname) ?? null;
+    if ("avatarEmoji" in req.body) data.avatarEmoji = sanitizeEmoji(req.body.avatarEmoji) ?? null;
+    if ("skills" in req.body) data.skills = sanitizeSkills(req.body.skills);
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ error: "No profile fields provided" });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true, email: true, role: true, name: true,
+        nickname: true, avatarEmoji: true, skills: true,
+      },
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error("Error updating own profile:", error);
+    res.status(500).json({ error: "Failed to update profile" });
   }
 });
 
@@ -918,7 +951,28 @@ router.patch("/:id", verifyJWT, verifyAdminOrEraSphere, async (req: any, res) =>
       where: { id },
       select: { id: true, role: true, referredById: true },
     });
-    if (!target || target.role !== "CLIENT") return res.status(404).json({ error: "Client not found" });
+    if (!target) return res.status(404).json({ error: "User not found" });
+
+    // Workers: admin-only edit of display profile (name + nickname/emoji/skills).
+    if (target.role === "WORKER") {
+      if (role !== "ADMIN") return res.status(403).json({ error: "Only admins can edit workers" });
+      const data: any = {};
+      if (req.body.name !== undefined) data.name = String(req.body.name).trim();
+      if ("nickname" in req.body) data.nickname = sanitizeNickname(req.body.nickname) ?? null;
+      if ("avatarEmoji" in req.body) data.avatarEmoji = sanitizeEmoji(req.body.avatarEmoji) ?? null;
+      if ("skills" in req.body) data.skills = sanitizeSkills(req.body.skills);
+      const updatedWorker = await prisma.user.update({
+        where: { id },
+        data,
+        select: {
+          id: true, name: true, email: true, role: true,
+          nickname: true, avatarEmoji: true, skills: true, profileStatus: true,
+        },
+      });
+      return res.json(updatedWorker);
+    }
+
+    if (target.role !== "CLIENT") return res.status(404).json({ error: "Client not found" });
     if (role === "ERASPHERE" && target.referredById !== userId) {
       return res.status(403).json({ error: "Not authorized to edit this client" });
     }

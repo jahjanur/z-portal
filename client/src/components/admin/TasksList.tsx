@@ -8,6 +8,8 @@ import Button from "../ui/Button";
 interface User {
   name: string;
   company?: string;
+  avatarEmoji?: string | null;
+  nickname?: string | null;
 }
 
 interface Project {
@@ -141,7 +143,9 @@ const TasksList: React.FC<TasksListProps> = ({ tasks, onDelete }) => {
                 </svg>
                 <dd>
                 {task.workers?.length
-                  ? task.workers.map((tw) => tw.user.name).join(", ")
+                  ? task.workers
+                      .map((tw) => `${tw.user.avatarEmoji ? tw.user.avatarEmoji + " " : ""}${tw.user.name}`)
+                      .join(", ")
                   : "Unassigned"}
               </dd>
               </div>

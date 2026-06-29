@@ -49,6 +49,9 @@ router.get("/", verifyJWT, async (req: any, res) => {
                   id: true,
                   email: true,
                   name: true,
+                  nickname: true,
+                  avatarEmoji: true,
+                  skills: true,
                   role: true
                 }
               }
@@ -240,6 +243,8 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
                   select: {
                     id: true,
                     name: true,
+                    nickname: true,
+                    avatarEmoji: true,
                     email: true,
                     role: true
                   }
@@ -255,6 +260,8 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
               select: {
                 id: true,
                 name: true,
+                nickname: true,
+                avatarEmoji: true,
                 email: true,
                 role: true
               }
@@ -289,7 +296,7 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
     const uploaders = uploaderIds.length
       ? await prisma.user.findMany({
           where: { id: { in: uploaderIds as number[] } },
-          select: { id: true, name: true, role: true },
+          select: { id: true, name: true, nickname: true, avatarEmoji: true, role: true },
         })
       : [];
     const uploaderMap = Object.fromEntries(uploaders.map((u) => [u.id, u]));

@@ -22,6 +22,10 @@ export default function AuthPage() {
       localStorage.setItem("role", res.user.role);
       localStorage.setItem("userId", res.user.id.toString());
       localStorage.setItem("name", res.user.name);
+      if (res.user.nickname) localStorage.setItem("nickname", res.user.nickname);
+      else localStorage.removeItem("nickname");
+      if (res.user.avatarEmoji) localStorage.setItem("avatarEmoji", res.user.avatarEmoji);
+      else localStorage.removeItem("avatarEmoji");
       const redirect = searchParams.get("redirect");
       window.location.href = redirect && redirect.startsWith("/") ? redirect : "/dashboard";
     } catch (err: unknown) {

@@ -4,6 +4,7 @@ import API from "../api";
 import Button from "../components/ui/Button";
 import Spinner from "../components/ui/Spinner";
 import EmptyState from "../components/ui/EmptyState";
+import WorkerProfileEditor, { WorkerProfileValue } from "../components/WorkerProfileEditor";
 
 interface InviteInfo {
   role: string;
@@ -44,6 +45,8 @@ export default function InviteAcceptPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [profile, setProfile] = useState<WorkerProfileValue>({ nickname: "", avatarEmoji: "", skills: [] });
+  const isWorker = info?.role === "WORKER";
 
   useEffect(() => {
     if (!token) {
@@ -77,11 +80,19 @@ export default function InviteAcceptPage() {
 
     setSubmitting(true);
     try {
-      const { data } = await API.post("/invites/accept", { token, password });
+      const payload: Record<string, unknown> = { token, password };
+      if (isWorker) {
+        payload.nickname = profile.nickname.trim();
+        payload.avatarEmoji = profile.avatarEmoji;
+        payload.skills = profile.skills;
+      }
+      const { data } = await API.post("/invites/accept", payload);
       localStorage.setItem("token", data.token);
       localStorage.setItem("role", data.user.role);
       localStorage.setItem("userId", data.user.id.toString());
       localStorage.setItem("name", data.user.name);
+      if (data.user.nickname) localStorage.setItem("nickname", data.user.nickname);
+      if (data.user.avatarEmoji) localStorage.setItem("avatarEmoji", data.user.avatarEmoji);
 
       window.location.href = "/dashboard";
     } catch (err: any) {
@@ -150,12 +161,12 @@ export default function InviteAcceptPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center p-4 sm:p-6">
+    <div className="relative flex min-h-screen items-start justify-center overflow-y-auto p-4 py-8 sm:p-6 sm:py-12">
       <div
         className="fixed inset-0 z-0 bg-gradient-to-b from-[var(--color-overlay)]/50 via-[var(--color-overlay)]/40 to-[var(--color-overlay)]/50"
         aria-hidden
       />
-      <div className="relative z-10 w-full max-w-md animate-fade-up">
+      <div className={`relative z-10 my-auto w-full animate-fade-up ${isWorker ? "max-w-lg" : "max-w-md"}`}>
         <div className="relative overflow-hidden rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface-2)] shadow-elev-lg backdrop-blur-2xl">
           <div
             className="pointer-events-none absolute inset-0 rounded-3xl shadow-[inset_0_1px_0_0_var(--color-border)]"
@@ -296,6 +307,18 @@ export default function InviteAcceptPage() {
                   className="input-dark w-full px-4 py-3"
                 />
               </div>
+
+              {isWorker && (
+                <div className="mt-2 border-t border-[var(--color-border)] pt-5">
+                  <div className="mb-4">
+                    <h2 className="text-sm font-bold text-[var(--color-text-primary)]">Make it yours</h2>
+                    <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                      Pick a nickname, an avatar and your skills — this is how the team will see you. You can change it later.
+                    </p>
+                  </div>
+                  <WorkerProfileEditor value={profile} onChange={setProfile} />
+                </div>
+              )}
 
               <Button type="submit" variant="primary" size="lg" loading={submitting} className="mt-1 w-full">
                 {submitting ? "Creating account..." : "Set Up Your Account"}

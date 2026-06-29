@@ -21,7 +21,7 @@ router.get("/recent", verifyJWT, verifyAdmin, async (req: any, res) => {
               ? { visibleToClient: true }
               : undefined,
         include: {
-          user: { select: { id: true, name: true, role: true, email: true } },
+          user: { select: { id: true, name: true, nickname: true, avatarEmoji: true, role: true, email: true } },
           task: { select: { id: true, title: true, clientId: true } },
         },
       }),
@@ -35,7 +35,7 @@ router.get("/recent", verifyJWT, verifyAdmin, async (req: any, res) => {
               ? { visibleToClient: true }
               : undefined,
         include: {
-          user: { select: { id: true, name: true, role: true, email: true } },
+          user: { select: { id: true, name: true, nickname: true, avatarEmoji: true, role: true, email: true } },
           file: {
             select: {
               id: true,
