@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import API from "../api";
 import Button from "../components/ui/Button";
 import Spinner from "../components/ui/Spinner";
-import WorkerProfileEditor, { WorkerProfileValue } from "../components/WorkerProfileEditor";
+import WorkerProfileEditor, { type WorkerProfileValue } from "../components/WorkerProfileEditor";
 import { avatarGlyph } from "../constants/workerProfile";
 
 export default function ProfileSettingsPage() {

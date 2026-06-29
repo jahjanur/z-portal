@@ -4,7 +4,7 @@ import API from "../api";
 import Button from "../components/ui/Button";
 import Spinner from "../components/ui/Spinner";
 import EmptyState from "../components/ui/EmptyState";
-import WorkerProfileEditor, { WorkerProfileValue } from "../components/WorkerProfileEditor";
+import WorkerProfileEditor, { type WorkerProfileValue } from "../components/WorkerProfileEditor";
 
 interface InviteInfo {
   role: string;
