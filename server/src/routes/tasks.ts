@@ -1403,8 +1403,8 @@ router.get("/:id/milestones", verifyJWT, async (req: any, res) => {
   }
 });
 
-// create a milestone (optional image)
-router.post("/:id/milestones", verifyJWT, upload.single("image"), async (req: any, res) => {
+// create a milestone (optional images)
+router.post("/:id/milestones", verifyJWT, upload.array("images", 10), async (req: any, res) => {
   try {
     const taskId = Number(req.params.id);
     if (!Number.isInteger(taskId)) return res.status(400).json({ error: "Invalid task id" });
@@ -1422,12 +1422,13 @@ router.post("/:id/milestones", verifyJWT, upload.single("image"), async (req: an
       orderBy: { order: "desc" },
       select: { order: true },
     });
+    const files = (req.files as Express.Multer.File[]) || [];
     const milestone = await prisma.milestone.create({
       data: {
         taskId,
         title: title.slice(0, 160),
         description: req.body.description ? String(req.body.description).trim() : null,
-        imageUrl: req.file ? `/uploads/${req.file.filename}` : null,
+        imageUrls: files.map((f) => `/uploads/${f.filename}`),
         createdById: req.user.userId,
         order: (last?.order ?? 0) + 1,
       },
@@ -1436,6 +1437,56 @@ router.post("/:id/milestones", verifyJWT, upload.single("image"), async (req: an
   } catch (error) {
     console.error("Error creating milestone:", error);
     res.status(500).json({ error: "Failed to create to-do" });
+  }
+});
+
+// add more images to an existing to-do
+router.post("/:id/milestones/:mid/images", verifyJWT, upload.array("images", 10), async (req: any, res) => {
+  try {
+    const taskId = Number(req.params.id);
+    const mid = Number(req.params.mid);
+    const task = await loadTaskForMilestone(taskId);
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    if (!(await canAccessMilestones(task, req.user))) return res.status(403).json({ error: "Not authorized" });
+    const milestone = await prisma.milestone.findFirst({ where: { id: mid, taskId } });
+    if (!milestone) return res.status(404).json({ error: "To-do not found" });
+
+    const files = (req.files as Express.Multer.File[]) || [];
+    if (files.length === 0) return res.status(400).json({ error: "No images uploaded" });
+    const updated = await prisma.milestone.update({
+      where: { id: mid },
+      data: { imageUrls: { push: files.map((f) => `/uploads/${f.filename}`) } },
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error("Error adding to-do images:", error);
+    res.status(500).json({ error: "Failed to add images" });
+  }
+});
+
+// remove one image from a to-do (admin or creator)
+router.delete("/:id/milestones/:mid/images", verifyJWT, async (req: any, res) => {
+  try {
+    const taskId = Number(req.params.id);
+    const mid = Number(req.params.mid);
+    const { userId, role } = req.user;
+    const url = String(req.body.url || "");
+    const milestone = await prisma.milestone.findFirst({ where: { id: mid, taskId } });
+    if (!milestone) return res.status(404).json({ error: "To-do not found" });
+    if (role !== "ADMIN" && milestone.createdById !== userId) {
+      return res.status(403).json({ error: "Not authorized to edit this to-do" });
+    }
+    const updated = await prisma.milestone.update({
+      where: { id: mid },
+      data: {
+        imageUrls: (milestone.imageUrls || []).filter((u) => u !== url),
+        imageUrl: milestone.imageUrl === url ? null : milestone.imageUrl,
+      },
+    });
+    res.json(updated);
+  } catch (error) {
+    console.error("Error removing to-do image:", error);
+    res.status(500).json({ error: "Failed to remove image" });
   }
 });
 

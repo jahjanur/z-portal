@@ -4,12 +4,19 @@ export interface Milestone {
   title: string;
   description?: string | null;
   imageUrl?: string | null;
+  imageUrls?: string[] | null;
   isDone: boolean;
   doneAt?: string | null;
   doneBy?: number | null;
   createdById: number;
   order: number;
   createdAt: string;
+}
+
+/** All images for a to-do (legacy single + the new array), de-duplicated. */
+export function milestoneImages(m: Pick<Milestone, "imageUrl" | "imageUrls">): string[] {
+  const all = [m.imageUrl, ...(m.imageUrls ?? [])].filter((u): u is string => !!u);
+  return Array.from(new Set(all));
 }
 
 /** Equal-weight progress across a task's milestones. */

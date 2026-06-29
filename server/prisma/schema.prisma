@@ -117,6 +117,7 @@ model Milestone {
   title       String
   description String?
   imageUrl    String?
+  imageUrls   String[]  @default([])
   isDone      Boolean   @default(false)
   doneAt      DateTime?
   doneBy      Int?

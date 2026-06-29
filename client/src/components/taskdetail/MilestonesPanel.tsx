@@ -1,14 +1,15 @@
 import { useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Check, Plus, Trash2, ImagePlus, Flag } from "lucide-react";
+import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight } from "lucide-react";
 import API, { getFileUrl } from "../../api";
+import Modal from "../ui/Modal";
 import ProgressBar from "../ui/ProgressBar";
-import { type Milestone, milestoneProgress } from "../../utils/milestones";
+import { type Milestone, milestoneProgress, milestoneImages } from "../../utils/milestones";
 
 interface Props {
   taskId: number;
   milestones?: Milestone[] | null;
-  /** Admin or assigned worker — may tick milestones done. */
+  /** Admin or assigned worker — may tick to-dos done. */
   canComplete: boolean;
   currentUserId: number;
   isAdmin: boolean;
@@ -22,13 +23,16 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [image, setImage] = useState<File | null>(null);
+  const [images, setImages] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [openId, setOpenId] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const open = openId != null ? list.find((m) => m.id === openId) ?? null : null;
+
   const resetForm = () => {
-    setTitle(""); setDescription(""); setImage(null); setAdding(false);
+    setTitle(""); setDescription(""); setImages([]); setAdding(false);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -39,7 +43,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
       const fd = new FormData();
       fd.append("title", title.trim());
       if (description.trim()) fd.append("description", description.trim());
-      if (image) fd.append("image", image);
+      images.forEach((f) => fd.append("images", f));
       await API.post(`/tasks/${taskId}/milestones`, fd);
       resetForm();
       onChanged();
@@ -67,6 +71,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
     if (!window.confirm("Delete this to-do?")) return;
     try {
       await API.delete(`/tasks/${taskId}/milestones/${m.id}`);
+      setOpenId(null);
       onChanged();
     } catch (err: any) {
       toast.error(err?.response?.data?.error ?? "Couldn't delete to-do");
@@ -79,9 +84,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
         <div className="flex items-center gap-2 text-[var(--color-text-primary)]">
           <Flag className="h-4 w-4 text-[var(--color-text-muted)]" />
           <h3 className="text-sm font-bold">To-dos</h3>
-          {total > 0 && (
-            <span className="text-xs font-medium text-[var(--color-text-muted)]">{done}/{total}</span>
-          )}
+          {total > 0 && <span className="text-xs font-medium text-[var(--color-text-muted)]">{done}/{total}</span>}
         </div>
         {total > 0 && (
           <span className={`text-sm font-bold tabular-nums ${percent >= 100 ? "text-[var(--color-success-text)]" : "text-[var(--color-text-primary)]"}`}>
@@ -92,20 +95,23 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
 
       {total > 0 && <ProgressBar percent={percent} size="md" className="mb-4" />}
 
-      {/* list */}
       {list.length > 0 ? (
         <ul className="space-y-2">
           {list.map((m) => {
-            const canDelete = isAdmin || m.createdById === currentUserId;
+            const imgs = milestoneImages(m);
             return (
-              <li key={m.id} className="group flex gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2.5">
+              <li
+                key={m.id}
+                onClick={() => setOpenId(m.id)}
+                className="group flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2.5 transition hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-3)]"
+              >
                 <button
                   type="button"
-                  onClick={() => toggle(m)}
+                  onClick={(e) => { e.stopPropagation(); toggle(m); }}
                   disabled={!canComplete || togglingId === m.id}
                   aria-label={m.isDone ? "Mark not done" : "Mark done"}
                   title={canComplete ? (m.isDone ? "Mark not done" : "Mark done") : "Only staff can complete to-dos"}
-                  className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
                     m.isDone
                       ? "border-[var(--color-success-text)] bg-[var(--color-success-text)] text-white"
                       : "border-[var(--color-border-hover)] text-transparent hover:border-[var(--color-success-text)]"
@@ -114,33 +120,25 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
                   <Check className="h-3.5 w-3.5" strokeWidth={3} />
                 </button>
 
-                {m.imageUrl && (
-                  <img
-                    src={getFileUrl(m.imageUrl)}
-                    alt=""
-                    className="h-12 w-12 shrink-0 rounded-lg border border-[var(--color-border)] object-cover"
-                  />
+                {imgs[0] && (
+                  <span className="relative shrink-0">
+                    <img src={getFileUrl(imgs[0])} alt="" className="h-10 w-10 rounded-lg border border-[var(--color-border)] object-cover" />
+                    {imgs.length > 1 && (
+                      <span className="absolute -bottom-1 -right-1 rounded-full bg-[var(--color-panel-solid)] px-1 text-[9px] font-bold text-[var(--color-text-secondary)] ring-1 ring-[var(--color-border)]">
+                        {imgs.length}
+                      </span>
+                    )}
+                  </span>
                 )}
 
                 <div className="min-w-0 flex-1">
-                  <p className={`text-sm font-semibold ${m.isDone ? "text-[var(--color-text-muted)] line-through" : "text-[var(--color-text-primary)]"}`}>
+                  <p className={`truncate text-sm font-semibold ${m.isDone ? "text-[var(--color-text-muted)] line-through" : "text-[var(--color-text-primary)]"}`}>
                     {m.title}
                   </p>
-                  {m.description && (
-                    <p className="mt-0.5 whitespace-pre-wrap text-xs text-[var(--color-text-muted)]">{m.description}</p>
-                  )}
+                  {m.description && <p className="truncate text-xs text-[var(--color-text-muted)]">{m.description}</p>}
                 </div>
 
-                {canDelete && (
-                  <button
-                    type="button"
-                    onClick={() => remove(m)}
-                    aria-label="Delete to-do"
-                    className="mt-0.5 shrink-0 text-[var(--color-text-muted)] opacity-0 transition hover:text-[var(--color-destructive-text)] focus:opacity-100 group-hover:opacity-100"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                )}
+                <ChevronRight className="h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition group-hover:translate-x-0.5" />
               </li>
             );
           })}
@@ -149,7 +147,6 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
         !adding && <p className="text-xs text-[var(--color-text-muted)]">No to-dos yet. Break this task into smaller to-dos to track progress.</p>
       )}
 
-      {/* add */}
       {adding ? (
         <div className="mt-3 space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3">
           <input
@@ -168,20 +165,34 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
             rows={2}
             className="input-dark w-full resize-y px-3 py-2 text-sm"
           />
+          {images.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {images.map((f, i) => (
+                <span key={i} className="relative h-14 w-14">
+                  <img src={URL.createObjectURL(f)} alt="" className="h-14 w-14 rounded-lg border border-[var(--color-border)] object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-panel-solid)] text-[var(--color-text-muted)] ring-1 ring-[var(--color-border)] hover:text-[var(--color-destructive-text)]"
+                    aria-label="Remove image"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2">
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => setImage(e.target.files?.[0] ?? null)} />
+            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => setImages((prev) => [...prev, ...Array.from(e.target.files || [])])} />
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)]"
             >
-              <ImagePlus className="h-3.5 w-3.5" />
-              {image ? <span className="max-w-[120px] truncate">{image.name}</span> : "Add image"}
+              <ImagePlus className="h-3.5 w-3.5" /> Add images
             </button>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={resetForm} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">
-                Cancel
-              </button>
+              <button type="button" onClick={resetForm} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">Cancel</button>
               <button
                 type="button"
                 onClick={create}
@@ -202,6 +213,158 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
           <Plus className="h-3.5 w-3.5" /> Add to-do
         </button>
       )}
+
+      {open && (
+        <TodoDetailModal
+          key={open.id}
+          taskId={taskId}
+          milestone={open}
+          canComplete={canComplete}
+          canEdit={isAdmin || open.createdById === currentUserId}
+          onClose={() => setOpenId(null)}
+          onToggle={() => toggle(open)}
+          onDelete={() => remove(open)}
+          onChanged={onChanged}
+        />
+      )}
     </div>
+  );
+}
+
+/* ----------------------------- detail modal ------------------------------ */
+
+function TodoDetailModal({
+  taskId, milestone, canComplete, canEdit, onClose, onToggle, onDelete, onChanged,
+}: {
+  taskId: number;
+  milestone: Milestone;
+  canComplete: boolean;
+  canEdit: boolean;
+  onClose: () => void;
+  onToggle: () => void;
+  onDelete: () => void;
+  onChanged: () => void;
+}) {
+  const imgs = milestoneImages(milestone);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const addRef = useRef<HTMLInputElement>(null);
+
+  const addImages = async (files: File[]) => {
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      files.forEach((f) => fd.append("images", f));
+      await API.post(`/tasks/${taskId}/milestones/${milestone.id}/images`, fd);
+      onChanged();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't add images");
+    } finally {
+      setUploading(false);
+      if (addRef.current) addRef.current.value = "";
+    }
+  };
+
+  const removeImage = async (url: string) => {
+    try {
+      await API.delete(`/tasks/${taskId}/milestones/${milestone.id}/images`, { data: { url } });
+      onChanged();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't remove image");
+    }
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} maxWidth="2xl" title={milestone.title}>
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${milestone.isDone ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)]" : "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]"}`}>
+            {milestone.isDone ? <><Check className="h-3.5 w-3.5" /> Done</> : "To do"}
+          </span>
+          {canComplete && (
+            <button
+              type="button"
+              onClick={onToggle}
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+            >
+              {milestone.isDone ? "Mark as not done" : "Mark as done"}
+            </button>
+          )}
+        </div>
+
+        {milestone.description && (
+          <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-secondary)]">{milestone.description}</p>
+        )}
+
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+              Images {imgs.length > 0 && `(${imgs.length})`}
+            </p>
+            {canEdit && (
+              <>
+                <input ref={addRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => addImages(Array.from(e.target.files || []))} />
+                <button
+                  type="button"
+                  onClick={() => addRef.current?.click()}
+                  disabled={uploading}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] disabled:opacity-50"
+                >
+                  <ImagePlus className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Add images"}
+                </button>
+              </>
+            )}
+          </div>
+          {imgs.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {imgs.map((url) => (
+                <div key={url} className="group relative aspect-square overflow-hidden rounded-xl border border-[var(--color-border)]">
+                  <img
+                    src={getFileUrl(url)}
+                    alt=""
+                    onClick={() => setLightbox(url)}
+                    className="h-full w-full cursor-zoom-in object-cover transition group-hover:scale-105"
+                  />
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => removeImage(url)}
+                      aria-label="Remove image"
+                      className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition group-hover:opacity-100 hover:bg-[var(--color-destructive-text)]"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--color-text-muted)]">No images yet.</p>
+          )}
+        </div>
+
+        {canEdit && (
+          <div className="flex justify-end border-t border-[var(--color-border)] pt-4">
+            <button
+              type="button"
+              onClick={onDelete}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-destructive-text)] transition hover:bg-[var(--color-destructive-bg)]"
+            >
+              <Trash2 className="h-4 w-4" /> Delete to-do
+            </button>
+          </div>
+        )}
+      </div>
+
+      {lightbox && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4 animate-fade-in" onClick={() => setLightbox(null)}>
+          <img src={getFileUrl(lightbox)} alt="" className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain" />
+          <button type="button" aria-label="Close image" className="absolute right-4 top-4 rounded-lg p-2 text-white/80 hover:text-white">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+      )}
+    </Modal>
   );
 }

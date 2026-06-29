@@ -120,6 +120,18 @@ router.get(/.*/, async (req: any, res) => {
           } else {
             authorized = owner.id === scopeId;
           }
+        } else {
+          // Milestone / to-do image: authorize via the milestone's task.
+          const m = await prisma.milestone.findFirst({
+            where: { OR: [{ imageUrl: fileUrl }, { imageUrls: { has: fileUrl } }] },
+            select: { task: { select: { clientId: true, workers: { select: { userId: true } } } } },
+          });
+          if (m?.task) {
+            if (role === "CLIENT") authorized = m.task.clientId === scopeId;
+            else if (role === "WORKER") authorized = m.task.workers.some((w) => w.userId === userId);
+            else if (role === "ERASPHERE")
+              authorized = m.task.clientId !== null && (await referredClientIds(userId)).includes(m.task.clientId);
+          }
         }
       }
     }
