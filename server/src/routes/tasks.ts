@@ -1435,15 +1435,10 @@ router.post("/:id/milestones", verifyJWT, upload.any(), async (req: any, res) =>
       },
     });
 
-    // When the CLIENT adds a to-do, surface it in the worker channel so the
-    // team sees the request in their chat, and ping the assigned workers.
+    // When the CLIENT adds a to-do, quietly notify the assigned workers (bell
+    // only — we intentionally do NOT post it into the chat to keep the chat for
+    // communication; the to-do shows up in the To-dos panel).
     if (req.user.role === "CLIENT") {
-      const imgNote = files.length ? `  ·  ${files.length} image${files.length > 1 ? "s" : ""}` : "";
-      const body = `🔖 New to-do from the client: “${milestone.title}”${imgNote}${milestone.description ? `\n${milestone.description}` : ""}`;
-      prisma.taskComment
-        .create({ data: { taskId, userId: req.user.userId, content: body, visibleToClient: false } })
-        .catch((e) => console.error("Failed to post to-do into worker channel:", e));
-
       const workerIds = task.workers.map((w) => w.userId);
       if (workerIds.length) {
         prisma.notification
