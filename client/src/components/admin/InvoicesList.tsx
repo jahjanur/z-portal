@@ -3,8 +3,9 @@ import Pagination from "../ui/Pagination";
 import toast from "react-hot-toast";
 import { generateInvoicePdf } from "../../utils/pdfHelpers";
 import type { Invoice as AdminInvoice } from "../../contexts/AdminContext";
-import { getFileUrl } from "../../api";
+import API, { getFileUrl } from "../../api";
 import StatusBadge from "../ui/StatusBadge";
+import ProgressBar from "../ui/ProgressBar";
 import EmptyState from "../ui/EmptyState";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
@@ -16,20 +17,60 @@ interface InvoicesListProps {
   onDelete: (id: number) => void;
   onEdit?: (invoice: Invoice) => void;
   onRequestPayment?: (invoice: Invoice) => void;
+  /** Refresh the list after a payment is recorded/removed. */
+  onChanged?: () => void;
   colors: { primary: string };
 }
+
+const fmt = (n: number) => `$${(n ?? 0).toFixed(2)}`;
 
 const InvoicesList: React.FC<InvoicesListProps> = ({
   invoices,
   onDelete,
   onEdit,
   onRequestPayment,
+  onChanged,
   colors: _colors,
 }) => {
   const PAGE_SIZE = 10;
   const [page, setPage] = useState(1);
   const [detailInvoice, setDetailInvoice] = useState<Invoice | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [payDate, setPayDate] = useState("");
+  const [payNote, setPayNote] = useState("");
+  const [recording, setRecording] = useState(false);
+
+  const recordPayment = async () => {
+    if (!detailInvoice) return;
+    const amount = parseFloat(payAmount);
+    if (!Number.isFinite(amount) || amount <= 0) { toast.error("Enter a valid amount"); return; }
+    setRecording(true);
+    try {
+      const { data } = await API.post(`/invoices/${detailInvoice.id}/payments`, {
+        amount, paidAt: payDate || undefined, note: payNote || undefined,
+      });
+      setDetailInvoice(data);
+      setPayAmount(""); setPayDate(""); setPayNote("");
+      toast.success("Payment recorded");
+      onChanged?.();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't record payment");
+    } finally {
+      setRecording(false);
+    }
+  };
+
+  const removePayment = async (paymentId: number) => {
+    if (!detailInvoice) return;
+    try {
+      const { data } = await API.delete(`/invoices/${detailInvoice.id}/payments/${paymentId}`);
+      setDetailInvoice(data);
+      onChanged?.();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't remove payment");
+    }
+  };
   const totalPages = Math.ceil(invoices.length / PAGE_SIZE);
   const paginatedInvoices = invoices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -98,6 +139,17 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                     </span>
                   )}
                 </div>
+
+                {/* paid / remaining (when a partial payment exists) */}
+                {(inv.amountPaid ?? 0) > 0 && inv.status.toUpperCase() !== "PAID" && (
+                  <div className="mt-2 max-w-sm">
+                    <ProgressBar percent={inv.amount > 0 ? ((inv.amountPaid ?? 0) / inv.amount) * 100 : 0} size="xs" />
+                    <div className="mt-1 flex justify-between text-xs tabular-nums">
+                      <span className="font-semibold text-[var(--color-success-text)]">{fmt(inv.amountPaid ?? 0)} paid</span>
+                      <span className="font-semibold text-[var(--color-text-primary)]">{fmt(inv.remaining ?? (inv.amount - (inv.amountPaid ?? 0)))} left</span>
+                    </div>
+                  </div>
+                )}
 
                 {inv.lineItems && inv.lineItems.length > 0 && (inv.subtotal != null || inv.taxAmount != null) && (
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-[var(--color-text-muted)]">
@@ -307,6 +359,57 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                 <span className="font-bold tabular-nums text-[var(--color-text-primary)]">${detailInvoice.amount.toFixed(2)}</span>
               </div>
             )}
+            {/* Payments — record partial payments and track what's left */}
+            {(() => {
+              const total = detailInvoice.amount || 0;
+              const paid = detailInvoice.amountPaid ?? (detailInvoice.payments ?? []).reduce((s, p) => s + p.amount, 0);
+              const remaining = detailInvoice.remaining ?? Math.max(0, total - paid);
+              const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+              const fullyPaid = remaining <= 0 && total > 0;
+              return (
+                <div className="card-panel rounded-xl p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-sm font-bold text-[var(--color-text-primary)]">Payments</span>
+                    <span className={`text-sm font-bold tabular-nums ${fullyPaid ? "text-[var(--color-success-text)]" : "text-[var(--color-text-primary)]"}`}>{pct}%</span>
+                  </div>
+                  <ProgressBar percent={fullyPaid ? 100 : pct} size="md" />
+                  <div className="mt-2 flex justify-between text-sm tabular-nums">
+                    <span className="font-semibold text-[var(--color-success-text)]">{fmt(paid)} paid</span>
+                    <span className="font-semibold text-[var(--color-text-primary)]">{fullyPaid ? "Fully paid" : `${fmt(remaining)} left`} of {fmt(total)}</span>
+                  </div>
+
+                  {(detailInvoice.payments ?? []).length > 0 && (
+                    <ul className="mt-3 space-y-1.5 border-t border-[var(--color-border)] pt-3">
+                      {(detailInvoice.payments ?? []).map((p) => (
+                        <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="tabular-nums font-medium text-[var(--color-text-primary)]">{fmt(p.amount)}</span>
+                          <span className="flex-1 truncate text-xs text-[var(--color-text-muted)]">{formatDate(p.paidAt)}{p.note ? ` · ${p.note}` : ""}</span>
+                          <button type="button" onClick={() => removePayment(p.id)} aria-label="Remove payment" className="text-[var(--color-text-muted)] transition hover:text-[var(--color-destructive-text)]">✕</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {!fullyPaid && (
+                    <div className="mt-3 flex flex-col gap-2 border-t border-[var(--color-border)] pt-3 sm:flex-row sm:items-end">
+                      <div className="flex-1">
+                        <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Amount</label>
+                        <input type="number" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder={remaining.toFixed(2)} className="input-dark w-full px-3 py-2 text-sm" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Date</label>
+                        <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className="input-dark w-full px-3 py-2 text-sm" />
+                      </div>
+                      <Button variant="primary" size="sm" onClick={recordPayment} loading={recording} disabled={!payAmount}>Record payment</Button>
+                    </div>
+                  )}
+                  {!fullyPaid && (
+                    <input type="text" value={payNote} onChange={(e) => setPayNote(e.target.value)} placeholder="Note (optional)" className="input-dark mt-2 w-full px-3 py-2 text-sm" />
+                  )}
+                </div>
+              );
+            })()}
+
             {detailInvoice.paymentTerms && (
               <div className="text-sm">
                 <span className="text-[var(--color-text-muted)]">Payment terms</span>

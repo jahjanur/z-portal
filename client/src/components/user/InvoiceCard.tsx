@@ -1,5 +1,6 @@
 import React from "react";
 import StatusBadge from "../ui/StatusBadge";
+import ProgressBar from "../ui/ProgressBar";
 
 interface Invoice {
   id: number;
@@ -9,6 +10,8 @@ interface Invoice {
   status?: string | null;
   description?: string | null;
   paidAt?: string | null;
+  amountPaid?: number;
+  remaining?: number;
 }
 
 interface InvoiceCardProps {
@@ -79,6 +82,33 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
           {formatCurrency(invoice.amount)}
         </p>
       </div>
+
+      {/* Payment progress — shown when a partial payment has been recorded */}
+      {(() => {
+        const paid = invoice.amountPaid ?? 0;
+        const total = invoice.amount || 0;
+        const remaining = invoice.remaining ?? Math.max(0, total - paid);
+        const isPaid = invoice.status?.toUpperCase() === "PAID" || remaining <= 0;
+        if (paid <= 0 && !isPaid) return null; // nothing paid yet → just the amount above
+        const pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+        return (
+          <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+            <ProgressBar percent={isPaid ? 100 : pct} size="sm" />
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
+              <span className="font-semibold text-[var(--color-success-text)]">
+                {formatCurrency(isPaid ? total : paid)} paid
+              </span>
+              {isPaid ? (
+                <span className="font-semibold text-[var(--color-success-text)]">Fully paid</span>
+              ) : (
+                <span className="font-semibold text-[var(--color-text-primary)]">
+                  {formatCurrency(remaining)} left
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

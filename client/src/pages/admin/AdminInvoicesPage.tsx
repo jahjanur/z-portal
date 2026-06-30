@@ -23,6 +23,7 @@ export default function AdminInvoicesPage() {
     updateInvoice,
     deleteInvoice,
     requestPayment,
+    fetchAll,
   } = useAdmin();
   const [showPaidInvoices, setShowPaidInvoices] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
@@ -78,7 +79,7 @@ export default function AdminInvoicesPage() {
           </span>
         </h3>
         {displayPending.length > 0 ? (
-          <InvoicesList invoices={displayPending} onDelete={deleteInvoice} onEdit={openEdit} onRequestPayment={(inv) => requestPayment(inv.id)} colors={colors} />
+          <InvoicesList invoices={displayPending} onDelete={deleteInvoice} onEdit={openEdit} onRequestPayment={(inv) => requestPayment(inv.id)} onChanged={fetchAll} colors={colors} />
         ) : (
           <EmptyState
             compact
@@ -113,7 +114,7 @@ export default function AdminInvoicesPage() {
         {showPaidInvoices && (
           <div>
             {displayPaid.length > 0 ? (
-              <InvoicesList invoices={displayPaid} onDelete={deleteInvoice} onEdit={openEdit} onRequestPayment={(inv) => requestPayment(inv.id)} colors={colors} />
+              <InvoicesList invoices={displayPaid} onDelete={deleteInvoice} onEdit={openEdit} onRequestPayment={(inv) => requestPayment(inv.id)} onChanged={fetchAll} colors={colors} />
             ) : (
               <EmptyState compact title="No paid invoices yet" description="Paid invoices will show up here once payments come in." />
             )}

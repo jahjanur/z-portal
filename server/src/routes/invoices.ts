@@ -11,6 +11,35 @@ import { clientScopeId } from "../lib/clientScope";
 
 const router = Router();
 
+/** Attach computed payment totals (amountPaid / remaining) from the payments list. */
+function attachPayments<T extends { amount?: number | null; payments?: { amount: number }[] }>(inv: T) {
+  const total = Number(inv.amount ?? 0);
+  const amountPaid = (inv.payments ?? []).reduce((s, p) => s + Number(p.amount || 0), 0);
+  return { ...inv, amountPaid, remaining: Math.max(0, Math.round((total - amountPaid) * 100) / 100) };
+}
+
+/** Recompute an invoice's status from its payments (PAID when fully covered). */
+async function recomputeInvoiceStatus(invoiceId: number) {
+  const inv = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: { amount: true, dueDate: true, payments: { select: { amount: true, paidAt: true } } },
+  });
+  if (!inv) return;
+  const paid = inv.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+  const fullyPaid = paid >= Number(inv.amount || 0) - 0.001 && Number(inv.amount || 0) > 0;
+  let status: string;
+  let paidAt: Date | null = null;
+  if (fullyPaid) {
+    status = "PAID";
+    paidAt = inv.payments.reduce((a, p) => (p.paidAt > a ? p.paidAt : a), inv.payments[0]?.paidAt ?? new Date());
+  } else if (inv.dueDate && new Date(inv.dueDate) < new Date()) {
+    status = "OVERDUE";
+  } else {
+    status = "PENDING";
+  }
+  await prisma.invoice.update({ where: { id: invoiceId }, data: { status, paidAt } });
+}
+
 const invoicesDir = path.join(uploadsDir, "invoices");
 if (!fs.existsSync(invoicesDir)) {
   fs.mkdirSync(invoicesDir, { recursive: true });
@@ -85,6 +114,7 @@ router.get("/", verifyJWT, async (req: any, res) => {
         include: {
           client: { select: clientSelectWithContact },
           lineItems: { orderBy: { sortOrder: 'asc' } },
+          payments: { orderBy: { paidAt: 'asc' } },
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -100,6 +130,7 @@ router.get("/", verifyJWT, async (req: any, res) => {
         include: { 
           client: { select: clientSelectWithContact },
           lineItems: { orderBy: { sortOrder: 'asc' } },
+          payments: { orderBy: { paidAt: 'asc' } },
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -109,6 +140,7 @@ router.get("/", verifyJWT, async (req: any, res) => {
         include: {
           client: { select: clientSelectWithContact },
           lineItems: { orderBy: { sortOrder: 'asc' } },
+          payments: { orderBy: { paidAt: 'asc' } },
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -127,6 +159,7 @@ router.get("/", verifyJWT, async (req: any, res) => {
             include: {
               client: { select: clientSelectWithContact },
               lineItems: { orderBy: { sortOrder: 'asc' } },
+          payments: { orderBy: { paidAt: 'asc' } },
             },
             orderBy: { createdAt: 'desc' },
           })
@@ -135,7 +168,7 @@ router.get("/", verifyJWT, async (req: any, res) => {
       return res.status(403).json({ error: "Invalid role" });
     }
 
-    res.json(invoices);
+    res.json(invoices.map(attachPayments));
   } catch (err) {
     console.error("Fetching invoices failed:", err);
     res.status(500).json({ error: "Failed to fetch invoices" });
@@ -156,6 +189,7 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
       include: {
         client: { select: clientSelectWithContact },
         lineItems: { orderBy: { sortOrder: 'asc' } },
+          payments: { orderBy: { paidAt: 'asc' } },
       }
     });
 
@@ -186,7 +220,7 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
       }
     }
 
-    res.json(invoice);
+    res.json(attachPayments(invoice));
   } catch (err) {
     console.error("Fetching invoice failed:", err);
     res.status(500).json({ error: "Failed to fetch invoice" });
@@ -257,6 +291,7 @@ router.post("/", verifyJWT, uploadInvoice.single("file"), async (req: any, res) 
       include: {
         client: { select: clientSelectWithContact },
         lineItems: { orderBy: { sortOrder: 'asc' } },
+          payments: { orderBy: { paidAt: 'asc' } },
       }
     });
 
@@ -278,6 +313,7 @@ router.post("/", verifyJWT, uploadInvoice.single("file"), async (req: any, res) 
       include: {
         client: { select: clientSelectWithContact },
         lineItems: { orderBy: { sortOrder: 'asc' } },
+          payments: { orderBy: { paidAt: 'asc' } },
       }
     });
 
@@ -338,7 +374,7 @@ router.post("/", verifyJWT, uploadInvoice.single("file"), async (req: any, res) 
       }
     }
 
-    res.status(201).json(invoiceWithLines ?? invoice);
+    res.status(201).json(attachPayments(invoiceWithLines ?? invoice));
   } catch (err) {
     console.error("Invoice creation failed:", err);
     res.status(500).json({ error: "Failed to create invoice" });
@@ -359,6 +395,7 @@ router.post("/:id/request-payment", verifyJWT, async (req: any, res) => {
       include: {
         client: { select: clientSelectWithContact },
         lineItems: { orderBy: { sortOrder: 'asc' } },
+          payments: { orderBy: { paidAt: 'asc' } },
       }
     });
 
@@ -489,6 +526,7 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
       include: {
         client: { select: clientSelectWithContact },
         lineItems: { orderBy: { sortOrder: 'asc' } },
+          payments: { orderBy: { paidAt: 'asc' } },
       }
     });
 
@@ -511,6 +549,7 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
       include: {
         client: { select: clientSelectWithContact },
         lineItems: { orderBy: { sortOrder: 'asc' } },
+          payments: { orderBy: { paidAt: 'asc' } },
       }
     });
 
@@ -524,7 +563,7 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
       });
     }
 
-    res.json(result ?? updatedInvoice);
+    res.json(attachPayments(result ?? updatedInvoice));
   } catch (err) {
     console.error("Invoice update failed:", err);
     res.status(500).json({ error: "Failed to update invoice" });
@@ -563,6 +602,65 @@ router.delete("/:id", verifyJWT, async (req: any, res) => {
   } catch (err) {
     console.error("Invoice deletion failed:", err);
     res.status(500).json({ error: "Failed to delete invoice" });
+  }
+});
+
+// ---- Payments (admin records partial payments against an invoice) ----
+
+// POST /invoices/:id/payments — record a payment
+router.post("/:id/payments", verifyJWT, async (req: any, res) => {
+  try {
+    if (req.user.role !== "ADMIN") return res.status(403).json({ error: "Only admins can record payments" });
+    const invoiceId = Number(req.params.id);
+    if (!Number.isInteger(invoiceId)) return res.status(400).json({ error: "Invalid invoice ID" });
+
+    const amount = Number(req.body.amount);
+    if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: "A positive amount is required" });
+
+    const invoice = await prisma.invoice.findUnique({ where: { id: invoiceId }, select: { id: true } });
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+
+    const paidAt = req.body.paidAt ? new Date(req.body.paidAt) : new Date();
+    await prisma.payment.create({
+      data: {
+        invoiceId,
+        amount: Math.round(amount * 100) / 100,
+        paidAt: isNaN(paidAt.getTime()) ? new Date() : paidAt,
+        note: req.body.note ? String(req.body.note).slice(0, 300) : null,
+      },
+    });
+    await recomputeInvoiceStatus(invoiceId);
+
+    const updated = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: { client: { select: clientSelectWithContact }, lineItems: { orderBy: { sortOrder: "asc" } }, payments: { orderBy: { paidAt: "asc" } } },
+    });
+    res.status(201).json(attachPayments(updated!));
+  } catch (err) {
+    console.error("Error recording payment:", err);
+    res.status(500).json({ error: "Failed to record payment" });
+  }
+});
+
+// DELETE /invoices/:id/payments/:paymentId — remove a payment
+router.delete("/:id/payments/:paymentId", verifyJWT, async (req: any, res) => {
+  try {
+    if (req.user.role !== "ADMIN") return res.status(403).json({ error: "Only admins can edit payments" });
+    const invoiceId = Number(req.params.id);
+    const paymentId = Number(req.params.paymentId);
+    const payment = await prisma.payment.findFirst({ where: { id: paymentId, invoiceId } });
+    if (!payment) return res.status(404).json({ error: "Payment not found" });
+    await prisma.payment.delete({ where: { id: paymentId } });
+    await recomputeInvoiceStatus(invoiceId);
+
+    const updated = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: { client: { select: clientSelectWithContact }, lineItems: { orderBy: { sortOrder: "asc" } }, payments: { orderBy: { paidAt: "asc" } } },
+    });
+    res.json(attachPayments(updated!));
+  } catch (err) {
+    console.error("Error deleting payment:", err);
+    res.status(500).json({ error: "Failed to delete payment" });
   }
 });
 

@@ -76,6 +76,18 @@ export interface Invoice {
   taxRate?: number | null;
   taxAmount?: number | null;
   lineItems?: InvoiceLineItem[];
+  payments?: Payment[];
+  amountPaid?: number;
+  remaining?: number;
+}
+
+export interface Payment {
+  id: number;
+  invoiceId: number;
+  amount: number;
+  paidAt: string;
+  note?: string | null;
+  createdAt: string;
 }
 
 export interface Domain {
