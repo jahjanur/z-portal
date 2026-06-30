@@ -592,7 +592,7 @@ export default function TaskConversation(p: any) {
             <StatusBadge status={task.status} className="shrink-0" />
             <ChevronDown className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" />
           </summary>
-          <div className="mt-2 space-y-2">
+          <div className="mt-2 max-h-[65vh] space-y-2 overflow-y-auto overscroll-contain pr-1">
             <TaskHeaderCard task={task} p={p} hideTitle />
             <MilestonesPanel
               taskId={task.id}
@@ -780,10 +780,18 @@ export default function TaskConversation(p: any) {
             <textarea
               rows={1}
               value={p.newComment}
-              onChange={(e) => p.setNewComment(e.target.value)}
+              onChange={(e) => {
+                p.setNewComment(e.target.value);
+                // auto-grow so longer messages stay visible (capped at max-h)
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 128)}px`;
+              }}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-              placeholder={p.selectedFiles?.length ? "Add a note… (optional)" : "Write a message, or attach a deliverable…"}
-              className="max-h-32 min-h-[24px] flex-1 resize-none !border-0 !bg-transparent !p-0 py-1.5 text-sm !shadow-none !ring-0 focus:!ring-0"
+              placeholder={p.selectedFiles?.length ? "Add a note…" : "Write a message…"}
+              // explicit colour + WebkitTextFillColor fixes iOS hiding the text inside
+              // the position:fixed composer; px-0 + !py-2 replaces the !p-0/py-1.5 clash.
+              style={{ color: "var(--color-text-primary)", WebkitTextFillColor: "var(--color-text-primary)" }}
+              className="max-h-32 min-h-[2.25rem] flex-1 resize-none self-center !border-0 !bg-transparent px-0 !py-2 text-base leading-snug !shadow-none !ring-0 placeholder:text-[var(--color-placeholder)] focus:!ring-0 sm:text-sm"
             />
             <button type="button" onClick={() => p.fileInputRef.current?.click()} aria-label="Attach file" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]">
               <Paperclip className="h-[18px] w-[18px]" />
