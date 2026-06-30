@@ -118,6 +118,8 @@ model Milestone {
   description String?
   imageUrl    String?
   imageUrls   String[]  @default([])
+  pushedToGithub Boolean @default(false)
+  deployed    Boolean   @default(false)
   isDone      Boolean   @default(false)
   doneAt      DateTime?
   doneBy      Int?

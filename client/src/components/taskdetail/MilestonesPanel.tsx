@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight } from "lucide-react";
+import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, Github, Rocket } from "lucide-react";
 import API, { getFileUrl } from "../../api";
 import Modal from "../ui/Modal";
 import ProgressBar from "../ui/ProgressBar";
@@ -25,7 +25,6 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
-  const [togglingId, setTogglingId] = useState<number | null>(null);
   const [openId, setOpenId] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -56,16 +55,15 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
     }
   };
 
-  const toggle = async (m: Milestone) => {
+  /** Toggle a stage (github → deployed). The server keeps them in order and
+   *  marks the to-do done once both are set. */
+  const setStage = async (m: Milestone, stage: "pushedToGithub" | "deployed", value: boolean) => {
     if (!canComplete) return;
-    setTogglingId(m.id);
     try {
-      await API.patch(`/tasks/${taskId}/milestones/${m.id}`, { isDone: !m.isDone });
+      await API.patch(`/tasks/${taskId}/milestones/${m.id}`, { [stage]: value });
       onChanged();
     } catch (err: any) {
-      toast.error(err?.response?.data?.error ?? "Couldn't update to-do");
-    } finally {
-      setTogglingId(null);
+      toast.error(err?.response?.data?.error ?? "Couldn't update stage");
     }
   };
 
@@ -107,20 +105,16 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
                 onClick={() => setOpenId(m.id)}
                 className="group flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2.5 transition hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-3)]"
               >
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); toggle(m); }}
-                  disabled={!canComplete || togglingId === m.id}
-                  aria-label={m.isDone ? "Mark not done" : "Mark done"}
-                  title={canComplete ? (m.isDone ? "Mark not done" : "Mark done") : "Only staff can complete to-dos"}
-                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                <span
+                  aria-label={m.isDone ? "Done" : "Not done"}
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                     m.isDone
                       ? "border-[var(--color-success-text)] bg-[var(--color-success-text)] text-white"
-                      : "border-[var(--color-border-hover)] text-transparent hover:border-[var(--color-success-text)]"
-                  } ${canComplete ? "cursor-pointer" : "cursor-not-allowed opacity-70"}`}
+                      : "border-[var(--color-border-hover)] text-transparent"
+                  }`}
                 >
-                  <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                </button>
+                  <Check className="h-3 w-3" strokeWidth={3} />
+                </span>
 
                 {imgs[0] && (
                   <span className="relative shrink-0">
@@ -138,6 +132,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
                     {m.title}
                   </p>
                   {m.description && <p className="truncate text-xs text-[var(--color-text-muted)]">{m.description}</p>}
+                  <StageChips m={m} canComplete={canComplete} onToggle={setStage} className="mt-1.5" />
                 </div>
 
                 <ChevronRight className="h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition group-hover:translate-x-0.5" />
@@ -224,7 +219,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
           canComplete={canComplete}
           canEdit={isAdmin || open.createdById === currentUserId}
           onClose={() => setOpenId(null)}
-          onToggle={() => toggle(open)}
+          onSetStage={(stage, value) => setStage(open, stage, value)}
           onDelete={() => remove(open)}
           onChanged={onChanged}
         />
@@ -236,14 +231,14 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
 /* ----------------------------- detail modal ------------------------------ */
 
 function TodoDetailModal({
-  taskId, milestone, canComplete, canEdit, onClose, onToggle, onDelete, onChanged,
+  taskId, milestone, canComplete, canEdit, onClose, onSetStage, onDelete, onChanged,
 }: {
   taskId: number;
   milestone: Milestone;
   canComplete: boolean;
   canEdit: boolean;
   onClose: () => void;
-  onToggle: () => void;
+  onSetStage: (stage: "pushedToGithub" | "deployed", value: boolean) => void;
   onDelete: () => void;
   onChanged: () => void;
 }) {
@@ -285,30 +280,21 @@ function TodoDetailModal({
   return (
     <Modal isOpen onClose={onClose} maxWidth="xl" title={milestone.title}>
       <div className="space-y-5">
-        {/* status + done toggle */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
-              milestone.isDone
-                ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)] ring-1 ring-inset ring-[var(--color-success-border)]"
-                : "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]"
-            }`}
-          >
-            {milestone.isDone ? <><Check className="h-3.5 w-3.5" strokeWidth={3} /> Done</> : <>● To do</>}
-          </span>
-          {canComplete && (
-            <button
-              type="button"
-              onClick={onToggle}
-              className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition ${
+        {/* status + stages (Pushed to GitHub → Deployed = done) */}
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
                 milestone.isDone
-                  ? "border border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
-                  : "bg-[var(--color-success-text)] text-white hover:brightness-110"
+                  ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)] ring-1 ring-inset ring-[var(--color-success-border)]"
+                  : "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]"
               }`}
             >
-              {milestone.isDone ? "Mark as not done" : "✓ Mark as done"}
-            </button>
-          )}
+              {milestone.isDone ? <><Check className="h-3.5 w-3.5" strokeWidth={3} /> Done</> : <>● In progress</>}
+            </span>
+            <span className="text-xs text-[var(--color-text-muted)]">Deployed = done</span>
+          </div>
+          <StageChipsModal milestone={milestone} canComplete={canComplete} onSetStage={onSetStage} />
         </div>
 
         {/* description */}
@@ -412,5 +398,80 @@ function TodoDetailModal({
         </div>
       )}
     </Modal>
+  );
+}
+
+/* ----------------------------- stage chips ------------------------------- */
+
+const STAGES = [
+  { key: "pushedToGithub" as const, label: "GitHub", longLabel: "Pushed to GitHub", Icon: Github },
+  { key: "deployed" as const, label: "Deployed", longLabel: "Deployed", Icon: Rocket },
+];
+
+/** Compact stage chips for a to-do row (GitHub → Deployed). */
+function StageChips({ m, canComplete, onToggle, className = "" }: {
+  m: Milestone;
+  canComplete: boolean;
+  onToggle: (m: Milestone, stage: "pushedToGithub" | "deployed", value: boolean) => void;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
+      {STAGES.map(({ key, label, Icon }) => {
+        const done = !!m[key];
+        return (
+          <button
+            key={key}
+            type="button"
+            disabled={!canComplete}
+            onClick={(e) => { e.stopPropagation(); onToggle(m, key, !done); }}
+            aria-pressed={done}
+            title={canComplete ? `Toggle ${label}` : label}
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset transition ${
+              done
+                ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)] ring-[var(--color-success-border)]"
+                : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)] ring-[var(--color-border)]"
+            } ${canComplete ? "cursor-pointer hover:brightness-110" : "cursor-default"}`}
+          >
+            {done ? <Check className="h-3 w-3" strokeWidth={3} /> : <Icon className="h-3 w-3" />}
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Larger stage row for the detail modal. */
+function StageChipsModal({ milestone, canComplete, onSetStage }: {
+  milestone: Milestone;
+  canComplete: boolean;
+  onSetStage: (stage: "pushedToGithub" | "deployed", value: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      {STAGES.map(({ key, longLabel, Icon }, i) => {
+        const done = !!milestone[key];
+        return (
+          <React.Fragment key={key}>
+            <button
+              type="button"
+              disabled={!canComplete}
+              onClick={() => onSetStage(key, !done)}
+              aria-pressed={done}
+              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold ring-1 ring-inset transition ${
+                done
+                  ? "bg-[var(--color-success-bg)] text-[var(--color-success-text)] ring-[var(--color-success-border)]"
+                  : "bg-[var(--color-surface-2)] text-[var(--color-text-secondary)] ring-[var(--color-border)]"
+              } ${canComplete ? "cursor-pointer hover:brightness-110" : "cursor-default"}`}
+            >
+              {done ? <Check className="h-4 w-4" strokeWidth={3} /> : <Icon className="h-4 w-4" />}
+              {longLabel}
+            </button>
+            {i === 0 && <ChevronRight className="mx-auto hidden h-4 w-4 shrink-0 text-[var(--color-text-muted)] sm:block" />}
+          </React.Fragment>
+        );
+      })}
+    </div>
   );
 }

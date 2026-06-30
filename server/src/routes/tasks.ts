@@ -1543,9 +1543,33 @@ router.patch("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
     }
 
     let justCompleted = false;
-    if (typeof req.body.isDone === "boolean") {
+    // Stage toggles: Pushed to GitHub → Deployed (kept in order). A to-do is
+    // "done" only once it's both pushed AND deployed.
+    if ("pushedToGithub" in req.body || "deployed" in req.body) {
+      if (!isStaff) return res.status(403).json({ error: "Only admins and assigned workers can update stages" });
+      let pushed = milestone.pushedToGithub;
+      let deployed = milestone.deployed;
+      if ("pushedToGithub" in req.body) {
+        pushed = !!req.body.pushedToGithub;
+        if (!pushed) deployed = false; // can't be deployed if it wasn't pushed
+      }
+      if ("deployed" in req.body) {
+        deployed = !!req.body.deployed;
+        if (deployed) pushed = true; // deploying implies it was pushed
+      }
+      const newDone = pushed && deployed;
+      data.pushedToGithub = pushed;
+      data.deployed = deployed;
+      data.isDone = newDone;
+      data.doneAt = newDone ? new Date() : null;
+      data.doneBy = newDone ? userId : null;
+      justCompleted = newDone && !milestone.isDone;
+    } else if (typeof req.body.isDone === "boolean") {
+      // Legacy/direct done toggle — keep the stage flags consistent.
       if (!isStaff) return res.status(403).json({ error: "Only admins and assigned workers can complete to-dos" });
       data.isDone = req.body.isDone;
+      data.deployed = req.body.isDone;
+      if (req.body.isDone) data.pushedToGithub = true;
       data.doneAt = req.body.isDone ? new Date() : null;
       data.doneBy = req.body.isDone ? userId : null;
       justCompleted = req.body.isDone && !milestone.isDone;

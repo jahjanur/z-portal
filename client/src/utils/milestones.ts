@@ -5,6 +5,8 @@ export interface Milestone {
   description?: string | null;
   imageUrl?: string | null;
   imageUrls?: string[] | null;
+  pushedToGithub?: boolean;
+  deployed?: boolean;
   isDone: boolean;
   doneAt?: string | null;
   doneBy?: number | null;
