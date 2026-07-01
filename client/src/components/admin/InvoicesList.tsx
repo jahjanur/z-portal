@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Pencil, Paperclip, FileText, X, Check, Trash2, Download, Image as ImageIcon } from "lucide-react";
 import Pagination from "../ui/Pagination";
 import toast from "react-hot-toast";
@@ -696,9 +697,10 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
         )}
       </Modal>
 
-      {/* In-app receipt preview (image / PDF) — no jarring new tab */}
-      {receiptPreview && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 p-4 animate-fade-in" onClick={() => setReceiptPreview(null)}>
+      {/* In-app receipt preview (image / PDF) — portaled to body so it sits
+          ABOVE the invoice modal (which itself portals at z-60). */}
+      {receiptPreview && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 animate-fade-in" onClick={() => setReceiptPreview(null)}>
           <div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="mb-2 flex items-center justify-end gap-2">
               <a
@@ -727,7 +729,8 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

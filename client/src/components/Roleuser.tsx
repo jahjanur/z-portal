@@ -16,7 +16,10 @@ import Button from "./ui/Button";
 import SectionCard from "./ui/SectionCard";
 import { SkeletonDashboard } from "./ui/Skeleton";
 import { useNotifications } from "../hooks/useNotifications";
-import { getStatusColor, formatDate, formatCurrency, getDaysUntilDue, isInvoiceOverdue } from "../utils";
+import { getStatusColor, formatDate, formatCurrency, getDaysUntilDue, isInvoiceOverdue, invoiceRemaining } from "../utils";
+import { formatMoney } from "../utils/currency";
+import Modal from "./ui/Modal";
+import StatusBadge from "./ui/StatusBadge";
 import ClientCollaborators from "./user/ClientCollaborators";
 
 interface Worker {
@@ -49,11 +52,14 @@ interface TaskFile {
 interface Invoice {
   id: number;
   amount: number;
+  currency?: string | null;
   dueDate?: string | null;
   status?: string | null;
   invoiceNumber: string;
   description?: string | null;
   paidAt?: string | null;
+  amountPaid?: number;
+  remaining?: number;
 }
 
 interface Domain {
@@ -97,6 +103,7 @@ const RoleUser: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [taskPage, setTaskPage] = useState(1);
   const [invoicePage, setInvoicePage] = useState(1);
+  const [showPendingModal, setShowPendingModal] = useState(false);
 
   useEffect(() => {
     fetchAll();
@@ -151,6 +158,34 @@ const fetchAll = async () => {
   );
   const totalPaid = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
   const totalPending = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+
+  // Outstanding = every unpaid invoice with a remaining balance (partial aware).
+  const outstandingInvoices = invoices
+    .filter((i) => i.status?.toUpperCase() !== "PAID" && invoiceRemaining(i) > 0)
+    .sort((a, b) => new Date(a.dueDate || 0).getTime() - new Date(b.dueDate || 0).getTime());
+  const outstandingCurrencies = Array.from(new Set(outstandingInvoices.map((i) => i.currency || "USD")));
+  const outstandingTotal = outstandingInvoices.reduce((s, i) => s + invoiceRemaining(i), 0);
+  const singleCurrency = outstandingCurrencies.length === 1 ? outstandingCurrencies[0] : null;
+
+  // Greet the client once per session with a summary of what's due.
+  useEffect(() => {
+    if (loading) return;
+    const key = `pendingSeen:${localStorage.getItem("userId")}`;
+    if (outstandingInvoices.length > 0 && !sessionStorage.getItem(key)) {
+      setShowPendingModal(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+
+  const dismissPendingModal = () => {
+    setShowPendingModal(false);
+    sessionStorage.setItem(`pendingSeen:${localStorage.getItem("userId")}`, "1");
+  };
+
+  const viewPendingInvoices = () => {
+    dismissPendingModal();
+    setSearchParams({ tab: "invoices" });
+  };
   const totalInvoiced = invoices.reduce((sum, inv) => sum + inv.amount, 0);
   const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0);
 
@@ -829,6 +864,58 @@ const fetchAll = async () => {
       )}
 
       {activeTab === "team" && <ClientCollaborators />}
+
+      {/* Welcome / pending-payment reminder — shown once per session */}
+      <Modal isOpen={showPendingModal} onClose={dismissPendingModal} maxWidth="md">
+        <div className="text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] ring-1 ring-inset ring-[var(--color-warning-border)]">
+            <svg className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+          </div>
+          <h3 className="mt-4 text-xl font-bold text-[var(--color-text-primary)]">
+            {firstName ? `Hi ${firstName} 👋` : "Welcome back 👋"}
+          </h3>
+          <p className="mt-1.5 text-sm text-[var(--color-text-secondary)]">
+            {singleCurrency ? (
+              <>You have <span className="font-bold text-[var(--color-text-primary)]">{formatMoney(outstandingTotal, singleCurrency)}</span> in pending payments.</>
+            ) : (
+              <>You have <span className="font-bold text-[var(--color-text-primary)]">{outstandingInvoices.length}</span> invoice{outstandingInvoices.length === 1 ? "" : "s"} awaiting payment.</>
+            )}
+          </p>
+        </div>
+
+        <div className="mt-5 space-y-2">
+          {outstandingInvoices.slice(0, 3).map((inv) => {
+            const remaining = invoiceRemaining(inv);
+            const overdue = isInvoiceOverdue(inv);
+            return (
+              <div key={inv.id} className="flex items-center justify-between gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-[var(--color-text-primary)]">Invoice #{inv.invoiceNumber}</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">Due {formatDate(inv.dueDate)}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="tabular-nums text-sm font-bold text-[var(--color-text-primary)]">{formatMoney(remaining, inv.currency)}</span>
+                  <StatusBadge status={overdue ? "OVERDUE" : "PENDING"} />
+                </div>
+              </div>
+            );
+          })}
+          {outstandingInvoices.length > 3 && (
+            <p className="text-center text-xs text-[var(--color-text-muted)]">+ {outstandingInvoices.length - 3} more</p>
+          )}
+        </div>
+
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
+          <Button variant="primary" onClick={viewPendingInvoices} className="w-full sm:flex-1">
+            View invoices
+          </Button>
+          <Button variant="secondary" onClick={dismissPendingModal} className="w-full sm:flex-1">
+            Maybe later
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 };
