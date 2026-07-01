@@ -217,13 +217,14 @@ model Invoice {
 }
 
 model Payment {
-  id        Int      @id @default(autoincrement())
-  invoiceId Int
-  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  amount    Float
-  paidAt    DateTime @default(now())
-  note      String?
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  invoiceId  Int
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  amount     Float
+  paidAt     DateTime @default(now())
+  note       String?
+  receiptUrl String?
+  createdAt  DateTime @default(now())
 
   @@index([invoiceId])
 }

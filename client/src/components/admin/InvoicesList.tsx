@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Pencil, Paperclip, FileText, X } from "lucide-react";
 import Pagination from "../ui/Pagination";
 import toast from "react-hot-toast";
 import { generateInvoicePdf } from "../../utils/pdfHelpers";
@@ -15,9 +16,8 @@ interface Invoice extends AdminInvoice {}
 interface InvoicesListProps {
   invoices: Invoice[];
   onDelete: (id: number) => void;
-  onEdit?: (invoice: Invoice) => void;
   onRequestPayment?: (invoice: Invoice) => void;
-  /** Refresh the list after a payment is recorded/removed. */
+  /** Refresh the list after an edit / payment is recorded/removed. */
   onChanged?: () => void;
   colors: { primary: string };
 }
@@ -27,7 +27,6 @@ const fmt = (n: number) => `$${(n ?? 0).toFixed(2)}`;
 const InvoicesList: React.FC<InvoicesListProps> = ({
   invoices,
   onDelete,
-  onEdit,
   onRequestPayment,
   onChanged,
   colors: _colors,
@@ -39,7 +38,55 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
   const [payAmount, setPayAmount] = useState("");
   const [payDate, setPayDate] = useState("");
   const [payNote, setPayNote] = useState("");
+  const [payReceipt, setPayReceipt] = useState<File | null>(null);
   const [recording, setRecording] = useState(false);
+  const receiptRef = useRef<HTMLInputElement>(null);
+
+  // Inline edit of the invoice's editable fields (right inside the detail view).
+  const [editMode, setEditMode] = useState(false);
+  const [editStatus, setEditStatus] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [editPaymentLink, setEditPaymentLink] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  /** Open the detail modal; when `edit` is true, start in edit mode. */
+  const openDetail = (inv: Invoice, edit = false) => {
+    setDetailInvoice(inv);
+    setEditStatus(inv.status);
+    setEditDueDate(inv.dueDate ? inv.dueDate.slice(0, 10) : "");
+    setEditPaymentLink(inv.paymentLink ?? "");
+    setEditNotes(inv.notes ?? "");
+    setEditMode(edit);
+  };
+
+  const closeDetail = () => {
+    setDetailInvoice(null);
+    setEditMode(false);
+    setPayAmount(""); setPayDate(""); setPayNote(""); setPayReceipt(null);
+    if (receiptRef.current) receiptRef.current.value = "";
+  };
+
+  const saveDetails = async () => {
+    if (!detailInvoice) return;
+    setSavingEdit(true);
+    try {
+      const { data } = await API.put(`/invoices/${detailInvoice.id}`, {
+        status: editStatus,
+        dueDate: editDueDate || undefined,
+        paymentLink: editPaymentLink,
+        notes: editNotes,
+      });
+      setDetailInvoice(data);
+      setEditMode(false);
+      toast.success("Invoice updated");
+      onChanged?.();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't update invoice");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const recordPayment = async () => {
     if (!detailInvoice) return;
@@ -47,11 +94,17 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
     if (!Number.isFinite(amount) || amount <= 0) { toast.error("Enter a valid amount"); return; }
     setRecording(true);
     try {
-      const { data } = await API.post(`/invoices/${detailInvoice.id}/payments`, {
-        amount, paidAt: payDate || undefined, note: payNote || undefined,
-      });
+      // multipart when a receipt is attached (Content-Type:undefined lets the
+      // browser set the multipart boundary; the API default is JSON).
+      const fd = new FormData();
+      fd.append("amount", String(amount));
+      if (payDate) fd.append("paidAt", payDate);
+      if (payNote) fd.append("note", payNote);
+      if (payReceipt) fd.append("receipt", payReceipt);
+      const { data } = await API.post(`/invoices/${detailInvoice.id}/payments`, fd, { headers: { "Content-Type": undefined } });
       setDetailInvoice(data);
-      setPayAmount(""); setPayDate(""); setPayNote("");
+      setPayAmount(""); setPayDate(""); setPayNote(""); setPayReceipt(null);
+      if (receiptRef.current) receiptRef.current.value = "";
       toast.success("Payment recorded");
       onChanged?.();
     } catch (err: any) {
@@ -185,7 +238,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setDetailInvoice(inv)}
+                  onClick={() => openDetail(inv)}
                   className="flex-1 sm:flex-none"
                 >
                   View
@@ -236,11 +289,9 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                   {downloadingId === inv.id ? "Generating…" : "Download"}
                 </Button>
 
-                {onEdit && (
-                  <Button variant="secondary" size="sm" onClick={() => onEdit(inv)} className="flex-1 sm:flex-none">
-                    Edit
-                  </Button>
-                )}
+                <Button variant="secondary" size="sm" onClick={() => openDetail(inv, true)} className="flex-1 sm:flex-none">
+                  Edit
+                </Button>
 
                 {inv.status.toUpperCase() === "PENDING" && onRequestPayment && (
                   <Button variant="secondary" size="sm" onClick={() => onRequestPayment(inv)} className="flex-1 sm:flex-none">
@@ -267,15 +318,62 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
       })}
       <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
 
-      {/* Invoice detail modal */}
+      {/* Invoice detail modal (view + inline edit + payments) */}
       <Modal
         isOpen={!!detailInvoice}
-        onClose={() => setDetailInvoice(null)}
+        onClose={closeDetail}
         title={detailInvoice ? `Invoice #${detailInvoice.invoiceNumber}` : undefined}
         maxWidth="2xl"
       >
         {detailInvoice && (
           <div className="space-y-4">
+            {/* Edit toggle */}
+            <div className="flex justify-end">
+              {!editMode ? (
+                <button
+                  type="button"
+                  onClick={() => setEditMode(true)}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Edit details
+                </button>
+              ) : (
+                <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Editing</span>
+              )}
+            </div>
+
+            {/* Inline edit card (status / due date / payment link / notes) */}
+            {editMode && (
+              <div className="card-panel space-y-3 rounded-xl p-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Status</label>
+                    <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className="input-dark w-full px-3 py-2 text-sm">
+                      <option value="PENDING">Pending</option>
+                      <option value="PAID">Paid</option>
+                      <option value="OVERDUE">Overdue</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Due date</label>
+                    <input type="date" value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} className="input-dark w-full px-3 py-2 text-sm" />
+                  </div>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Payment link</label>
+                  <input type="url" value={editPaymentLink} onChange={(e) => setEditPaymentLink(e.target.value)} placeholder="https://..." className="input-dark w-full px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Notes</label>
+                  <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} className="input-dark w-full resize-y px-3 py-2 text-sm" />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => { setEditMode(false); openDetail(detailInvoice); }}>Cancel</Button>
+                  <Button variant="primary" size="sm" loading={savingEdit} onClick={saveDetails}>{savingEdit ? "Saving…" : "Save changes"}</Button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <span className="text-[var(--color-text-muted)]">Client</span>
@@ -384,6 +482,16 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                         <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
                           <span className="tabular-nums font-medium text-[var(--color-text-primary)]">{fmt(p.amount)}</span>
                           <span className="flex-1 truncate text-xs text-[var(--color-text-muted)]">{formatDate(p.paidAt)}{p.note ? ` · ${p.note}` : ""}</span>
+                          {p.receiptUrl && (
+                            <a
+                              href={getFileUrl(p.receiptUrl)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-text-secondary)] underline-offset-2 hover:text-[var(--color-text-primary)] hover:underline"
+                            >
+                              <FileText className="h-3.5 w-3.5" /> Receipt
+                            </a>
+                          )}
                           <button type="button" onClick={() => removePayment(p.id)} aria-label="Remove payment" className="text-[var(--color-text-muted)] transition hover:text-[var(--color-destructive-text)]">✕</button>
                         </li>
                       ))}
@@ -404,7 +512,33 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                     </div>
                   )}
                   {!fullyPaid && (
-                    <input type="text" value={payNote} onChange={(e) => setPayNote(e.target.value)} placeholder="Note (optional)" className="input-dark mt-2 w-full px-3 py-2 text-sm" />
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <input type="text" value={payNote} onChange={(e) => setPayNote(e.target.value)} placeholder="Note (optional)" className="input-dark w-full px-3 py-2 text-sm sm:flex-1" />
+                      <input
+                        ref={receiptRef}
+                        type="file"
+                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                        className="hidden"
+                        onChange={(e) => setPayReceipt(e.target.files?.[0] ?? null)}
+                      />
+                      {payReceipt ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs font-medium text-[var(--color-text-secondary)]">
+                          <FileText className="h-3.5 w-3.5 shrink-0" />
+                          <span className="max-w-[10rem] truncate" title={payReceipt.name}>{payReceipt.name}</span>
+                          <button type="button" onClick={() => { setPayReceipt(null); if (receiptRef.current) receiptRef.current.value = ""; }} aria-label="Remove receipt" className="text-[var(--color-text-muted)] hover:text-[var(--color-destructive-text)]">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => receiptRef.current?.click()}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                        >
+                          <Paperclip className="h-3.5 w-3.5" /> Attach receipt
+                        </button>
+                      )}
+                    </div>
                   )}
                 </div>
               );

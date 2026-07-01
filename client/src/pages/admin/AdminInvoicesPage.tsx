@@ -1,13 +1,9 @@
 import { useState } from "react";
 import { useAdmin } from "../../contexts/AdminContext";
-import type { Invoice } from "../../contexts/AdminContext";
 import InvoiceForm from "../../components/admin/InvoiceForm";
 import InvoicesList from "../../components/admin/InvoicesList";
 import PageHeader from "../../components/ui/PageHeader";
 import EmptyState from "../../components/ui/EmptyState";
-import Button from "../../components/ui/Button";
-import Modal from "../../components/ui/Modal";
-import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT, CONTROL_TEXTAREA } from "../../components/ui/controls";
 
 const colors = { primary: "" };
 
@@ -20,43 +16,12 @@ export default function AdminInvoicesPage() {
     adminOwnPendingInvoices,
     adminOwnPaidInvoices,
     createInvoice,
-    updateInvoice,
     deleteInvoice,
     requestPayment,
     fetchAll,
   } = useAdmin();
   const [showPaidInvoices, setShowPaidInvoices] = useState(false);
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
-  const [editStatus, setEditStatus] = useState("");
-  const [editDueDate, setEditDueDate] = useState("");
-  const [editPaymentLink, setEditPaymentLink] = useState("");
-  const [editNotes, setEditNotes] = useState("");
-  const [editSaving, setEditSaving] = useState(false);
   const isAdmin = localStorage.getItem("role") === "ADMIN";
-
-  const openEdit = (inv: Invoice) => {
-    setEditingInvoice(inv);
-    setEditStatus(inv.status);
-    setEditDueDate(inv.dueDate ? inv.dueDate.slice(0, 10) : "");
-    setEditPaymentLink(inv.paymentLink ?? "");
-    setEditNotes(inv.notes ?? "");
-  };
-
-  const saveEdit = async () => {
-    if (!editingInvoice) return;
-    setEditSaving(true);
-    try {
-      await updateInvoice(editingInvoice.id, {
-        status: editStatus,
-        dueDate: editDueDate || undefined,
-        paymentLink: editPaymentLink || undefined,
-        notes: editNotes || undefined,
-      });
-      setEditingInvoice(null);
-    } finally {
-      setEditSaving(false);
-    }
-  };
 
   const displayClients = isAdmin ? adminOwnClients : clients;
   const displayPending = isAdmin ? adminOwnPendingInvoices : pendingInvoices;
@@ -79,7 +44,7 @@ export default function AdminInvoicesPage() {
           </span>
         </h3>
         {displayPending.length > 0 ? (
-          <InvoicesList invoices={displayPending} onDelete={deleteInvoice} onEdit={openEdit} onRequestPayment={(inv) => requestPayment(inv.id)} onChanged={fetchAll} colors={colors} />
+          <InvoicesList invoices={displayPending} onDelete={deleteInvoice} onRequestPayment={(inv) => requestPayment(inv.id)} onChanged={fetchAll} colors={colors} />
         ) : (
           <EmptyState
             compact
@@ -114,54 +79,13 @@ export default function AdminInvoicesPage() {
         {showPaidInvoices && (
           <div>
             {displayPaid.length > 0 ? (
-              <InvoicesList invoices={displayPaid} onDelete={deleteInvoice} onEdit={openEdit} onRequestPayment={(inv) => requestPayment(inv.id)} onChanged={fetchAll} colors={colors} />
+              <InvoicesList invoices={displayPaid} onDelete={deleteInvoice} onRequestPayment={(inv) => requestPayment(inv.id)} onChanged={fetchAll} colors={colors} />
             ) : (
               <EmptyState compact title="No paid invoices yet" description="Paid invoices will show up here once payments come in." />
             )}
           </div>
         )}
       </section>
-
-      {/* Invoice edit modal */}
-      <Modal
-        isOpen={!!editingInvoice}
-        onClose={() => setEditingInvoice(null)}
-        title={editingInvoice ? `Edit Invoice #${editingInvoice.invoiceNumber}` : undefined}
-        maxWidth="md"
-      >
-        {editingInvoice && (
-          <div className="space-y-4">
-            <div>
-              <label className={CONTROL_LABEL}>Status</label>
-              <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)} className={CONTROL_SELECT}>
-                <option value="PENDING">Pending</option>
-                <option value="PAID">Paid</option>
-                <option value="OVERDUE">Overdue</option>
-              </select>
-            </div>
-            <div>
-              <label className={CONTROL_LABEL}>Due Date</label>
-              <input type="date" value={editDueDate} onChange={(e) => setEditDueDate(e.target.value)} className={CONTROL_INPUT} />
-            </div>
-            <div>
-              <label className={CONTROL_LABEL}>Payment Link</label>
-              <input type="url" value={editPaymentLink} onChange={(e) => setEditPaymentLink(e.target.value)} placeholder="https://..." className={CONTROL_INPUT} />
-            </div>
-            <div>
-              <label className={CONTROL_LABEL}>Notes</label>
-              <textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={3} className={CONTROL_TEXTAREA} />
-            </div>
-            <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
-              <Button variant="secondary" onClick={() => setEditingInvoice(null)}>
-                Cancel
-              </Button>
-              <Button variant="primary" loading={editSaving} onClick={saveEdit}>
-                {editSaving ? "Saving…" : "Save"}
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

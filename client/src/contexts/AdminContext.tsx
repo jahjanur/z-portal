@@ -87,6 +87,7 @@ export interface Payment {
   amount: number;
   paidAt: string;
   note?: string | null;
+  receiptUrl?: string | null;
   createdAt: string;
 }
 

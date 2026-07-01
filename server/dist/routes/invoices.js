@@ -568,8 +568,8 @@ router.delete("/:id", auth_1.verifyJWT, async (req, res) => {
     }
 });
 // ---- Payments (admin records partial payments against an invoice) ----
-// POST /invoices/:id/payments — record a payment
-router.post("/:id/payments", auth_1.verifyJWT, async (req, res) => {
+// POST /invoices/:id/payments — record a payment (optional receipt/proof file)
+router.post("/:id/payments", auth_1.verifyJWT, uploadInvoice.single("receipt"), async (req, res) => {
     try {
         if (req.user.role !== "ADMIN")
             return res.status(403).json({ error: "Only admins can record payments" });
@@ -589,6 +589,7 @@ router.post("/:id/payments", auth_1.verifyJWT, async (req, res) => {
                 amount: Math.round(amount * 100) / 100,
                 paidAt: isNaN(paidAt.getTime()) ? new Date() : paidAt,
                 note: req.body.note ? String(req.body.note).slice(0, 300) : null,
+                receiptUrl: req.file ? `/uploads/invoices/${req.file.filename}` : null,
             },
         });
         await recomputeInvoiceStatus(invoiceId);

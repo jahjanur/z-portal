@@ -73,13 +73,24 @@ router.get(/.*/, async (req: any, res) => {
     if (role === "ADMIN") {
       authorized = true;
     } else if (rel.startsWith("invoices/")) {
+      // Either an invoice PDF (invoice.fileUrl) or a payment receipt (payment.receiptUrl).
+      let clientId: number | null = null;
       const invoice = await prisma.invoice.findFirst({ where: { fileUrl }, select: { clientId: true } });
       if (invoice) {
-        if (role === "CLIENT") authorized = invoice.clientId === scopeId;
-        else if (role === "ERASPHERE") authorized = (await referredClientIds(userId)).includes(invoice.clientId);
+        clientId = invoice.clientId;
+      } else {
+        const payment = await prisma.payment.findFirst({
+          where: { receiptUrl: fileUrl },
+          select: { invoice: { select: { clientId: true } } },
+        });
+        if (payment) clientId = payment.invoice.clientId;
+      }
+      if (clientId != null) {
+        if (role === "CLIENT") authorized = clientId === scopeId;
+        else if (role === "ERASPHERE") authorized = (await referredClientIds(userId)).includes(clientId);
         else if (role === "WORKER") {
           const t = await prisma.task.findFirst({
-            where: { clientId: invoice.clientId, workers: { some: { userId } } },
+            where: { clientId, workers: { some: { userId } } },
             select: { id: true },
           });
           authorized = !!t;
