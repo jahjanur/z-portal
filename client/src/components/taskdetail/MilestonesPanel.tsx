@@ -1,6 +1,6 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, Github, Rocket, Pencil, RotateCcw, Paperclip, FileText } from "lucide-react";
+import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, ChevronLeft, Github, Rocket, Pencil, RotateCcw, Paperclip, FileText } from "lucide-react";
 import API, { getFileUrl } from "../../api";
 import Modal from "../ui/Modal";
 import ProgressBar from "../ui/ProgressBar";
@@ -274,9 +274,28 @@ function TodoDetailModal({
 }) {
   const imgs = milestoneImages(milestone);
   const docs = milestoneDocs(milestone);
-  const [lightbox, setLightbox] = useState<string | null>(null);
+  // Lightbox tracks an index into imgs so you can page through with the arrows,
+  // keyboard (←/→/Esc) or a swipe. null = closed.
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const addRef = useRef<HTMLInputElement>(null);
+  const touchX = useRef<number | null>(null);
+
+  const closeLightbox = () => setLightboxIdx(null);
+  const showPrev = () => setLightboxIdx((i) => (i === null ? i : (i - 1 + imgs.length) % imgs.length));
+  const showNext = () => setLightboxIdx((i) => (i === null ? i : (i + 1) % imgs.length));
+
+  useEffect(() => {
+    if (lightboxIdx === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+      else if (e.key === "ArrowLeft") showPrev();
+      else if (e.key === "ArrowRight") showNext();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lightboxIdx, imgs.length]);
 
   // Inline edit of title/description
   const [editing, setEditing] = useState(false);
@@ -501,13 +520,13 @@ function TodoDetailModal({
           </div>
           {imgs.length > 0 ? (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-              {imgs.map((url) => (
+              {imgs.map((url, idx) => (
                 <div key={url} className="group relative aspect-square overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)]">
                   <img
                     src={getFileUrl(url)}
                     alt=""
                     loading="lazy"
-                    onClick={() => setLightbox(url)}
+                    onClick={() => setLightboxIdx(idx)}
                     className="h-full w-full cursor-zoom-in object-cover transition duration-300 group-hover:scale-105"
                   />
                   {canEdit && (
@@ -599,10 +618,51 @@ function TodoDetailModal({
         </div>
       </div>
 
-      {lightbox && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 animate-fade-in" onClick={() => setLightbox(null)}>
-          <img src={getFileUrl(lightbox)} alt="" className="max-h-[90vh] max-w-[92vw] rounded-xl object-contain shadow-elev-lg" onClick={(e) => e.stopPropagation()} />
-          <button type="button" aria-label="Close image" onClick={() => setLightbox(null)} className="absolute right-4 top-4 rounded-full bg-black/40 p-2 text-white/80 transition hover:bg-black/60 hover:text-white">
+      {lightboxIdx !== null && imgs[lightboxIdx] && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 animate-fade-in"
+          onClick={closeLightbox}
+          onTouchStart={(e) => { touchX.current = e.touches[0].clientX; }}
+          onTouchEnd={(e) => {
+            if (touchX.current === null) return;
+            const dx = e.changedTouches[0].clientX - touchX.current;
+            if (Math.abs(dx) > 50) { dx > 0 ? showPrev() : showNext(); }
+            touchX.current = null;
+          }}
+        >
+          <img
+            src={getFileUrl(imgs[lightboxIdx])}
+            alt=""
+            className="max-h-[90vh] max-w-[92vw] rounded-xl object-contain shadow-elev-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+
+          {/* Prev / Next (only when there's more than one image) */}
+          {imgs.length > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label="Previous image"
+                onClick={(e) => { e.stopPropagation(); showPrev(); }}
+                className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white/85 transition hover:bg-black/60 hover:text-white sm:left-5"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next image"
+                onClick={(e) => { e.stopPropagation(); showNext(); }}
+                className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/40 text-white/85 transition hover:bg-black/60 hover:text-white sm:right-5"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+              <span className="absolute bottom-5 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white/90 tabular-nums">
+                {lightboxIdx + 1} / {imgs.length}
+              </span>
+            </>
+          )}
+
+          <button type="button" aria-label="Close image" onClick={(e) => { e.stopPropagation(); closeLightbox(); }} className="absolute right-4 top-4 rounded-full bg-black/40 p-2 text-white/80 transition hover:bg-black/60 hover:text-white">
             <X className="h-6 w-6" />
           </button>
         </div>
