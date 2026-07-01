@@ -16,8 +16,10 @@ import Button from "./ui/Button";
 import SectionCard from "./ui/SectionCard";
 import { SkeletonDashboard } from "./ui/Skeleton";
 import { useNotifications } from "../hooks/useNotifications";
-import { getStatusColor, formatDate, formatCurrency, getDaysUntilDue, isInvoiceOverdue, invoiceRemaining } from "../utils";
+import { getStatusColor, formatDate, formatCurrency, getDaysUntilDue, isInvoiceOverdue, invoiceRemaining, invoicePaid } from "../utils";
 import { formatMoney } from "../utils/currency";
+import { getFileUrl } from "../api";
+import { createPortal } from "react-dom";
 import Modal from "./ui/Modal";
 import StatusBadge from "./ui/StatusBadge";
 import ClientCollaborators from "./user/ClientCollaborators";
@@ -60,6 +62,9 @@ interface Invoice {
   paidAt?: string | null;
   amountPaid?: number;
   remaining?: number;
+  issueDate?: string | null;
+  paymentLink?: string | null;
+  payments?: { id: number; amount: number; paidAt: string; note?: string | null; receiptUrl?: string | null }[];
 }
 
 interface Domain {
@@ -104,6 +109,10 @@ const RoleUser: React.FC = () => {
   const [taskPage, setTaskPage] = useState(1);
   const [invoicePage, setInvoicePage] = useState(1);
   const [showPendingModal, setShowPendingModal] = useState(false);
+  const [invoiceDetail, setInvoiceDetail] = useState<Invoice | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const isImageUrl = (url: string) => /\.(jpe?g|png|gif|webp|avif|bmp|heic|heif|svg)$/i.test(url.split("?")[0]);
+  const isPdfUrl = (url: string) => /\.pdf$/i.test(url.split("?")[0]);
 
   useEffect(() => {
     fetchAll();
@@ -153,11 +162,13 @@ const fetchAll = async () => {
   // same invoice twice (isInvoiceOverdue also catches admin-flagged OVERDUE).
   const paidInvoices = invoices.filter(i => i.status?.toUpperCase() === "PAID");
   const overdueInvoices = invoices.filter(isInvoiceOverdue);
-  const pendingInvoices = invoices.filter(
-    i => i.status?.toUpperCase() === "PENDING" && !isInvoiceOverdue(i)
-  );
-  const totalPaid = paidInvoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const totalPending = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+  // Partial-payment aware: totalPaid counts every recorded payment (even on
+  // invoices that aren't fully settled yet), totalPending is what's still owed.
+  const totalPaid = invoices.reduce((sum, inv) => sum + invoicePaid(inv), 0);
+  const totalPending = invoices.reduce((sum, inv) => sum + invoiceRemaining(inv), 0);
+  const invoiceCurrencies = Array.from(new Set(invoices.map((i) => i.currency || "USD")));
+  const clientCurrency = invoiceCurrencies.length === 1 ? invoiceCurrencies[0] : undefined;
+  const cmoney = (n: number) => formatMoney(n, clientCurrency);
 
   // Outstanding = every unpaid invoice with a remaining balance (partial aware).
   const outstandingInvoices = invoices
@@ -330,7 +341,7 @@ const fetchAll = async () => {
             />
             <StatCard
               label="Total Invoiced"
-              value={formatCurrency(totalInvoiced)}
+              value={cmoney(totalInvoiced)}
               hint={`${invoices.length} invoices`}
               icon={
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -357,20 +368,20 @@ const fetchAll = async () => {
               <div className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] px-4 py-3">
                 <span className="badge badge-success">Paid</span>
                 <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
-                  {formatCurrency(totalPaid)}
+                  {cmoney(totalPaid)}
                 </span>
               </div>
               <div className="flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] px-4 py-3">
                 <span className="badge badge-warning">Pending</span>
                 <span className="text-sm font-bold tabular-nums text-[var(--color-text-primary)]">
-                  {formatCurrency(totalPending)}
+                  {cmoney(totalPending)}
                 </span>
               </div>
               {overdueInvoices.length > 0 && (
                 <div className="flex items-center justify-between rounded-xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] px-4 py-3">
                   <span className="badge badge-danger">Overdue ({overdueInvoices.length})</span>
                   <span className="text-sm font-bold tabular-nums text-[var(--color-destructive-text)]">
-                    {formatCurrency(totalOverdue)}
+                    {cmoney(totalOverdue)}
                   </span>
                 </div>
               )}
@@ -581,15 +592,20 @@ const fetchAll = async () => {
               />
             ) : (
               paginatedInvoices.map((invoice) => (
-                <InvoiceCard
+                <button
                   key={invoice.id}
-                  invoice={invoice}
-                  getStatusColor={getStatusColor}
-                  formatCurrency={formatCurrency}
-                  formatDate={formatDate}
-                  getDaysUntilDue={getDaysUntilDue}
-                  primaryColor="var(--color-text-primary)"
-                />
+                  type="button"
+                  onClick={() => setInvoiceDetail(invoice)}
+                  className="block w-full rounded-2xl text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)]"
+                >
+                  <InvoiceCard
+                    invoice={invoice}
+                    getStatusColor={getStatusColor}
+                    formatDate={formatDate}
+                    getDaysUntilDue={getDaysUntilDue}
+                    primaryColor="var(--color-text-primary)"
+                  />
+                </button>
               ))
             )}
           </div>
@@ -598,9 +614,9 @@ const fetchAll = async () => {
           {/* Invoice Summary */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 stagger-children">
             <StatCard
-              label="Paid Invoices"
-              value={formatCurrency(totalPaid)}
-              hint={`${paidInvoices.length} invoices paid`}
+              label="Total Paid"
+              value={cmoney(totalPaid)}
+              hint={`${paidInvoices.length} fully paid · includes part-payments`}
               tone="success"
               icon={
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -609,9 +625,9 @@ const fetchAll = async () => {
               }
             />
             <StatCard
-              label="Pending Invoices"
-              value={formatCurrency(totalPending)}
-              hint={`${pendingInvoices.length} invoices pending`}
+              label="Outstanding"
+              value={cmoney(totalPending)}
+              hint={`${outstandingInvoices.length} invoice${outstandingInvoices.length === 1 ? "" : "s"} owing`}
               tone="warning"
               icon={
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -907,15 +923,115 @@ const fetchAll = async () => {
           )}
         </div>
 
-        <div className="mt-6 flex flex-col gap-2 sm:flex-row-reverse">
-          <Button variant="primary" onClick={viewPendingInvoices} className="w-full sm:flex-1">
+        <div className="mt-6 flex flex-col gap-2">
+          <Button variant="primary" onClick={viewPendingInvoices} className="w-full">
             View invoices
           </Button>
-          <Button variant="secondary" onClick={dismissPendingModal} className="w-full sm:flex-1">
+          <Button variant="secondary" onClick={dismissPendingModal} className="w-full">
             Maybe later
           </Button>
         </div>
       </Modal>
+
+      {/* Invoice detail — payment history + receipts for the client */}
+      <Modal
+        isOpen={!!invoiceDetail}
+        onClose={() => setInvoiceDetail(null)}
+        title={invoiceDetail ? `Invoice #${invoiceDetail.invoiceNumber}` : undefined}
+        maxWidth="lg"
+      >
+        {invoiceDetail && (() => {
+          const total = invoiceDetail.amount || 0;
+          const paid = invoicePaid(invoiceDetail);
+          const remaining = invoiceRemaining(invoiceDetail);
+          const fully = remaining <= 0 && total > 0;
+          const overdue = isInvoiceOverdue(invoiceDetail);
+          const pays = invoiceDetail.payments ?? [];
+          return (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-2xl font-bold tabular-nums text-[var(--color-text-primary)]">{formatMoney(total, invoiceDetail.currency)}</p>
+                  <p className="mt-0.5 text-xs text-[var(--color-text-muted)]">
+                    {(invoiceDetail.issueDate || invoiceDetail.paidAt) && <>Issued {formatDate(invoiceDetail.issueDate || invoiceDetail.paidAt)} · </>}Due {formatDate(invoiceDetail.dueDate)}
+                  </p>
+                  {invoiceDetail.description && <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{invoiceDetail.description}</p>}
+                </div>
+                <StatusBadge status={fully ? "PAID" : overdue ? "OVERDUE" : invoiceDetail.status} />
+              </div>
+
+              <div className="card-panel rounded-xl p-4">
+                <ProgressBar label="Paid" current={paid} total={total} />
+                <div className="mt-2 flex justify-between text-sm tabular-nums">
+                  <span className="font-semibold text-[var(--color-success-text)]">{formatMoney(paid, invoiceDetail.currency)} paid</span>
+                  <span className="font-semibold text-[var(--color-text-primary)]">{fully ? "Fully paid" : `${formatMoney(remaining, invoiceDetail.currency)} left`}</span>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2.5 text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Payments{pays.length > 0 ? ` · ${pays.length}` : ""}</p>
+                {pays.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-[var(--color-border-hover)] py-6 text-center text-sm text-[var(--color-text-muted)]">No payments recorded yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {pays.map((p) => (
+                      <div key={p.id} className="flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-success-bg)] text-[var(--color-success-text)] ring-1 ring-inset ring-[var(--color-success-border)]">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold tabular-nums text-[var(--color-text-primary)]">{formatMoney(p.amount, invoiceDetail.currency)}</p>
+                          <p className="truncate text-xs text-[var(--color-text-muted)]">{formatDate(p.paidAt)}{p.note ? ` · ${p.note}` : ""}</p>
+                        </div>
+                        {p.receiptUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setReceiptPreview(p.receiptUrl!)}
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                          >
+                            View receipt
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {invoiceDetail.paymentLink && !fully && (
+                <a href={invoiceDetail.paymentLink} target="_blank" rel="noopener noreferrer" className="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold">
+                  Pay now
+                </a>
+              )}
+            </div>
+          );
+        })()}
+      </Modal>
+
+      {/* Receipt preview — portaled above the modal (z-100) */}
+      {receiptPreview && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 animate-fade-in" onClick={() => setReceiptPreview(null)}>
+          <div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-2 flex items-center justify-end gap-2">
+              <a href={getFileUrl(receiptPreview)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 backdrop-blur transition hover:bg-white/20">Download</a>
+              <button type="button" onClick={() => setReceiptPreview(null)} aria-label="Close" className="rounded-lg bg-white/10 p-2 text-white/90 backdrop-blur transition hover:bg-white/20">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            {isImageUrl(receiptPreview) ? (
+              <img src={getFileUrl(receiptPreview)} alt="Receipt" className="mx-auto max-h-[85vh] w-auto rounded-xl object-contain shadow-elev-lg" />
+            ) : isPdfUrl(receiptPreview) ? (
+              <iframe src={getFileUrl(receiptPreview)} title="Receipt" className="h-[85vh] w-full rounded-xl bg-white shadow-elev-lg" />
+            ) : (
+              <div className="rounded-2xl bg-[var(--color-panel-solid)] p-10 text-center">
+                <p className="text-sm text-[var(--color-text-secondary)]">This file type can’t be previewed here.</p>
+                <a href={getFileUrl(receiptPreview)} target="_blank" rel="noopener noreferrer" className="btn-primary mt-4 inline-flex rounded-lg px-4 py-2 text-sm font-semibold">Download receipt</a>
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
