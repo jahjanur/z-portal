@@ -80,26 +80,34 @@ export function isInvoiceOverdue(invoice: { status?: string | null; dueDate?: st
 interface RevenueInvoice {
   status?: string | null;
   amount: number;
+  amountPaid?: number | null;
+  remaining?: number | null;
+}
+
+/** How much of a single invoice is actually paid (partial payments aware). */
+export function invoicePaid(i: RevenueInvoice): number {
+  if (typeof i.amountPaid === "number") return i.amountPaid;
+  return (i.status ?? "").toUpperCase() === "PAID" ? i.amount : 0; // fallback for old data
+}
+
+/** How much of a single invoice is still owed. */
+export function invoiceRemaining(i: RevenueInvoice): number {
+  if (typeof i.remaining === "number") return i.remaining;
+  return Math.max(0, i.amount - invoicePaid(i));
 }
 
 /**
- * Revenue rollup for invoice dashboards.
- *  - paid       = invoices marked PAID
- *  - pending    = OUTSTANDING, i.e. everything not paid (PENDING, OVERDUE, …)
+ * Revenue rollup for invoice dashboards — partial-payment aware.
+ *  - paid       = sum of amounts actually paid (incl. partial payments)
+ *  - pending    = OUTSTANDING, i.e. what's still owed across all invoices
  *  - revenue    = paid + pending = sum of every invoice (always reconciles)
- * Treating "outstanding" as "not paid" keeps OVERDUE-status invoices in the
- * totals and matches the server's EraSphere analytics.
  */
 export function computeInvoiceRevenue(invoices: RevenueInvoice[]): {
   totalPaid: number;
   totalPending: number;
   totalRevenue: number;
 } {
-  const totalPaid = invoices
-    .filter((i) => (i.status ?? "").toUpperCase() === "PAID")
-    .reduce((sum, i) => sum + i.amount, 0);
-  const totalPending = invoices
-    .filter((i) => (i.status ?? "").toUpperCase() !== "PAID")
-    .reduce((sum, i) => sum + i.amount, 0);
+  const totalPaid = invoices.reduce((sum, i) => sum + invoicePaid(i), 0);
+  const totalPending = invoices.reduce((sum, i) => sum + invoiceRemaining(i), 0);
   return { totalPaid, totalPending, totalRevenue: totalPaid + totalPending };
 }

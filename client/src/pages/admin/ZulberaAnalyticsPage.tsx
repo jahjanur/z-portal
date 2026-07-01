@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
-import { formatCurrency, formatDate, computeInvoiceRevenue, isInvoiceOverdue } from "../../utils";
+import { formatCurrency, formatDate, computeInvoiceRevenue, invoicePaid, invoiceRemaining, isInvoiceOverdue } from "../../utils";
 import {
   PieChart,
   Pie,
@@ -58,6 +58,8 @@ interface Invoice {
   invoiceNumber: string;
   amount: number;
   status: "PAID" | "PENDING";
+  amountPaid?: number;
+  remaining?: number;
   dueDate?: string;
   paidAt?: string;
   createdAt: string;
@@ -236,8 +238,8 @@ export default function ZulberaAnalyticsPage() {
       else if (timeRange === "month") periodKey = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
       else periodKey = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
       if (!periodData[periodKey]) periodData[periodKey] = { paid: 0, pending: 0 };
-      if (inv.status === "PAID") periodData[periodKey].paid += inv.amount;
-      else periodData[periodKey].pending += inv.amount;
+      periodData[periodKey].paid += invoicePaid(inv);
+      periodData[periodKey].pending += invoiceRemaining(inv);
     });
     return Object.entries(periodData)
       .map(([period, data]) => ({ period, paid: data.paid, pending: data.pending, total: data.paid + data.pending }))

@@ -16,6 +16,9 @@ import { sanitizeNickname, sanitizeEmoji, sanitizeSkills } from "../constants/wo
 const router = Router();
 const SALT_ROUNDS = 10;
 
+/** Sum of payments recorded against an invoice (partial-payment aware). */
+const paidOf = (inv: { payments: { amount: number }[] }) => inv.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+
 const filesDir = path.join(uploadsDir, "files");
 if (!fs.existsSync(filesDir)) {
   fs.mkdirSync(filesDir, { recursive: true });
@@ -251,14 +254,14 @@ router.get("/erasphere/admin-analytics", verifyJWT, verifyAdmin, async (req: any
       }),
       prisma.invoice.findMany({
         where: { clientId: { in: clientIds } },
-        select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true },
+        select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
       }),
     ]);
 
     const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-    const paidRevenue = invoices.filter((inv) => inv.status === "PAID").reduce((sum, inv) => sum + inv.amount, 0);
-    // Outstanding = anything not paid (PENDING, OVERDUE, …) so paid + pending = total.
-    const pendingRevenue = invoices.filter((inv) => inv.status !== "PAID").reduce((sum, inv) => sum + inv.amount, 0);
+    const paidRevenue = invoices.reduce((sum, inv) => sum + paidOf(inv), 0);
+    // Outstanding = what's still owed across all invoices (partial-payment aware).
+    const pendingRevenue = invoices.reduce((sum, inv) => sum + Math.max(0, inv.amount - paidOf(inv)), 0);
 
     res.json({
       clients: erasphereClients,
@@ -316,18 +319,14 @@ router.get("/erasphere/analytics", verifyJWT, async (req: any, res) => {
       }),
       prisma.invoice.findMany({
         where: { clientId: { in: clientIds } },
-        select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true },
+        select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
       }),
     ]);
 
     const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-    const paidRevenue = invoices
-      .filter((inv) => inv.status === "PAID")
-      .reduce((sum, inv) => sum + inv.amount, 0);
-    // Outstanding = anything not paid (PENDING, OVERDUE, …) so paid + pending = total.
-    const pendingRevenue = invoices
-      .filter((inv) => inv.status !== "PAID")
-      .reduce((sum, inv) => sum + inv.amount, 0);
+    const paidRevenue = invoices.reduce((sum, inv) => sum + paidOf(inv), 0);
+    // Outstanding = what's still owed across all invoices (partial-payment aware).
+    const pendingRevenue = invoices.reduce((sum, inv) => sum + Math.max(0, inv.amount - paidOf(inv)), 0);
 
     res.json({
       clients: myClients,
