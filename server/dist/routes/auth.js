@@ -28,7 +28,7 @@ router.post("/login", async (req, res) => {
             return res.status(401).json({ message: "Invalid credentials" });
         }
         const role = String(user.role || "").toUpperCase();
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, role }, JWT_SECRET, { expiresIn: "7d" });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, role, companyOwnerId: user.companyOwnerId ?? null }, JWT_SECRET, { expiresIn: "7d" });
         return res.json({
             token,
             user: {
@@ -36,7 +36,11 @@ router.post("/login", async (req, res) => {
                 email: user.email,
                 role,
                 name: user.name,
+                nickname: user.nickname,
+                avatarEmoji: user.avatarEmoji,
+                skills: user.skills,
                 company: user.company,
+                companyOwnerId: user.companyOwnerId,
                 logo: user.logo,
                 colorHex: user.colorHex
             }
@@ -65,7 +69,11 @@ router.get("/verify", async (req, res) => {
                 email: true,
                 role: true,
                 name: true,
+                nickname: true,
+                avatarEmoji: true,
+                skills: true,
                 company: true,
+                companyOwnerId: true,
                 logo: true,
                 colorHex: true,
                 createdAt: true

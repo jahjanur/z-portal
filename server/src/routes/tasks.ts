@@ -1623,6 +1623,87 @@ router.patch("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
   }
 });
 
+// Request changes on a to-do stage: un-mark the stage (e.g. GitHub) and post a
+// comment into the worker channel so the assigned workers know what to fix.
+router.post("/:id/milestones/:mid/request-changes", verifyJWT, async (req: any, res) => {
+  try {
+    const taskId = Number(req.params.id);
+    const mid = Number(req.params.mid);
+    if (!Number.isInteger(taskId) || !Number.isInteger(mid)) {
+      return res.status(400).json({ error: "Invalid id" });
+    }
+    const { userId } = req.user;
+    const stage = String(req.body.stage || "");
+    const comment = String(req.body.comment || "").trim();
+    if (stage !== "pushedToGithub" && stage !== "deployed") {
+      return res.status(400).json({ error: "stage must be 'pushedToGithub' or 'deployed'" });
+    }
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { id: true, title: true, clientId: true, workers: { select: { userId: true } } },
+    });
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    if (!canCompleteMilestones(task as any, req.user)) {
+      return res.status(403).json({ error: "Only admins and assigned workers can request changes" });
+    }
+    const milestone = await prisma.milestone.findFirst({ where: { id: mid, taskId } });
+    if (!milestone) return res.status(404).json({ error: "To-do not found" });
+
+    // Roll back the requested stage (and anything downstream of it). Requesting
+    // changes on GitHub also clears Deployed, since deploy sits on top of it.
+    let pushed = milestone.pushedToGithub;
+    let deployed = milestone.deployed;
+    if (stage === "pushedToGithub") {
+      pushed = false;
+      deployed = false;
+    } else {
+      deployed = false;
+    }
+    const newDone = pushed && deployed;
+    const updated = await prisma.milestone.update({
+      where: { id: mid },
+      data: {
+        pushedToGithub: pushed,
+        deployed,
+        isDone: newDone,
+        doneAt: newDone ? milestone.doneAt : null,
+        doneBy: newDone ? milestone.doneBy : null,
+      },
+    });
+
+    // Post the feedback into the worker channel (internal — never client-visible).
+    const stageLabel = stage === "pushedToGithub" ? "GitHub" : "Deployed";
+    const body = `🔁 Changes requested on to-do “${milestone.title}” (${stageLabel})${comment ? `:\n${comment}` : "."}`;
+    await prisma.taskComment.create({
+      data: { taskId, userId, content: body, visibleToClient: false },
+    });
+
+    // Notify the assigned workers (admins acting → workers; a worker acting →
+    // the other workers). Never the client — this is an internal review note.
+    const recipientIds = (task.workers.map((w) => w.userId)).filter((wid) => wid !== userId);
+    if (recipientIds.length) {
+      await prisma.notification
+        .createMany({
+          data: recipientIds.map((wid) => ({
+            userId: wid,
+            type: "TODO_CHANGES_REQUESTED",
+            title: `Changes requested (${stageLabel})`,
+            message: `“${milestone.title}” on ${task.title} needs changes${comment ? `: ${comment.slice(0, 120)}` : ""}`,
+            link: `/tasks/${taskId}`,
+            read: false,
+          })),
+        })
+        .catch((e) => console.error("Failed changes-requested notification:", e));
+    }
+
+    res.json(updated);
+  } catch (error) {
+    console.error("Error requesting changes:", error);
+    res.status(500).json({ error: "Failed to request changes" });
+  }
+});
+
 // delete a milestone (admin or its creator)
 router.delete("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
   try {

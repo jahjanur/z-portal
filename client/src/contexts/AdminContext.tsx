@@ -173,6 +173,7 @@ interface AdminContextValue {
   deleteProject: (id: number) => Promise<void>;
   deleteTask: (id: number) => Promise<void>;
   updateTaskStatus: (id: number, status: string) => Promise<void>;
+  updateTask: (id: number, data: { title?: string; description?: string; clientId?: string; workerIds?: number[]; dueDate?: string; projectId?: string }) => Promise<void>;
   createInvoice: (formData: FormData) => Promise<void>;
   updateInvoice: (id: number, data: { status?: string; dueDate?: string; paymentLink?: string; notes?: string; paidAt?: string | null }) => Promise<void>;
   deleteInvoice: (id: number) => Promise<void>;
@@ -353,6 +354,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       projectId: data.projectId ? parseInt(data.projectId, 10) : null,
     });
     await fetchAll();
+  };
+
+  const updateTask = async (id: number, data: { title?: string; description?: string; clientId?: string; workerIds?: number[]; dueDate?: string; projectId?: string }) => {
+    await API.put(`/tasks/${id}`, {
+      title: data.title,
+      description: data.description,
+      clientId: data.clientId ? parseInt(data.clientId, 10) : undefined,
+      workerIds: data.workerIds,
+      dueDate: data.dueDate || undefined,
+      projectId: data.projectId ? parseInt(data.projectId, 10) : (data.projectId === "" ? null : undefined),
+    });
+    await fetchAll();
+    toast.success("Task updated!");
   };
 
   const handleCreateProject = async (data: { name: string; clientId: string; description: string; serviceType?: string; metadata?: Record<string, unknown> }) => {
@@ -553,6 +567,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     deleteProject,
     deleteTask,
     updateTaskStatus,
+    updateTask,
     createInvoice,
     updateInvoice,
     deleteInvoice,

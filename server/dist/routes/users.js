@@ -15,8 +15,12 @@ const notifications_1 = require("../services/notifications");
 const notificationEngine_1 = require("../services/notificationEngine");
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const uploadsPath_1 = require("../lib/uploadsPath");
+const clientScope_1 = require("../lib/clientScope");
+const workerProfile_1 = require("../constants/workerProfile");
 const router = (0, express_1.Router)();
 const SALT_ROUNDS = 10;
+/** Sum of payments recorded against an invoice (partial-payment aware). */
+const paidOf = (inv) => inv.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
 const filesDir = path_1.default.join(uploadsPath_1.uploadsDir, "files");
 if (!fs_1.default.existsSync(filesDir)) {
     fs_1.default.mkdirSync(filesDir, { recursive: true });
@@ -48,9 +52,11 @@ const transporter = nodemailer_1.default.createTransport({
 router.get("/", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, async (req, res) => {
     try {
         const { role, userId } = req.user;
+        // Exclude company team members (companyOwnerId set) from the main lists —
+        // they show under their company's "Team members" section, not as their own row.
         const whereClause = role === "ERASPHERE"
-            ? { role: "CLIENT", referredById: userId }
-            : {};
+            ? { role: "CLIENT", referredById: userId, companyOwnerId: null }
+            : { companyOwnerId: null };
         const users = await prisma_1.default.user.findMany({
             where: whereClause,
             select: {
@@ -58,6 +64,9 @@ router.get("/", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, async (req, res
                 email: true,
                 role: true,
                 name: true,
+                nickname: true,
+                avatarEmoji: true,
+                skills: true,
                 company: true,
                 logo: true,
                 colorHex: true,
@@ -74,6 +83,99 @@ router.get("/", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, async (req, res
     catch (error) {
         console.error("Error fetching users:", error);
         res.status(500).json({ error: "Failed to fetch users" });
+    }
+});
+// List the team members (extra founders) linked to a company. Admin only.
+router.get("/:id/team-members", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
+    try {
+        const companyId = Number(req.params.id);
+        if (!Number.isInteger(companyId))
+            return res.status(400).json({ error: "Invalid id" });
+        const members = await prisma_1.default.user.findMany({
+            where: { companyOwnerId: companyId },
+            select: { id: true, name: true, email: true, profileStatus: true, createdAt: true },
+            orderBy: { createdAt: "asc" },
+        });
+        res.json(members);
+    }
+    catch (error) {
+        console.error("Error listing team members:", error);
+        res.status(500).json({ error: "Failed to load team members" });
+    }
+});
+// A CLIENT lists their own company's collaborators (team members).
+router.get("/my-team-members", auth_1.verifyJWT, async (req, res) => {
+    try {
+        if (req.user.role !== "CLIENT")
+            return res.status(403).json({ error: "Not authorized" });
+        const companyId = (0, clientScope_1.clientScopeId)(req.user);
+        // Everyone on the company except the caller themselves.
+        const members = await prisma_1.default.user.findMany({
+            where: { OR: [{ companyOwnerId: companyId }, { id: companyId }], NOT: { id: req.user.userId } },
+            select: { id: true, name: true, email: true, profileStatus: true, createdAt: true, companyOwnerId: true },
+            orderBy: { createdAt: "asc" },
+        });
+        res.json(members);
+    }
+    catch (error) {
+        console.error("Error listing collaborators:", error);
+        res.status(500).json({ error: "Failed to load collaborators" });
+    }
+});
+// A CLIENT removes a collaborator from their own company.
+router.delete("/my-team-members/:id", auth_1.verifyJWT, async (req, res) => {
+    try {
+        if (req.user.role !== "CLIENT")
+            return res.status(403).json({ error: "Not authorized" });
+        const targetId = Number(req.params.id);
+        const companyId = (0, clientScope_1.clientScopeId)(req.user);
+        const target = await prisma_1.default.user.findUnique({ where: { id: targetId }, select: { id: true, companyOwnerId: true, role: true } });
+        // Can only remove an actual member of the caller's own company (not the primary, not self).
+        if (!target || target.role !== "CLIENT" || target.companyOwnerId !== companyId || target.id === req.user.userId) {
+            return res.status(403).json({ error: "Not allowed to remove this user" });
+        }
+        await prisma_1.default.$transaction(async (tx) => {
+            await tx.fileComment.deleteMany({ where: { userId: targetId } });
+            await tx.taskComment.deleteMany({ where: { userId: targetId } });
+            await tx.notification.deleteMany({ where: { userId: targetId } });
+            await tx.notificationPreference.deleteMany({ where: { userId: targetId } });
+            await tx.user.delete({ where: { id: targetId } });
+        });
+        res.json({ success: true });
+    }
+    catch (error) {
+        console.error("Error removing collaborator:", error);
+        res.status(500).json({ error: "Failed to remove collaborator" });
+    }
+});
+// Self-service: the logged-in user updates their own display profile
+// (nickname / emoji / skills). Used by the onboarding + settings screens.
+router.patch("/me/profile", auth_1.verifyJWT, async (req, res) => {
+    try {
+        const { userId } = req.user;
+        const data = {};
+        if ("nickname" in req.body)
+            data.nickname = (0, workerProfile_1.sanitizeNickname)(req.body.nickname) ?? null;
+        if ("avatarEmoji" in req.body)
+            data.avatarEmoji = (0, workerProfile_1.sanitizeEmoji)(req.body.avatarEmoji) ?? null;
+        if ("skills" in req.body)
+            data.skills = (0, workerProfile_1.sanitizeSkills)(req.body.skills);
+        if (Object.keys(data).length === 0) {
+            return res.status(400).json({ error: "No profile fields provided" });
+        }
+        const updated = await prisma_1.default.user.update({
+            where: { id: userId },
+            data,
+            select: {
+                id: true, email: true, role: true, name: true,
+                nickname: true, avatarEmoji: true, skills: true,
+            },
+        });
+        res.json(updated);
+    }
+    catch (error) {
+        console.error("Error updating own profile:", error);
+        res.status(500).json({ error: "Failed to update profile" });
     }
 });
 // get EraSphere partners (admin only) with stats: clientsCount, tasksCount
@@ -146,12 +248,13 @@ router.get("/erasphere/admin-analytics", auth_1.verifyJWT, auth_1.verifyAdmin, a
             }),
             prisma_1.default.invoice.findMany({
                 where: { clientId: { in: clientIds } },
-                select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true },
+                select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
             }),
         ]);
         const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-        const paidRevenue = invoices.filter((inv) => inv.status === "PAID").reduce((sum, inv) => sum + inv.amount, 0);
-        const pendingRevenue = invoices.filter((inv) => inv.status === "PENDING").reduce((sum, inv) => sum + inv.amount, 0);
+        const paidRevenue = invoices.reduce((sum, inv) => sum + paidOf(inv), 0);
+        // Outstanding = what's still owed across all invoices (partial-payment aware).
+        const pendingRevenue = invoices.reduce((sum, inv) => sum + Math.max(0, inv.amount - paidOf(inv)), 0);
         res.json({
             clients: erasphereClients,
             tasks,
@@ -205,16 +308,13 @@ router.get("/erasphere/analytics", auth_1.verifyJWT, async (req, res) => {
             }),
             prisma_1.default.invoice.findMany({
                 where: { clientId: { in: clientIds } },
-                select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true },
+                select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
             }),
         ]);
         const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-        const paidRevenue = invoices
-            .filter((inv) => inv.status === "PAID")
-            .reduce((sum, inv) => sum + inv.amount, 0);
-        const pendingRevenue = invoices
-            .filter((inv) => inv.status === "PENDING")
-            .reduce((sum, inv) => sum + inv.amount, 0);
+        const paidRevenue = invoices.reduce((sum, inv) => sum + paidOf(inv), 0);
+        // Outstanding = what's still owed across all invoices (partial-payment aware).
+        const pendingRevenue = invoices.reduce((sum, inv) => sum + Math.max(0, inv.amount - paidOf(inv)), 0);
         res.json({
             clients: myClients,
             tasks,
@@ -324,6 +424,9 @@ router.post("/:id/resend-invite", auth_1.verifyJWT, auth_1.verifyAdmin, async (r
 router.get("/:id", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, async (req, res) => {
     try {
         const requestedId = Number(req.params.id);
+        if (!Number.isInteger(requestedId)) {
+            return res.status(400).json({ error: "Invalid user ID" });
+        }
         const user = await prisma_1.default.user.findUnique({
             where: { id: requestedId },
             select: {
@@ -537,8 +640,9 @@ router.post("/complete-profile", uploadFile.array("files", 10), async (req, res)
         };
         const files = req.files;
         let logoPath = user.logo;
-        // NEW: Create profile files directory for this user
-        const profileFilesDir = `uploads/profile-files/${user.id}`;
+        // Profile files live on the persistent uploads volume (so they survive deploys)
+        // and are served by the protected /uploads route.
+        const profileFilesDir = path_1.default.join(uploadsPath_1.uploadsDir, "profile-files", String(user.id));
         if (!fs_1.default.existsSync(profileFilesDir)) {
             fs_1.default.mkdirSync(profileFilesDir, { recursive: true });
         }
@@ -632,6 +736,8 @@ router.delete("/:id", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => 
             }
             // 5. If EraSphere: unlink referred clients so we can delete this user
             await tx.user.updateMany({ where: { referredById: id }, data: { referredById: null } });
+            // Unlink any team members of this company so the FK doesn't block deletion.
+            await tx.user.updateMany({ where: { companyOwnerId: id }, data: { companyOwnerId: null } });
             // 6. Notifications and preferences (may already cascade via schema; safe to delete explicitly)
             await tx.notification.deleteMany({ where: { userId: id } });
             await tx.notificationPreference.deleteMany({ where: { userId: id } });
@@ -719,7 +825,7 @@ router.get("/files/client/:clientId", auth_1.verifyJWT, auth_1.verifyAdmin, asyn
 router.get("/profile-files/client/:clientId", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
     try {
         const clientId = parseInt(req.params.clientId);
-        const profileFilesDir = path_1.default.join(__dirname, `../../uploads/profile-files/${clientId}`);
+        const profileFilesDir = path_1.default.join(uploadsPath_1.uploadsDir, "profile-files", String(clientId));
         if (!fs_1.default.existsSync(profileFilesDir)) {
             return res.json([]);
         }
@@ -741,7 +847,7 @@ router.get("/profile-files/client/:clientId", auth_1.verifyJWT, auth_1.verifyAdm
             return {
                 id: `profile-${fileName}`,
                 fileName: fileName,
-                fileUrl: `uploads/profile-files/${clientId}/${fileName}`,
+                fileUrl: `/uploads/profile-files/${clientId}/${fileName}`,
                 fileType: fileType,
                 uploadedAt: stats.birthtime,
                 caption: null,
@@ -758,6 +864,129 @@ router.get("/profile-files/client/:clientId", auth_1.verifyJWT, auth_1.verifyAdm
     catch (error) {
         console.error("Error fetching profile files:", error);
         res.status(500).json({ error: "Failed to fetch profile files" });
+    }
+});
+// Admin/EraSphere upload brand files (and optionally a logo) for a client.
+router.post("/:id/brand-files", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, uploadFile.array("files", 10), async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (isNaN(id))
+            return res.status(400).json({ error: "Invalid id" });
+        const { role, userId } = req.user;
+        const target = await prisma_1.default.user.findUnique({ where: { id }, select: { id: true, role: true, referredById: true, logo: true } });
+        if (!target || target.role !== "CLIENT")
+            return res.status(404).json({ error: "Client not found" });
+        if (role === "ERASPHERE" && target.referredById !== userId)
+            return res.status(403).json({ error: "Not authorized to edit this client" });
+        const files = req.files || [];
+        if (files.length === 0)
+            return res.status(400).json({ error: "No files uploaded" });
+        const profileFilesDir = path_1.default.join(uploadsPath_1.uploadsDir, "profile-files", String(id));
+        fs_1.default.mkdirSync(profileFilesDir, { recursive: true });
+        for (const file of files) {
+            try {
+                fs_1.default.copyFileSync(path_1.default.join(filesDir, file.filename), path_1.default.join(profileFilesDir, file.filename));
+            }
+            catch (copyErr) {
+                console.error("Error copying brand file:", copyErr);
+            }
+        }
+        // Set the logo: explicit logoIndex, else the first image when none exists yet.
+        let logo = target.logo;
+        const logoIndex = req.body.logoIndex;
+        if (logoIndex !== undefined && logoIndex !== "") {
+            const idx = parseInt(logoIndex, 10);
+            if (idx >= 0 && idx < files.length)
+                logo = `/uploads/files/${files[idx].filename}`;
+        }
+        else if (!target.logo) {
+            const firstImage = files.find((f) => f.mimetype.startsWith("image/"));
+            if (firstImage)
+                logo = `/uploads/files/${firstImage.filename}`;
+        }
+        if (logo !== target.logo) {
+            await prisma_1.default.user.update({ where: { id }, data: { logo } });
+        }
+        res.status(201).json({ message: "Files uploaded", count: files.length, logo });
+    }
+    catch (error) {
+        console.error("Error uploading brand files:", error);
+        res.status(500).json({ error: "Failed to upload files" });
+    }
+});
+// Admin/EraSphere edit a client's profile: brand colors + contact details.
+router.patch("/:id", auth_1.verifyJWT, auth_1.verifyAdminOrEraSphere, async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (isNaN(id))
+            return res.status(400).json({ error: "Invalid id" });
+        const { role, userId } = req.user;
+        const target = await prisma_1.default.user.findUnique({
+            where: { id },
+            select: { id: true, role: true, referredById: true },
+        });
+        if (!target)
+            return res.status(404).json({ error: "User not found" });
+        // Workers: admin-only edit of display profile (name + nickname/emoji/skills).
+        if (target.role === "WORKER") {
+            if (role !== "ADMIN")
+                return res.status(403).json({ error: "Only admins can edit workers" });
+            const data = {};
+            if (req.body.name !== undefined)
+                data.name = String(req.body.name).trim();
+            if ("nickname" in req.body)
+                data.nickname = (0, workerProfile_1.sanitizeNickname)(req.body.nickname) ?? null;
+            if ("avatarEmoji" in req.body)
+                data.avatarEmoji = (0, workerProfile_1.sanitizeEmoji)(req.body.avatarEmoji) ?? null;
+            if ("skills" in req.body)
+                data.skills = (0, workerProfile_1.sanitizeSkills)(req.body.skills);
+            const updatedWorker = await prisma_1.default.user.update({
+                where: { id },
+                data,
+                select: {
+                    id: true, name: true, email: true, role: true,
+                    nickname: true, avatarEmoji: true, skills: true, profileStatus: true,
+                },
+            });
+            return res.json(updatedWorker);
+        }
+        if (target.role !== "CLIENT")
+            return res.status(404).json({ error: "Client not found" });
+        if (role === "ERASPHERE" && target.referredById !== userId) {
+            return res.status(403).json({ error: "Not authorized to edit this client" });
+        }
+        const { name, company, colorHex, brandPattern, shortInfo, postalAddress, address, phoneNumber } = req.body;
+        const data = {};
+        if (name !== undefined)
+            data.name = String(name).trim();
+        if (company !== undefined)
+            data.company = company || null;
+        if (colorHex !== undefined)
+            data.colorHex = colorHex || null;
+        if (brandPattern !== undefined)
+            data.brandPattern = brandPattern || null;
+        if (shortInfo !== undefined)
+            data.shortInfo = shortInfo || null;
+        if (postalAddress !== undefined)
+            data.postalAddress = postalAddress || null;
+        if (address !== undefined)
+            data.address = address || null;
+        if (phoneNumber !== undefined)
+            data.phoneNumber = phoneNumber || null;
+        const updated = await prisma_1.default.user.update({
+            where: { id },
+            data,
+            select: {
+                id: true, name: true, email: true, company: true, colorHex: true,
+                brandPattern: true, shortInfo: true, postalAddress: true, address: true,
+                phoneNumber: true, logo: true, role: true, profileStatus: true,
+            },
+        });
+        res.json(updated);
+    }
+    catch (error) {
+        console.error("Error updating client:", error);
+        res.status(500).json({ error: "Failed to update client" });
     }
 });
 exports.default = router;

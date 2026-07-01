@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, Github, Rocket } from "lucide-react";
+import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, Github, Rocket, Pencil, RotateCcw } from "lucide-react";
 import API, { getFileUrl } from "../../api";
 import Modal from "../ui/Modal";
 import ProgressBar from "../ui/ProgressBar";
@@ -247,6 +247,54 @@ function TodoDetailModal({
   const [uploading, setUploading] = useState(false);
   const addRef = useRef<HTMLInputElement>(null);
 
+  // Inline edit of title/description
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(milestone.title);
+  const [editDesc, setEditDesc] = useState(milestone.description ?? "");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const saveEdit = async () => {
+    if (!editTitle.trim()) { toast.error("Title can't be empty"); return; }
+    setSavingEdit(true);
+    try {
+      await API.patch(`/tasks/${taskId}/milestones/${milestone.id}`, {
+        title: editTitle.trim(),
+        description: editDesc.trim(),
+      });
+      setEditing(false);
+      onChanged();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't save changes");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  // Request changes on a stage (staff only) — rolls the stage back + notifies workers
+  const [requesting, setRequesting] = useState(false);
+  const [reqStage, setReqStage] = useState<"pushedToGithub" | "deployed">("pushedToGithub");
+  const [reqComment, setReqComment] = useState("");
+  const [sendingReq, setSendingReq] = useState(false);
+
+  const submitRequest = async () => {
+    setSendingReq(true);
+    try {
+      await API.post(`/tasks/${taskId}/milestones/${milestone.id}/request-changes`, {
+        stage: reqStage,
+        comment: reqComment.trim(),
+      });
+      const label = reqStage === "pushedToGithub" ? "GitHub" : "Deployed";
+      toast.success(`Changes requested (${label}) — the team was notified`);
+      setRequesting(false);
+      setReqComment("");
+      onChanged();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't request changes");
+    } finally {
+      setSendingReq(false);
+    }
+  };
+
   const addImages = async (files: File[]) => {
     if (!files.length) return;
     setUploading(true);
@@ -295,15 +343,109 @@ function TodoDetailModal({
             <span className="text-xs text-[var(--color-text-muted)]">Deployed = done</span>
           </div>
           <StageChipsModal milestone={milestone} canComplete={canComplete} onSetStage={onSetStage} />
+
+          {/* Request changes (staff only): roll a stage back + notify the team */}
+          {canComplete && (milestone.pushedToGithub || milestone.deployed) && (
+            requesting ? (
+              <div className="mt-3 space-y-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Request changes</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {STAGES.filter((s) => !!milestone[s.key]).map(({ key, label, Icon }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setReqStage(key)}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset transition ${
+                        reqStage === key
+                          ? "bg-[var(--color-focus-ring)]/15 text-[var(--color-text-primary)] ring-[var(--color-focus-ring)]"
+                          : "bg-[var(--color-surface-1)] text-[var(--color-text-muted)] ring-[var(--color-border)] hover:text-[var(--color-text-secondary)]"
+                      }`}
+                    >
+                      <Icon className="h-3 w-3" /> {label}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  autoFocus
+                  value={reqComment}
+                  onChange={(e) => setReqComment(e.target.value)}
+                  placeholder="What needs fixing? (posted to the team chat)"
+                  rows={3}
+                  className="input-dark w-full resize-y px-3 py-2 text-sm"
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button type="button" onClick={() => { setRequesting(false); setReqComment(""); }} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">Cancel</button>
+                  <button
+                    type="button"
+                    onClick={submitRequest}
+                    disabled={sendingReq}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--color-warning-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--color-warning-text)] ring-1 ring-inset ring-[var(--color-warning-border)] transition hover:brightness-110 disabled:opacity-50"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" /> {sendingReq ? "Sending…" : "Send to team"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  // default to the furthest-along completed stage
+                  setReqStage(milestone.deployed ? "deployed" : "pushedToGithub");
+                  setRequesting(true);
+                }}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-muted)] transition hover:text-[var(--color-text-primary)]"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Request changes
+              </button>
+            )
+          )}
         </div>
 
-        {/* description */}
-        {milestone.description ? (
-          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-secondary)]">{milestone.description}</p>
+        {/* description (with inline edit) */}
+        {canEdit && editing ? (
+          <div className="space-y-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4">
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Title</label>
+              <input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                maxLength={160}
+                className="input-dark w-full px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Description</label>
+              <textarea
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                placeholder="Description (optional)"
+                rows={3}
+                className="input-dark w-full resize-y px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button type="button" onClick={() => { setEditing(false); setEditTitle(milestone.title); setEditDesc(milestone.description ?? ""); }} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">Cancel</button>
+              <button type="button" onClick={saveEdit} disabled={savingEdit || !editTitle.trim()} className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50">
+                {savingEdit ? "Saving…" : "Save"}
+              </button>
+            </div>
           </div>
         ) : (
-          <p className="text-sm italic text-[var(--color-text-muted)]">No description.</p>
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4">
+            <div className="mb-1 flex items-start justify-between gap-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Details</p>
+              {canEdit && (
+                <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-text-muted)] transition hover:text-[var(--color-text-primary)]">
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </button>
+              )}
+            </div>
+            {milestone.description ? (
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-secondary)]">{milestone.description}</p>
+            ) : (
+              <p className="text-sm italic text-[var(--color-text-muted)]">No description.</p>
+            )}
+          </div>
         )}
 
         {/* images */}

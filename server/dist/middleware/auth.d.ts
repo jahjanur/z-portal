@@ -3,6 +3,7 @@ interface AuthRequest extends Request {
     user?: {
         userId: number;
         role: string;
+        companyOwnerId?: number | null;
     };
 }
 export declare function verifyJWT(req: AuthRequest, res: Response, next: NextFunction): Response<any, Record<string, any>> | undefined;

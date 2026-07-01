@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, FolderKanban, Trash2, User as UserIcon } from "lucide-react";
+import { Calendar, FolderKanban, Trash2, Pencil, User as UserIcon } from "lucide-react";
 import type { Task } from "../../contexts/AdminContext";
 import { avatarGlyph } from "../../constants/workerProfile";
 import ProgressBar from "../ui/ProgressBar";
@@ -9,6 +9,7 @@ import { milestoneProgress } from "../../utils/milestones";
 interface TaskBoardProps {
   tasks: Task[];
   onDelete: (id: number) => void;
+  onEdit?: (task: Task) => void;
   /** "board" = kanban columns, "list" = single dense list */
   view?: "board" | "list";
   /** When provided, board cards can be dragged between columns to change status. */
@@ -65,6 +66,7 @@ function TaskCard({
   task,
   accent,
   onDelete,
+  onEdit,
   navigate,
   draggable,
   onDragStart,
@@ -72,6 +74,7 @@ function TaskCard({
   task: Task;
   accent: string;
   onDelete: (id: number) => void;
+  onEdit?: (task: Task) => void;
   navigate: ReturnType<typeof useNavigate>;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
@@ -102,6 +105,16 @@ function TaskCard({
         <h4 className="min-w-0 break-words pr-1 text-[0.9375rem] font-semibold leading-snug text-[var(--color-text-primary)]">
           {task.title}
         </h4>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onEdit(task); }}
+            aria-label={`Edit task: ${task.title}`}
+            className="shrink-0 rounded-lg p-1.5 text-[var(--color-text-muted)] opacity-0 transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] focus-visible:opacity-100 group-hover:opacity-100"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        )}
         <button
           type="button"
           onClick={(e) => {
@@ -183,7 +196,7 @@ function TaskCard({
   );
 }
 
-export default function TaskBoard({ tasks, onDelete, view = "board", onChangeStatus }: TaskBoardProps) {
+export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onChangeStatus }: TaskBoardProps) {
   const navigate = useNavigate();
   const [dragOverCol, setDragOverCol] = useState<ColumnKey | null>(null);
   const dnd = !!onChangeStatus;
@@ -241,6 +254,16 @@ export default function TaskBoard({ tasks, onDelete, view = "board", onChangeSta
                 </span>
               )}
               <span className="shrink-0 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">{col.label}</span>
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onEdit(t); }}
+                  aria-label={`Edit task: ${t.title}`}
+                  className="shrink-0 rounded-lg p-1.5 text-[var(--color-text-muted)] opacity-0 transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); if (confirm(`Delete task "${t.title}"?`)) onDelete(t.id); }}
@@ -291,6 +314,7 @@ export default function TaskBoard({ tasks, onDelete, view = "board", onChangeSta
               ) : (
                 colTasks.map((t) => (
                   <TaskCard
+                    onEdit={onEdit}
                     key={t.id}
                     task={t}
                     accent={col.accent}

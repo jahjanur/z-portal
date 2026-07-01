@@ -19,7 +19,7 @@ export default function AdminTasksPage() {
   const {
     clients, workers, projects, tasks,
     adminOwnClients, adminOwnTasks,
-    createTask, handleCreateProject, updateProject, deleteProject, deleteTask, updateTaskStatus,
+    createTask, handleCreateProject, updateProject, deleteProject, deleteTask, updateTaskStatus, updateTask,
   } = useAdmin();
 
   const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
@@ -31,6 +31,8 @@ export default function AdminTasksPage() {
   const [view, setView] = useState<"board" | "list">("board");
   const [showCreate, setShowCreate] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
+  const [editingTask, setEditingTask] = useState<import("../../contexts/AdminContext").Task | null>(null);
+  const [savingTask, setSavingTask] = useState(false);
 
   // Manage-projects modal state
   const emptyProj = { name: "", clientId: "", description: "", serviceType: "OTHER", metadata: {} as Record<string, unknown> };
@@ -72,6 +74,17 @@ export default function AdminTasksPage() {
     playSuccessSound();
     toast.success("Task created");
     setShowCreate(false);
+  };
+
+  const submitEditTask = async (data: Parameters<typeof createTask>[0]) => {
+    if (!editingTask) return;
+    setSavingTask(true);
+    try {
+      await updateTask(editingTask.id, data);
+      setEditingTask(null);
+    } finally {
+      setSavingTask(false);
+    }
   };
 
   const createProject = async () => {
@@ -184,7 +197,7 @@ export default function AdminTasksPage() {
 
       {/* Board / list */}
       {filteredTasks.length > 0 ? (
-        <TaskBoard tasks={filteredTasks} onDelete={deleteTask} view={view} onChangeStatus={updateTaskStatus} />
+        <TaskBoard tasks={filteredTasks} onDelete={deleteTask} onEdit={setEditingTask} view={view} onChangeStatus={updateTaskStatus} />
       ) : (
         <EmptyState
           title={searchQuery || projectFilter !== "all" ? "No matching tasks" : "No tasks yet"}
@@ -220,6 +233,31 @@ export default function AdminTasksPage() {
           hideWorkerAssignment={isEraSphere}
           embedded
         />
+      </Modal>
+
+      {/* Edit task */}
+      <Modal isOpen={!!editingTask} onClose={() => setEditingTask(null)} title={editingTask ? `Edit: ${editingTask.title}` : undefined} maxWidth="2xl">
+        {editingTask && (
+          <TaskForm
+            key={editingTask.id}
+            onSubmit={submitEditTask}
+            clients={formClients}
+            workers={workers}
+            projects={projects}
+            onCreateProject={handleCreateProject}
+            hideWorkerAssignment={isEraSphere}
+            embedded
+            submitLabel={savingTask ? "Saving…" : "Save changes"}
+            initialValues={{
+              title: editingTask.title,
+              description: editingTask.description ?? "",
+              clientId: String(editingTask.clientId ?? ""),
+              workerIds: (editingTask.workers ?? []).map((tw) => tw.user.id),
+              dueDate: editingTask.dueDate ? editingTask.dueDate.slice(0, 10) : "",
+              projectId: editingTask.projectId ? String(editingTask.projectId) : "",
+            }}
+          />
+        )}
       </Modal>
 
       {/* Manage projects */}

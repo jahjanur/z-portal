@@ -12,7 +12,38 @@ const nodemailer_1 = __importDefault(require("nodemailer"));
 const notificationEngine_1 = require("../services/notificationEngine");
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const uploadsPath_1 = require("../lib/uploadsPath");
+const clientScope_1 = require("../lib/clientScope");
 const router = (0, express_1.Router)();
+/** Attach computed payment totals (amountPaid / remaining) from the payments list. */
+function attachPayments(inv) {
+    const total = Number(inv.amount ?? 0);
+    const amountPaid = (inv.payments ?? []).reduce((s, p) => s + Number(p.amount || 0), 0);
+    return { ...inv, amountPaid, remaining: Math.max(0, Math.round((total - amountPaid) * 100) / 100) };
+}
+/** Recompute an invoice's status from its payments (PAID when fully covered). */
+async function recomputeInvoiceStatus(invoiceId) {
+    const inv = await prisma_1.default.invoice.findUnique({
+        where: { id: invoiceId },
+        select: { amount: true, dueDate: true, payments: { select: { amount: true, paidAt: true } } },
+    });
+    if (!inv)
+        return;
+    const paid = inv.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+    const fullyPaid = paid >= Number(inv.amount || 0) - 0.001 && Number(inv.amount || 0) > 0;
+    let status;
+    let paidAt = null;
+    if (fullyPaid) {
+        status = "PAID";
+        paidAt = inv.payments.reduce((a, p) => (p.paidAt > a ? p.paidAt : a), inv.payments[0]?.paidAt ?? new Date());
+    }
+    else if (inv.dueDate && new Date(inv.dueDate) < new Date()) {
+        status = "OVERDUE";
+    }
+    else {
+        status = "PENDING";
+    }
+    await prisma_1.default.invoice.update({ where: { id: invoiceId }, data: { status, paidAt } });
+}
 const invoicesDir = path_1.default.join(uploadsPath_1.uploadsDir, "invoices");
 if (!fs_1.default.existsSync(invoicesDir)) {
     fs_1.default.mkdirSync(invoicesDir, { recursive: true });
@@ -68,11 +99,16 @@ router.get("/", auth_1.verifyJWT, async (req, res) => {
     try {
         const { role, userId } = req.user;
         let invoices;
+        // Optional ?clientId= filter (admin/EraSphere client detail page).
+        const clientIdQ = Number(req.query.clientId);
+        const filterClientId = Number.isInteger(clientIdQ) ? clientIdQ : null;
         if (role === "ADMIN") {
             invoices = await prisma_1.default.invoice.findMany({
+                where: filterClientId !== null ? { clientId: filterClientId } : undefined,
                 include: {
                     client: { select: clientSelectWithContact },
                     lineItems: { orderBy: { sortOrder: 'asc' } },
+                    payments: { orderBy: { paidAt: 'asc' } },
                 },
                 orderBy: { createdAt: 'desc' }
             });
@@ -88,16 +124,18 @@ router.get("/", auth_1.verifyJWT, async (req, res) => {
                 include: {
                     client: { select: clientSelectWithContact },
                     lineItems: { orderBy: { sortOrder: 'asc' } },
+                    payments: { orderBy: { paidAt: 'asc' } },
                 },
                 orderBy: { createdAt: 'desc' }
             });
         }
         else if (role === "CLIENT") {
             invoices = await prisma_1.default.invoice.findMany({
-                where: { clientId: userId },
+                where: { clientId: (0, clientScope_1.clientScopeId)(req.user) },
                 include: {
                     client: { select: clientSelectWithContact },
                     lineItems: { orderBy: { sortOrder: 'asc' } },
+                    payments: { orderBy: { paidAt: 'asc' } },
                 },
                 orderBy: { createdAt: 'desc' }
             });
@@ -107,12 +145,16 @@ router.get("/", auth_1.verifyJWT, async (req, res) => {
                 where: { referredById: userId, role: "CLIENT" },
                 select: { id: true },
             }).then((users) => users.map((u) => u.id));
-            invoices = referredClientIds.length
+            const scopedIds = filterClientId !== null
+                ? referredClientIds.filter((cid) => cid === filterClientId)
+                : referredClientIds;
+            invoices = scopedIds.length
                 ? await prisma_1.default.invoice.findMany({
-                    where: { clientId: { in: referredClientIds } },
+                    where: { clientId: { in: scopedIds } },
                     include: {
                         client: { select: clientSelectWithContact },
                         lineItems: { orderBy: { sortOrder: 'asc' } },
+                        payments: { orderBy: { paidAt: 'asc' } },
                     },
                     orderBy: { createdAt: 'desc' },
                 })
@@ -121,7 +163,7 @@ router.get("/", auth_1.verifyJWT, async (req, res) => {
         else {
             return res.status(403).json({ error: "Invalid role" });
         }
-        res.json(invoices);
+        res.json(invoices.map(attachPayments));
     }
     catch (err) {
         console.error("Fetching invoices failed:", err);
@@ -133,11 +175,15 @@ router.get("/:id", auth_1.verifyJWT, async (req, res) => {
     try {
         const { role, userId } = req.user;
         const invoiceId = Number(req.params.id);
+        if (!Number.isInteger(invoiceId)) {
+            return res.status(400).json({ error: "Invalid invoice ID" });
+        }
         const invoice = await prisma_1.default.invoice.findUnique({
             where: { id: invoiceId },
             include: {
                 client: { select: clientSelectWithContact },
                 lineItems: { orderBy: { sortOrder: 'asc' } },
+                payments: { orderBy: { paidAt: 'asc' } },
             }
         });
         if (!invoice) {
@@ -154,10 +200,20 @@ router.get("/:id", auth_1.verifyJWT, async (req, res) => {
                 return res.status(403).json({ error: "Not authorized to view this invoice" });
             }
         }
-        else if (role === "CLIENT" && invoice.clientId !== userId) {
+        else if (role === "CLIENT" && invoice.clientId !== (0, clientScope_1.clientScopeId)(req.user)) {
             return res.status(403).json({ error: "Not authorized to view this invoice" });
         }
-        res.json(invoice);
+        else if (role === "ERASPHERE") {
+            // Partners may only view invoices of clients they referred.
+            const referred = await prisma_1.default.user.findMany({
+                where: { referredById: userId, role: "CLIENT" },
+                select: { id: true },
+            });
+            if (!referred.some((c) => c.id === invoice.clientId)) {
+                return res.status(403).json({ error: "Not authorized to view this invoice" });
+            }
+        }
+        res.json(attachPayments(invoice));
     }
     catch (err) {
         console.error("Fetching invoice failed:", err);
@@ -220,6 +276,7 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
             include: {
                 client: { select: clientSelectWithContact },
                 lineItems: { orderBy: { sortOrder: 'asc' } },
+                payments: { orderBy: { paidAt: 'asc' } },
             }
         });
         if (hasLineItems) {
@@ -239,11 +296,12 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
             include: {
                 client: { select: clientSelectWithContact },
                 lineItems: { orderBy: { sortOrder: 'asc' } },
+                payments: { orderBy: { paidAt: 'asc' } },
             }
         });
         await (0, notificationEngine_1.emit)(notificationEngine_1.EventType.INVOICE_CREATED, {
             title: "New Invoice",
-            message: `Invoice ${invoiceNumber} for ${totalAmount.toFixed(2)} € has been created`,
+            message: `Invoice ${invoiceNumber} for $${totalAmount.toFixed(2)} has been created`,
             link: "/dashboard",
             invoiceId: invoice.id,
             clientId: Number(clientId),
@@ -295,7 +353,7 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
                 console.error("❌ Error sending payment request email:", emailError);
             }
         }
-        res.status(201).json(invoiceWithLines ?? invoice);
+        res.status(201).json(attachPayments(invoiceWithLines ?? invoice));
     }
     catch (err) {
         console.error("Invoice creation failed:", err);
@@ -314,6 +372,7 @@ router.post("/:id/request-payment", auth_1.verifyJWT, async (req, res) => {
             include: {
                 client: { select: clientSelectWithContact },
                 lineItems: { orderBy: { sortOrder: 'asc' } },
+                payments: { orderBy: { paidAt: 'asc' } },
             }
         });
         if (!invoice) {
@@ -440,6 +499,7 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
             include: {
                 client: { select: clientSelectWithContact },
                 lineItems: { orderBy: { sortOrder: 'asc' } },
+                payments: { orderBy: { paidAt: 'asc' } },
             }
         });
         if (hasLineItems) {
@@ -460,18 +520,19 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
             include: {
                 client: { select: clientSelectWithContact },
                 lineItems: { orderBy: { sortOrder: 'asc' } },
+                payments: { orderBy: { paidAt: 'asc' } },
             }
         });
         if (status === "PAID" && existingInvoice.status !== "PAID") {
             await (0, notificationEngine_1.emit)(notificationEngine_1.EventType.INVOICE_PAID, {
                 title: "Invoice Paid",
-                message: `Invoice ${result.invoiceNumber} (${result.amount.toFixed(2)} €) has been marked as paid`,
+                message: `Invoice ${result.invoiceNumber} ($${result.amount.toFixed(2)}) has been marked as paid`,
                 link: "/dashboard",
                 invoiceId: result.id,
                 clientId: result.clientId,
             });
         }
-        res.json(result ?? updatedInvoice);
+        res.json(attachPayments(result ?? updatedInvoice));
     }
     catch (err) {
         console.error("Invoice update failed:", err);
@@ -504,6 +565,65 @@ router.delete("/:id", auth_1.verifyJWT, async (req, res) => {
     catch (err) {
         console.error("Invoice deletion failed:", err);
         res.status(500).json({ error: "Failed to delete invoice" });
+    }
+});
+// ---- Payments (admin records partial payments against an invoice) ----
+// POST /invoices/:id/payments — record a payment
+router.post("/:id/payments", auth_1.verifyJWT, async (req, res) => {
+    try {
+        if (req.user.role !== "ADMIN")
+            return res.status(403).json({ error: "Only admins can record payments" });
+        const invoiceId = Number(req.params.id);
+        if (!Number.isInteger(invoiceId))
+            return res.status(400).json({ error: "Invalid invoice ID" });
+        const amount = Number(req.body.amount);
+        if (!Number.isFinite(amount) || amount <= 0)
+            return res.status(400).json({ error: "A positive amount is required" });
+        const invoice = await prisma_1.default.invoice.findUnique({ where: { id: invoiceId }, select: { id: true } });
+        if (!invoice)
+            return res.status(404).json({ error: "Invoice not found" });
+        const paidAt = req.body.paidAt ? new Date(req.body.paidAt) : new Date();
+        await prisma_1.default.payment.create({
+            data: {
+                invoiceId,
+                amount: Math.round(amount * 100) / 100,
+                paidAt: isNaN(paidAt.getTime()) ? new Date() : paidAt,
+                note: req.body.note ? String(req.body.note).slice(0, 300) : null,
+            },
+        });
+        await recomputeInvoiceStatus(invoiceId);
+        const updated = await prisma_1.default.invoice.findUnique({
+            where: { id: invoiceId },
+            include: { client: { select: clientSelectWithContact }, lineItems: { orderBy: { sortOrder: "asc" } }, payments: { orderBy: { paidAt: "asc" } } },
+        });
+        res.status(201).json(attachPayments(updated));
+    }
+    catch (err) {
+        console.error("Error recording payment:", err);
+        res.status(500).json({ error: "Failed to record payment" });
+    }
+});
+// DELETE /invoices/:id/payments/:paymentId — remove a payment
+router.delete("/:id/payments/:paymentId", auth_1.verifyJWT, async (req, res) => {
+    try {
+        if (req.user.role !== "ADMIN")
+            return res.status(403).json({ error: "Only admins can edit payments" });
+        const invoiceId = Number(req.params.id);
+        const paymentId = Number(req.params.paymentId);
+        const payment = await prisma_1.default.payment.findFirst({ where: { id: paymentId, invoiceId } });
+        if (!payment)
+            return res.status(404).json({ error: "Payment not found" });
+        await prisma_1.default.payment.delete({ where: { id: paymentId } });
+        await recomputeInvoiceStatus(invoiceId);
+        const updated = await prisma_1.default.invoice.findUnique({
+            where: { id: invoiceId },
+            include: { client: { select: clientSelectWithContact }, lineItems: { orderBy: { sortOrder: "asc" } }, payments: { orderBy: { paidAt: "asc" } } },
+        });
+        res.json(attachPayments(updated));
+    }
+    catch (err) {
+        console.error("Error deleting payment:", err);
+        res.status(500).json({ error: "Failed to delete payment" });
     }
 });
 exports.default = router;

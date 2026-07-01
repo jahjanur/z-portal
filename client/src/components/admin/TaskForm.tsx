@@ -43,6 +43,9 @@ interface TaskFormProps {
   hideWorkerAssignment?: boolean;
   /** When true, render without the outer card/title (e.g. inside a modal). */
   embedded?: boolean;
+  /** Prefill for edit mode. */
+  initialValues?: { title: string; description: string; clientId: string; workerIds: number[]; dueDate: string; projectId: string };
+  submitLabel?: string;
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({
@@ -53,15 +56,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
   onCreateProject,
   hideWorkerAssignment = false,
   embedded = false,
+  initialValues,
+  submitLabel,
 }) => {
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    clientId: "",
-    workerIds: [] as number[],
-    dueDate: "",
-    projectId: "",
-  });
+  const [formData, setFormData] = useState(
+    initialValues ?? {
+      title: "",
+      description: "",
+      clientId: "",
+      workerIds: [] as number[],
+      dueDate: "",
+      projectId: "",
+    }
+  );
 
   const [showProjectForm, setShowProjectForm] = useState(false);
   const emptyProject = {
@@ -79,7 +86,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       return;
     }
     onSubmit(formData);
-    setFormData({ title: "", description: "", clientId: "", workerIds: [], dueDate: "", projectId: "" });
+    if (!initialValues) setFormData({ title: "", description: "", clientId: "", workerIds: [], dueDate: "", projectId: "" });
   };
 
   const handleCreateProject = async () => {
@@ -285,7 +292,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       </div>
       <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button type="button" variant="primary" onClick={handleSubmit} className="w-full sm:w-auto">
-          Add Task
+          {submitLabel ?? "Add Task"}
         </Button>
       </div>
     </div>
