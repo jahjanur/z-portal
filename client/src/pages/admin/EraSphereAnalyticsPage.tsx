@@ -36,6 +36,7 @@ interface ProjectSummary {
 interface InvoiceSummary {
   id: number;
   amount: number;
+  currency?: string;
   status: string;
   clientId: number;
   createdAt: string;
@@ -52,6 +53,7 @@ interface Stats {
   totalRevenue: number;
   paidRevenue: number;
   pendingRevenue: number;
+  currency?: string;
 }
 
 interface AnalyticsData {
@@ -62,8 +64,12 @@ interface AnalyticsData {
   stats: Stats;
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "EUR" }).format(amount);
+function formatCurrency(amount: number, currency = "USD"): string {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount ?? 0);
+  } catch {
+    return `${(amount ?? 0).toFixed(2)} ${currency}`;
+  }
 }
 
 export default function EraSphereAnalyticsPage() {
@@ -138,18 +144,18 @@ export default function EraSphereAnalyticsPage() {
         />
         <StatCard
           label="Total Revenue"
-          value={formatCurrency(stats.totalRevenue)}
+          value={formatCurrency(stats.totalRevenue, stats.currency)}
           tone="success"
           icon={<CircleDollarSign className="h-5 w-5" />}
         />
         <StatCard
           label="Paid"
-          value={formatCurrency(stats.paidRevenue)}
+          value={formatCurrency(stats.paidRevenue, stats.currency)}
           tone={stats.pendingRevenue > 0 ? "warning" : "success"}
           icon={<CheckCircle2 className="h-5 w-5" />}
           hint={
             <span className="font-medium text-[var(--color-warning-text)]">
-              {formatCurrency(stats.pendingRevenue)} pending
+              {formatCurrency(stats.pendingRevenue, stats.currency)} pending
             </span>
           }
         />
@@ -258,7 +264,7 @@ export default function EraSphereAnalyticsPage() {
                   {recentInvoices.map((inv) => (
                     <tr key={inv.id}>
                       <td className="text-[var(--color-text-primary)]">{inv.invoiceNumber}</td>
-                      <td className="font-medium text-[var(--color-text-primary)]">{formatCurrency(inv.amount)}</td>
+                      <td className="font-medium text-[var(--color-text-primary)]">{formatCurrency(inv.amount, inv.currency)}</td>
                       <td>
                         <StatusBadge status={inv.status} />
                       </td>

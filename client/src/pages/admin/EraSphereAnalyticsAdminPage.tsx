@@ -52,11 +52,13 @@ interface Stats {
   totalRevenue: number;
   paidRevenue: number;
   pendingRevenue: number;
+  currency?: string;
 }
 
 interface InvoiceItem {
   id: number;
   amount: number;
+  currency?: string;
   status: string;
   clientId: number;
   createdAt: string;
@@ -73,8 +75,12 @@ interface AnalyticsData {
   stats: Stats;
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "EUR" }).format(amount);
+function formatCurrency(amount: number, currency = "USD"): string {
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount ?? 0);
+  } catch {
+    return `${(amount ?? 0).toFixed(2)} ${currency}`;
+  }
 }
 
 function StatusBar({ items, colorMap }: { items: { label: string; count: number }[]; colorMap: Record<string, string> }) {
@@ -236,7 +242,7 @@ export default function EraSphereAnalyticsAdminPage() {
         />
         <StatCard
           label="Total Revenue"
-          value={formatCurrency(stats.totalRevenue)}
+          value={formatCurrency(stats.totalRevenue, stats.currency)}
           tone="success"
           icon={<CircleDollarSign className="h-5 w-5" />}
           hint={
@@ -245,7 +251,7 @@ export default function EraSphereAnalyticsAdminPage() {
         />
         <StatCard
           label="Avg / Client"
-          value={formatCurrency(avgRevenuePerClient)}
+          value={formatCurrency(avgRevenuePerClient, stats.currency)}
           tone="neutral"
           icon={<TrendingUp className="h-5 w-5" />}
           hint="revenue per client"
@@ -285,7 +291,7 @@ export default function EraSphereAnalyticsAdminPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-[var(--color-text-secondary)]">Total Revenue</span>
-              <span className="text-sm font-bold text-[var(--color-text-primary)]">{formatCurrency(stats.totalRevenue)}</span>
+              <span className="text-sm font-bold text-[var(--color-text-primary)]">{formatCurrency(stats.totalRevenue, stats.currency)}</span>
             </div>
             <div className="h-px bg-[var(--color-border)]" />
             <div className="flex items-center justify-between">
@@ -293,14 +299,14 @@ export default function EraSphereAnalyticsAdminPage() {
                 <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-success-text)]" />
                 <span className="text-sm text-[var(--color-text-secondary)]">Paid</span>
               </div>
-              <span className="text-sm font-semibold text-[var(--color-success-text)]">{formatCurrency(stats.paidRevenue)}</span>
+              <span className="text-sm font-semibold text-[var(--color-success-text)]">{formatCurrency(stats.paidRevenue, stats.currency)}</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="inline-block h-2.5 w-2.5 rounded-full bg-[var(--color-warning-text)]" />
                 <span className="text-sm text-[var(--color-text-secondary)]">Pending</span>
               </div>
-              <span className="text-sm font-semibold text-[var(--color-warning-text)]">{formatCurrency(stats.pendingRevenue)}</span>
+              <span className="text-sm font-semibold text-[var(--color-warning-text)]">{formatCurrency(stats.pendingRevenue, stats.currency)}</span>
             </div>
             <div className="h-px bg-[var(--color-border)]" />
             <div className="flex items-center justify-between">
@@ -472,7 +478,7 @@ export default function EraSphereAnalyticsAdminPage() {
                     <tr key={inv.id}>
                       <td className="font-medium text-[var(--color-text-primary)]">{inv.invoiceNumber}</td>
                       <td className="text-[var(--color-text-secondary)]">{client?.name || `#${inv.clientId}`}</td>
-                      <td className="text-right font-semibold text-[var(--color-text-primary)]">{formatCurrency(inv.amount)}</td>
+                      <td className="text-right font-semibold text-[var(--color-text-primary)]">{formatCurrency(inv.amount, inv.currency)}</td>
                       <td>
                         <StatusBadge status={inv.status} />
                       </td>
