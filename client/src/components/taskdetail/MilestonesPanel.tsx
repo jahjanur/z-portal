@@ -1,10 +1,20 @@
 import React, { useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, Github, Rocket, Pencil, RotateCcw } from "lucide-react";
+import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, Github, Rocket, Pencil, RotateCcw, Paperclip, FileText } from "lucide-react";
 import API, { getFileUrl } from "../../api";
 import Modal from "../ui/Modal";
 import ProgressBar from "../ui/ProgressBar";
-import { type Milestone, milestoneProgress, milestoneImages } from "../../utils/milestones";
+import { type Milestone, milestoneProgress, milestoneImages, milestoneDocs, fileExt } from "../../utils/milestones";
+
+/** Images plus common document types the pickers accept. */
+const ATTACH_ACCEPT =
+  "image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.odt,.ods,.odp,.zip";
+
+/** Short label for a stored document URL, e.g. "PDF" / "DOCX" / "FILE". */
+function docLabel(url: string): string {
+  const ext = fileExt(url);
+  return ext ? ext.toUpperCase() : "FILE";
+}
 
 interface Props {
   taskId: number;
@@ -99,6 +109,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
         <ul className="space-y-2">
           {list.map((m) => {
             const imgs = milestoneImages(m);
+            const docs = milestoneDocs(m);
             return (
               <li
                 key={m.id}
@@ -116,7 +127,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
                   <Check className="h-3 w-3" strokeWidth={3} />
                 </span>
 
-                {imgs[0] && (
+                {imgs[0] ? (
                   <span className="relative shrink-0">
                     <img src={getFileUrl(imgs[0])} alt="" className="h-10 w-10 rounded-lg border border-[var(--color-border)] object-cover" />
                     {imgs.length > 1 && (
@@ -125,7 +136,16 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
                       </span>
                     )}
                   </span>
-                )}
+                ) : docs.length > 0 ? (
+                  <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]">
+                    <FileText className="h-5 w-5" />
+                    {docs.length > 1 && (
+                      <span className="absolute -bottom-1 -right-1 rounded-full bg-[var(--color-panel-solid)] px-1 text-[9px] font-bold text-[var(--color-text-secondary)] ring-1 ring-[var(--color-border)]">
+                        {docs.length}
+                      </span>
+                    )}
+                  </span>
+                ) : null}
 
                 <div className="min-w-0 flex-1">
                   <p className={`truncate text-sm font-semibold ${m.isDone ? "text-[var(--color-text-muted)] line-through" : "text-[var(--color-text-primary)]"}`}>
@@ -164,29 +184,39 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
           />
           {images.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {images.map((f, i) => (
-                <span key={i} className="relative h-14 w-14">
-                  <img src={URL.createObjectURL(f)} alt="" className="h-14 w-14 rounded-lg border border-[var(--color-border)] object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-panel-solid)] text-[var(--color-text-muted)] ring-1 ring-[var(--color-border)] hover:text-[var(--color-destructive-text)]"
-                    aria-label="Remove image"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
+              {images.map((f, i) => {
+                const isImg = f.type.startsWith("image/");
+                return (
+                  <span key={i} className="relative">
+                    {isImg ? (
+                      <img src={URL.createObjectURL(f)} alt="" className="h-14 w-14 rounded-lg border border-[var(--color-border)] object-cover" />
+                    ) : (
+                      <span className="flex h-14 min-w-[3.5rem] max-w-[8rem] flex-col items-center justify-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 text-[var(--color-text-secondary)]">
+                        <FileText className="h-4 w-4 shrink-0" />
+                        <span className="w-full truncate text-center text-[10px] font-medium" title={f.name}>{f.name}</span>
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-panel-solid)] text-[var(--color-text-muted)] ring-1 ring-[var(--color-border)] hover:text-[var(--color-destructive-text)]"
+                      aria-label="Remove file"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                );
+              })}
             </div>
           )}
           <div className="flex items-center justify-between gap-2">
-            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => setImages((prev) => [...prev, ...Array.from(e.target.files || [])])} />
+            <input ref={fileRef} type="file" accept={ATTACH_ACCEPT} multiple className="hidden" onChange={(e) => setImages((prev) => [...prev, ...Array.from(e.target.files || [])])} />
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)]"
             >
-              <ImagePlus className="h-3.5 w-3.5" /> Add images
+              <Paperclip className="h-3.5 w-3.5" /> Add files
             </button>
             <div className="flex items-center gap-2">
               <button type="button" onClick={resetForm} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">Cancel</button>
@@ -243,6 +273,7 @@ function TodoDetailModal({
   onChanged: () => void;
 }) {
   const imgs = milestoneImages(milestone);
+  const docs = milestoneDocs(milestone);
   const [lightbox, setLightbox] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const addRef = useRef<HTMLInputElement>(null);
@@ -448,7 +479,7 @@ function TodoDetailModal({
           </div>
         )}
 
-        {/* images */}
+        {/* attachments: images + documents */}
         <div>
           <div className="mb-2.5 flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
@@ -456,14 +487,14 @@ function TodoDetailModal({
             </p>
             {canEdit && (
               <>
-                <input ref={addRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => addImages(Array.from(e.target.files || []))} />
+                <input ref={addRef} type="file" accept={ATTACH_ACCEPT} multiple className="hidden" onChange={(e) => addImages(Array.from(e.target.files || []))} />
                 <button
                   type="button"
                   onClick={() => addRef.current?.click()}
                   disabled={uploading}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] disabled:opacity-50"
                 >
-                  <ImagePlus className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Add"}
+                  <Paperclip className="h-3.5 w-3.5" /> {uploading ? "Uploading…" : "Add files"}
                 </button>
               </>
             )}
@@ -503,16 +534,53 @@ function TodoDetailModal({
                 </button>
               )}
             </div>
-          ) : (
+          ) : docs.length === 0 ? (
             <button
               type="button"
               onClick={() => canEdit && addRef.current?.click()}
               disabled={!canEdit || uploading}
               className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--color-border-hover)] py-8 text-[var(--color-text-muted)] transition ${canEdit ? "hover:border-[var(--color-focus-ring)] hover:text-[var(--color-text-secondary)]" : "cursor-default"}`}
             >
-              <ImagePlus className="h-6 w-6" />
-              <span className="text-sm font-medium">{canEdit ? "Add images to this to-do" : "No images"}</span>
+              <Paperclip className="h-6 w-6" />
+              <span className="text-sm font-medium">{canEdit ? "Add images or documents" : "No attachments"}</span>
             </button>
+          ) : null}
+
+          {/* documents */}
+          {docs.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2.5 text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+                Documents · {docs.length}
+              </p>
+              <ul className="space-y-2">
+                {docs.map((url) => (
+                  <li key={url} className="group flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2.5">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-3)] text-[var(--color-text-secondary)]">
+                      <FileText className="h-4 w-4" />
+                    </span>
+                    <a
+                      href={getFileUrl(url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="min-w-0 flex-1"
+                    >
+                      <p className="truncate text-sm font-semibold text-[var(--color-text-primary)] group-hover:underline">{docLabel(url)} document</p>
+                      <p className="text-xs text-[var(--color-text-muted)]">Click to open · download</p>
+                    </a>
+                    {canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => removeImage(url)}
+                        aria-label="Remove document"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--color-text-muted)] transition hover:bg-[var(--color-destructive-bg)] hover:text-[var(--color-destructive-text)]"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
 
