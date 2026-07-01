@@ -4,6 +4,7 @@ import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, ChevronLeft, Git
 import API, { getFileUrl } from "../../api";
 import Modal from "../ui/Modal";
 import ProgressBar from "../ui/ProgressBar";
+import { useFileDrop } from "../../hooks/useFileDrop";
 import { type Milestone, milestoneProgress, milestoneImages, milestoneDocs, fileExt } from "../../utils/milestones";
 
 /** Images plus common document types the pickers accept. */
@@ -37,6 +38,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const { dragging: createDragging, dropHandlers: createDrop } = useFileDrop((files) => setImages((prev) => [...prev, ...files]));
 
   const open = openId != null ? list.find((m) => m.id === openId) ?? null : null;
 
@@ -165,7 +167,13 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
       )}
 
       {adding ? (
-        <div className="mt-3 space-y-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3">
+        <div
+          {...createDrop}
+          className={`mt-3 space-y-2 rounded-xl border bg-[var(--color-surface-1)] p-3 transition ${createDragging ? "border-[var(--color-focus-ring)] ring-2 ring-[var(--color-focus-ring)]/40" : "border-[var(--color-border)]"}`}
+        >
+          {createDragging && (
+            <p className="rounded-lg border border-dashed border-[var(--color-focus-ring)] bg-[var(--color-focus-ring)]/5 py-2 text-center text-xs font-semibold text-[var(--color-text-secondary)]">Drop files to attach</p>
+          )}
           <input
             autoFocus
             value={title}
@@ -361,6 +369,8 @@ function TodoDetailModal({
     }
   };
 
+  const { dragging: attachDragging, dropHandlers: attachDrop } = useFileDrop((files) => canEdit && addImages(files), { disabled: !canEdit });
+
   const removeImage = async (url: string) => {
     try {
       await API.delete(`/tasks/${taskId}/milestones/${milestone.id}/images`, { data: { url } });
@@ -498,8 +508,11 @@ function TodoDetailModal({
           </div>
         )}
 
-        {/* attachments: images + documents */}
-        <div>
+        {/* attachments: images + documents (drag & drop enabled) */}
+        <div {...attachDrop} className={`rounded-xl transition ${attachDragging ? "ring-2 ring-[var(--color-focus-ring)]/50" : ""}`}>
+          {attachDragging && (
+            <p className="mb-2.5 rounded-lg border border-dashed border-[var(--color-focus-ring)] bg-[var(--color-focus-ring)]/5 py-2 text-center text-xs font-semibold text-[var(--color-text-secondary)]">Drop images or documents to attach</p>
+          )}
           <div className="mb-2.5 flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
               Images{imgs.length > 0 ? ` · ${imgs.length}` : ""}

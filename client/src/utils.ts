@@ -147,6 +147,7 @@ export interface TrendInvoice {
   status?: string | null;
   createdAt: string;
   issueDate?: string | null;
+  dueDate?: string | null;
   payments?: { amount: number; paidAt: string }[];
 }
 
@@ -192,12 +193,24 @@ export function computeRevenueTrend(invoices: TrendInvoice[], range: "week" | "m
     }
   }
 
+  // Drop an amount into the bucket containing `time` (used for paid, which is a
+  // flow event on a real date; out-of-range payments are simply not shown).
   const add = (time: number, key: "paid" | "pending", amt: number) => {
     if (!Number.isFinite(time) || amt <= 0) return;
     const b = buckets.find((b) => time >= b.start && time <= b.end);
     if (b) b[key] += amt;
   };
+  // Like `add`, but clamps into the range — used for pending, which is a
+  // still-owed balance that must remain visible (in the current/most-recent
+  // period, or its future due month) rather than vanish after the issue month.
+  const addClamped = (time: number, key: "paid" | "pending", amt: number) => {
+    if (amt <= 0 || !buckets.length) return;
+    let b = buckets.find((b) => time >= b.start && time <= b.end);
+    if (!b) b = time < buckets[0].start ? buckets[0] : buckets[buckets.length - 1];
+    b[key] += amt;
+  };
 
+  const nowMs = now.getTime();
   for (const inv of invoices) {
     const cur = inv.currency;
     const payments = inv.payments ?? [];
@@ -210,7 +223,13 @@ export function computeRevenueTrend(invoices: TrendInvoice[], range: "week" | "m
       ? payments.reduce((s, p) => s + p.amount, 0)
       : ((inv.status ?? "").toUpperCase() === "PAID" ? inv.amount : 0);
     const remaining = Math.max(0, inv.amount - paidSum);
-    add(new Date(inv.issueDate || inv.createdAt).getTime(), "pending", toDisplay(remaining, cur));
+    // Outstanding stays pending until paid: show it at its due date if that's
+    // still upcoming, otherwise in the current period (never a past month).
+    if (remaining > 0) {
+      const due = new Date(inv.dueDate || inv.issueDate || inv.createdAt).getTime();
+      const target = Number.isFinite(due) && due > nowMs ? due : nowMs;
+      addClamped(target, "pending", toDisplay(remaining, cur));
+    }
   }
 
   const r = (n: number) => Math.round(n * 100) / 100;

@@ -11,6 +11,7 @@ import EmptyState from "../ui/EmptyState";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import { formatMoney } from "../../utils/currency";
+import { useFileDrop } from "../../hooks/useFileDrop";
 
 interface Invoice extends AdminInvoice {}
 
@@ -57,6 +58,10 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
   const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const isImageUrl = (url: string) => /\.(jpe?g|png|gif|webp|avif|bmp|heic|heif|svg)$/i.test(url.split("?")[0]);
   const isPdfUrl = (url: string) => /\.pdf$/i.test(url.split("?")[0]);
+
+  // Drag & drop for receipts (record form + edit form)
+  const { dragging: payDragging, dropHandlers: payDrop } = useFileDrop((files) => setPayReceipt(files[0] ?? null), { multiple: false });
+  const { dragging: ePayDragging, dropHandlers: ePayDrop } = useFileDrop((files) => { setEPayReceipt(files[0] ?? null); setEPayRemoveReceipt(false); }, { multiple: false });
 
   // Inline edit of the invoice's editable fields (right inside the detail view).
   const [editMode, setEditMode] = useState(false);
@@ -532,7 +537,10 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                       {(detailInvoice.payments ?? []).map((p) => (
                         <div key={p.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3">
                           {editingPaymentId === p.id ? (
-                            <div className="space-y-2.5">
+                            <div {...ePayDrop} className={`space-y-2.5 rounded-lg transition ${ePayDragging ? "ring-2 ring-[var(--color-focus-ring)]/50" : ""}`}>
+                              {ePayDragging && (
+                                <p className="rounded-lg border border-dashed border-[var(--color-focus-ring)] bg-[var(--color-focus-ring)]/5 py-1.5 text-center text-xs font-semibold text-[var(--color-text-secondary)]">Drop to replace receipt</p>
+                              )}
                               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                                 <div className="flex-1">
                                   <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Amount</label>
@@ -596,45 +604,48 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                   )}
 
                   {!fullyPaid && (
-                    <div className="mt-3 flex flex-col gap-2 border-t border-[var(--color-border)] pt-3 sm:flex-row sm:items-end">
-                      <div className="flex-1">
-                        <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Amount</label>
-                        <input type="number" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder={remaining.toFixed(2)} className="input-dark w-full px-3 py-2 text-sm" />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Date</label>
-                        <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className="input-dark w-full px-3 py-2 text-sm" />
-                      </div>
-                      <Button variant="primary" size="sm" onClick={recordPayment} loading={recording} disabled={!payAmount}>Record payment</Button>
-                    </div>
-                  )}
-                  {!fullyPaid && (
-                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                      <input type="text" value={payNote} onChange={(e) => setPayNote(e.target.value)} placeholder="Note (optional)" className="input-dark w-full px-3 py-2 text-sm sm:flex-1" />
-                      <input
-                        ref={receiptRef}
-                        type="file"
-                        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
-                        className="hidden"
-                        onChange={(e) => setPayReceipt(e.target.files?.[0] ?? null)}
-                      />
-                      {payReceipt ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs font-medium text-[var(--color-text-secondary)]">
-                          <FileText className="h-3.5 w-3.5 shrink-0" />
-                          <span className="max-w-[10rem] truncate" title={payReceipt.name}>{payReceipt.name}</span>
-                          <button type="button" onClick={() => { setPayReceipt(null); if (receiptRef.current) receiptRef.current.value = ""; }} aria-label="Remove receipt" className="text-[var(--color-text-muted)] hover:text-[var(--color-destructive-text)]">
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => receiptRef.current?.click()}
-                          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
-                        >
-                          <Paperclip className="h-3.5 w-3.5" /> Attach receipt
-                        </button>
+                    <div {...payDrop} className={`mt-3 rounded-xl border-t border-[var(--color-border)] pt-3 transition ${payDragging ? "ring-2 ring-[var(--color-focus-ring)]/50" : ""}`}>
+                      {payDragging && (
+                        <p className="mb-2 rounded-lg border border-dashed border-[var(--color-focus-ring)] bg-[var(--color-focus-ring)]/5 py-2 text-center text-xs font-semibold text-[var(--color-text-secondary)]">Drop a receipt to attach</p>
                       )}
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                        <div className="flex-1">
+                          <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Amount</label>
+                          <input type="number" min="0" step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder={remaining.toFixed(2)} className="input-dark w-full px-3 py-2 text-sm" />
+                        </div>
+                        <div>
+                          <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Date</label>
+                          <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className="input-dark w-full px-3 py-2 text-sm" />
+                        </div>
+                        <Button variant="primary" size="sm" onClick={recordPayment} loading={recording} disabled={!payAmount}>Record payment</Button>
+                      </div>
+                      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                        <input type="text" value={payNote} onChange={(e) => setPayNote(e.target.value)} placeholder="Note (optional)" className="input-dark w-full px-3 py-2 text-sm sm:flex-1" />
+                        <input
+                          ref={receiptRef}
+                          type="file"
+                          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                          className="hidden"
+                          onChange={(e) => setPayReceipt(e.target.files?.[0] ?? null)}
+                        />
+                        {payReceipt ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs font-medium text-[var(--color-text-secondary)]">
+                            <FileText className="h-3.5 w-3.5 shrink-0" />
+                            <span className="max-w-[10rem] truncate" title={payReceipt.name}>{payReceipt.name}</span>
+                            <button type="button" onClick={() => { setPayReceipt(null); if (receiptRef.current) receiptRef.current.value = ""; }} aria-label="Remove receipt" className="text-[var(--color-text-muted)] hover:text-[var(--color-destructive-text)]">
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => receiptRef.current?.click()}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                          >
+                            <Paperclip className="h-3.5 w-3.5" /> Attach receipt
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
