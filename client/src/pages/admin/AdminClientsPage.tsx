@@ -27,8 +27,17 @@ export default function AdminClientsPage() {
     completeClients,
     deleteUser,
     fetchAll,
+    sendPasswordReset,
   } = useAdmin();
   const [showCompletedProfiles, setShowCompletedProfiles] = useState(false);
+
+  const handleSendReset = async (id: number) => {
+    try {
+      await sendPasswordReset(id);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't send password reset");
+    }
+  };
   const isEraSphere = localStorage.getItem("role") === "ERASPHERE";
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -178,6 +187,7 @@ export default function AdminClientsPage() {
               <ListDisplay
                 items={displayComplete}
                 onDelete={deleteUser}
+                onSendReset={handleSendReset}
                 showProfileStatus
                 getProfileStatus={(c) => c.profileStatus}
                 renderItem={(c) => (

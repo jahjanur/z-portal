@@ -168,6 +168,7 @@ interface AdminContextValue {
     sslExpiry?: string;
   }) => void;
   resendInvite: (clientId: number) => Promise<void>;
+  sendPasswordReset: (userId: number) => Promise<void>;
   createTask: (data: { title: string; description: string; clientId: string; workerIds: number[]; dueDate: string; projectId: string }) => void;
   handleCreateProject: (data: { name: string; clientId: string; description: string; serviceType?: string; metadata?: Record<string, unknown> }) => Promise<void>;
   updateProject: (id: number, data: { name?: string; description?: string; status?: string; clientId?: string; serviceType?: string; metadata?: Record<string, unknown> }) => Promise<void>;
@@ -343,6 +344,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const resendInvite = async (clientId: number) => {
     await API.post(`/users/${clientId}/resend-invite`);
     toast.success("Invite sent successfully!");
+  };
+
+  const sendPasswordReset = async (userId: number) => {
+    const { data } = await API.post(`/users/${userId}/send-password-reset`);
+    toast.success(data?.message ?? "Password reset link sent");
   };
 
   const createTask = async (data: { title: string; description: string; clientId: string; workerIds: number[]; dueDate: string; projectId: string }) => {
@@ -562,6 +568,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     deleteUser,
     createClient,
     resendInvite,
+    sendPasswordReset,
     createTask,
     handleCreateProject,
     updateProject,

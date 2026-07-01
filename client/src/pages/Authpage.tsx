@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { login } from "../services/auth";
+import API from "../api";
 import Button from "../components/ui/Button";
 
 export default function AuthPage() {
@@ -10,6 +11,26 @@ export default function AuthPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // "Forgot password?" — request a reset link by email.
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState("");
+
+  const submitForgot = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setForgotMsg("");
+    setForgotLoading(true);
+    try {
+      await API.post("/auth/forgot-password", { email: forgotEmail || email });
+      setForgotMsg("If that email is registered, a reset link is on its way. Check your inbox.");
+    } catch {
+      setForgotMsg("If that email is registered, a reset link is on its way. Check your inbox.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -145,10 +166,42 @@ export default function AuthPage() {
                   </button>
                 </div>
               </div>
+              <div className="-mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setForgotOpen((v) => !v); setForgotEmail(email); setForgotMsg(""); }}
+                  className="text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-text-primary)]"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <Button type="submit" variant="primary" size="lg" loading={loading} className="mt-1 w-full">
                 {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
+
+            {forgotOpen && (
+              <div className="mt-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4 animate-fade-in">
+                <p className="mb-3 text-sm font-semibold text-[var(--color-text-primary)]">Reset your password</p>
+                <form onSubmit={submitForgot} className="flex flex-col gap-3">
+                  <input
+                    type="email"
+                    placeholder="you@company.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                    autoComplete="email"
+                    className="input-dark w-full px-4 py-2.5 text-sm"
+                  />
+                  <Button type="submit" variant="secondary" loading={forgotLoading} className="w-full">
+                    {forgotLoading ? "Sending…" : "Send reset link"}
+                  </Button>
+                </form>
+                {forgotMsg && (
+                  <p className="mt-3 text-sm font-medium text-[var(--color-success-text)]">{forgotMsg}</p>
+                )}
+              </div>
+            )}
 
             {message && (
               <div

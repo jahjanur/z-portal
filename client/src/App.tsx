@@ -4,6 +4,7 @@ import AuthPage from "./pages/Authpage";
 import Dashboard from "./pages/Dashboard";
 import HomePage from "./pages/Homepage";
 import CompleteProfile from "./pages/CompleteProfile";
+import ResetPassword from "./pages/ResetPassword";
 import InviteAcceptPage from "./pages/InviteAcceptPage";
 import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
@@ -49,6 +50,7 @@ function AppShell() {
   const isAuthScreen =
     pathname === "/login" ||
     pathname === "/complete-profile" ||
+    pathname === "/reset-password" ||
     pathname.startsWith("/invite");
 
   // Sidebar layouts render their own footer inside the content column (so it
@@ -221,6 +223,7 @@ function AppShell() {
             
             {/* Public routes - no authentication required */}
             <Route path="/complete-profile" element={<CompleteProfile />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/invite/accept" element={<InviteAcceptPage />} />
             
             {/* Unknown route → branded 404 page (mascot). "Back to home" routes by role. */}

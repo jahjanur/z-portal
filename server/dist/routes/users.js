@@ -17,6 +17,7 @@ const prisma_1 = __importDefault(require("../lib/prisma"));
 const uploadsPath_1 = require("../lib/uploadsPath");
 const clientScope_1 = require("../lib/clientScope");
 const workerProfile_1 = require("../constants/workerProfile");
+const auth_2 = require("./auth");
 const router = (0, express_1.Router)();
 const SALT_ROUNDS = 10;
 /** Sum of payments recorded against an invoice (partial-payment aware). */
@@ -418,6 +419,33 @@ router.post("/:id/resend-invite", auth_1.verifyJWT, auth_1.verifyAdmin, async (r
     catch (error) {
         console.error("Error resending invite:", error);
         res.status(500).json({ error: "Failed to resend invite" });
+    }
+});
+// POST /users/:id/send-password-reset — admin triggers a reset email for any
+// user (worker, client, EraSphere partner). The user gets a link to set a new
+// password; the admin never sees or sets it.
+router.post("/:id/send-password-reset", auth_1.verifyJWT, auth_1.verifyAdmin, async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (!Number.isInteger(id))
+            return res.status(400).json({ error: "Invalid user ID" });
+        const user = await prisma_1.default.user.findUnique({
+            where: { id },
+            select: { id: true, email: true, name: true },
+        });
+        if (!user)
+            return res.status(404).json({ error: "User not found" });
+        // 24h window — admins send these ahead of time and the user may not check
+        // their inbox immediately.
+        const sent = await (0, auth_2.issuePasswordReset)(user, { byAdmin: true, ttlHours: 24 });
+        if (!sent) {
+            return res.status(500).json({ error: "Email isn't configured on the server, so no reset link was sent." });
+        }
+        return res.json({ message: `Password reset link sent to ${user.email}` });
+    }
+    catch (error) {
+        console.error("Error sending password reset:", error);
+        return res.status(500).json({ error: "Failed to send password reset" });
     }
 });
 // get user by id (admin: any; EraSphere: only their referred clients)

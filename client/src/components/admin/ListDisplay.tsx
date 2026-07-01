@@ -7,6 +7,7 @@ interface ListDisplayProps<T extends { id: number }> {
   items: T[];
   onDelete: (id: number) => void;
   onResendInvite?: (id: number) => void;
+  onSendReset?: (id: number) => void;
   renderItem: (item: T) => React.ReactNode;
   showProfileStatus?: boolean;
   getProfileStatus?: (item: T) => string | null | undefined;
@@ -16,6 +17,7 @@ const ListDisplay = <T extends { id: number }>({
   items,
   onDelete,
   onResendInvite,
+  onSendReset,
   renderItem,
   showProfileStatus = false,
   getProfileStatus,
@@ -74,6 +76,16 @@ const ListDisplay = <T extends { id: number }>({
                   onClick={() => onResendInvite(item.id)}
                 >
                   Resend Invite
+                </Button>
+              )}
+              {onSendReset && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1 whitespace-nowrap sm:flex-none"
+                  onClick={() => onSendReset(item.id)}
+                >
+                  Reset password
                 </Button>
               )}
               <Button

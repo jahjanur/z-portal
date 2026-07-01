@@ -12,6 +12,7 @@ import prisma from "../lib/prisma";
 import { uploadsDir } from "../lib/uploadsPath";
 import { clientScopeId } from "../lib/clientScope";
 import { sanitizeNickname, sanitizeEmoji, sanitizeSkills } from "../constants/workerProfile";
+import { issuePasswordReset } from "./auth";
 
 const router = Router();
 const SALT_ROUNDS = 10;
@@ -439,6 +440,33 @@ router.post("/:id/resend-invite", verifyJWT, verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error resending invite:", error);
     res.status(500).json({ error: "Failed to resend invite" });
+  }
+});
+
+// POST /users/:id/send-password-reset — admin triggers a reset email for any
+// user (worker, client, EraSphere partner). The user gets a link to set a new
+// password; the admin never sees or sets it.
+router.post("/:id/send-password-reset", verifyJWT, verifyAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid user ID" });
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, name: true },
+    });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // 24h window — admins send these ahead of time and the user may not check
+    // their inbox immediately.
+    const sent = await issuePasswordReset(user, { byAdmin: true, ttlHours: 24 });
+    if (!sent) {
+      return res.status(500).json({ error: "Email isn't configured on the server, so no reset link was sent." });
+    }
+    return res.json({ message: `Password reset link sent to ${user.email}` });
+  } catch (error) {
+    console.error("Error sending password reset:", error);
+    return res.status(500).json({ error: "Failed to send password reset" });
   }
 });
 

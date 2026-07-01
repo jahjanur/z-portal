@@ -29,6 +29,8 @@ model User {
   profileStatus  String?            @default("INCOMPLETE")
   inviteToken    String?            @unique
   inviteExpires  DateTime?
+  resetToken     String?            @unique
+  resetExpires   DateTime?
   referredById   Int?
   referredBy     User?              @relation("ReferredClients", fields: [referredById], references: [id])
   referredClients User[]            @relation("ReferredClients")

@@ -21,7 +21,15 @@ interface InviteItem {
 }
 
 export default function AdminWorkersPage() {
-  const { workers, deleteUser, fetchAll } = useAdmin();
+  const { workers, deleteUser, fetchAll, sendPasswordReset } = useAdmin();
+
+  const handleSendReset = async (id: number) => {
+    try {
+      await sendPasswordReset(id);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? "Couldn't send password reset");
+    }
+  };
   const [invites, setInvites] = useState<InviteItem[]>([]);
   const [resendingIds, setResendingIds] = useState<Set<number>>(new Set());
   const formRef = useRef<HTMLDivElement>(null);
@@ -179,7 +187,7 @@ export default function AdminWorkersPage() {
         <h4 className="section-title">
           Active Workers <span className="ml-1 text-xs font-normal text-[var(--color-text-muted)]">({workers.length})</span>
         </h4>
-        <WorkersList workers={workers} onDelete={deleteUser} canDelete={true} />
+        <WorkersList workers={workers} onDelete={deleteUser} onSendReset={handleSendReset} canDelete={true} />
       </section>
     </div>
   );

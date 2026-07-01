@@ -15,10 +15,11 @@ interface User {
 interface WorkersListProps {
   workers: User[];
   onDelete: (id: number) => void;
+  onSendReset?: (id: number) => void;
   canDelete?: boolean;
 }
 
-const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete, canDelete = true }) => {
+const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete, onSendReset, canDelete = true }) => {
   if (workers.length === 0) {
     return (
       <EmptyState
@@ -56,17 +57,30 @@ const WorkersList: React.FC<WorkersListProps> = ({ workers, onDelete, canDelete 
               <SkillBadges skills={w.skills} max={5} className="mt-2" />
             </div>
           </div>
-          {canDelete && (
+          {(canDelete || onSendReset) && (
             <div className="flex w-full gap-2 sm:w-auto sm:shrink-0 sm:justify-end">
-              <Button
-                variant="danger"
-                size="sm"
-                className="flex-1 sm:flex-none"
-                onClick={() => onDelete(w.id)}
-                aria-label={`Delete worker: ${w.name}`}
-              >
-                Delete
-              </Button>
+              {onSendReset && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
+                  onClick={() => onSendReset(w.id)}
+                  aria-label={`Send password reset to ${w.name}`}
+                >
+                  Reset password
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
+                  onClick={() => onDelete(w.id)}
+                  aria-label={`Delete worker: ${w.name}`}
+                >
+                  Delete
+                </Button>
+              )}
             </div>
           )}
         </div>
