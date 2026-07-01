@@ -98,7 +98,9 @@ export const Modal: React.FC<ModalProps> = ({
         ) : (
           <div className="absolute top-2.5 right-3 z-10 sm:top-3">{closeButton}</div>
         )}
-        <div className="min-h-0 flex-1 overflow-y-auto p-5 safe-bottom sm:p-6">{children}</div>
+        {/* Bottom padding must include the safe-area inset WITHOUT dropping the
+            base padding (the old `safe-bottom` class zeroed it on desktop). */}
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:p-6 sm:pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">{children}</div>
       </div>
     </div>,
     document.body
