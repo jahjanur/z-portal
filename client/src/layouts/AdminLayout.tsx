@@ -34,7 +34,7 @@ function AdminLayoutInner() {
 export default function AdminLayout() {
   return (
     <AdminProvider>
-      <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden bg-transparent pt-16">
+      <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden bg-transparent pt-header">
         <main className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col overflow-x-hidden px-4 sm:px-6 lg:px-8">
           <AdminLayoutInner />
         </main>

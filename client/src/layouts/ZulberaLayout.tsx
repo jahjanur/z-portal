@@ -150,7 +150,7 @@ function ZulberaLayoutInner() {
 
   if (error) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center pt-16">
+      <div className="flex min-h-[60vh] items-center justify-center pt-header">
         <div className="max-w-md rounded-2xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] p-6">
           <p className="mb-2 font-semibold text-[var(--color-destructive-text)]">Something went wrong</p>
           <p className="text-sm text-[var(--color-destructive-text)]">{error}</p>
@@ -160,13 +160,13 @@ function ZulberaLayoutInner() {
   }
 
   return (
-    <div className="flex grow min-h-[calc(100vh-4rem)] pt-16">
+    <div className="flex grow min-h-[calc(100vh-4rem)] pt-header">
       {/* Sidebar: icon rail on tablet (md), full at lg+.
           The <aside> stretches to the full layout height (so its background +
           right border always reach the footer — no dead gap), while the inner
           wrapper is sticky so the nav stays pinned as the page scrolls. */}
       <aside className="app-sidebar hidden w-[72px] shrink-0 self-stretch min-h-[calc(100vh-4rem)] md:block lg:w-[252px]">
-        <div className="sticky top-16 flex max-h-[calc(100vh-4rem)] flex-col overflow-y-auto overflow-x-hidden">
+        <div className="sticky top-header flex max-h-[calc(100vh-4rem)] flex-col overflow-y-auto overflow-x-hidden">
         <nav className="space-y-4 px-3 pt-6" aria-label="Zulbera">
           {ZULBERA_NAV_SECTIONS.map((section) => (
             <div key={section.label} className="space-y-1">

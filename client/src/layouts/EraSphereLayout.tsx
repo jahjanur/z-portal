@@ -96,7 +96,7 @@ function EraSphereLayoutInner() {
 
   if (error) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center pt-16">
+      <div className="flex min-h-[60vh] items-center justify-center pt-header">
         <div className="max-w-md rounded-2xl border border-[var(--color-destructive-border)] bg-[var(--color-destructive-bg)] p-6">
           <p className="mb-2 font-semibold text-[var(--color-destructive-text)]">Something went wrong</p>
           <p className="text-sm text-[var(--color-destructive-text)]">{error}</p>
@@ -106,13 +106,13 @@ function EraSphereLayoutInner() {
   }
 
   return (
-    <div data-workspace="erasphere" className="flex grow min-h-[calc(100vh-4rem)] pt-16">
+    <div data-workspace="erasphere" className="flex grow min-h-[calc(100vh-4rem)] pt-header">
       {/* Sidebar: icon rail on tablet (md), full at lg+.
           <aside> stretches to the full layout height (background + right border
           reach the footer — no dead gap); inner wrapper is sticky so the nav
           stays pinned while scrolling. */}
       <aside className="app-sidebar hidden w-[72px] shrink-0 self-stretch min-h-[calc(100vh-4rem)] md:block lg:w-[252px]">
-        <div className="sticky top-16 flex max-h-[calc(100vh-4rem)] flex-col overflow-y-auto overflow-x-hidden">
+        <div className="sticky top-header flex max-h-[calc(100vh-4rem)] flex-col overflow-y-auto overflow-x-hidden">
         <nav className="space-y-1 px-3 pt-6" aria-label="EraSphere">
           <p className="nav-section-label mb-1 hidden lg:block">Navigation</p>
           {ERASPHERE_NAV.map(({ path, label, icon: Icon }) => (

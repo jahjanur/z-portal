@@ -531,7 +531,7 @@ export default function TaskConversation(p: any) {
       {/* Mobile: pin the whole chat to the real viewport with position:fixed (top-16 → bottom-0)
           so the composer is ALWAYS visible and never falls off-screen behind the browser
           toolbar — vh/dvh units are unreliable on mobile. Desktop keeps the centered layout. */}
-      <div ref={shellRef} className="fixed inset-x-0 bottom-0 top-16 z-20 flex flex-col px-3 lg:static lg:z-auto lg:mx-auto lg:h-[calc(100dvh-4rem)] lg:w-full lg:max-w-[1400px] lg:flex-row lg:gap-6 lg:px-4">
+      <div ref={shellRef} className="fixed inset-x-0 bottom-0 top-header z-20 flex flex-col px-3 lg:static lg:z-auto lg:mx-auto lg:h-[calc(100dvh-4rem)] lg:w-full lg:max-w-[1400px] lg:flex-row lg:gap-6 lg:px-4">
         {/* LEFT — task header + brand & assets + sibling tasks (desktop sidebar) */}
         <aside className="hidden shrink-0 flex-col gap-3 overflow-y-auto py-4 lg:flex lg:w-[380px]">
           <TaskHeaderCard task={task} p={p} />

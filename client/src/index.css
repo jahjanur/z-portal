@@ -619,6 +619,18 @@ form label {
 /* Safe-area padding for devices with notches */
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
 
+/* --- Safe-area for the fixed top navbar (PWA standalone: clears the status
+   bar / notch so the header, logo and menu don't sit under the clock). ---
+   --app-safe-top is the status-bar inset; --app-header-h is the navbar's full
+   height including it, so content offsets (pt/top) line up in one place. */
+:root {
+  --app-safe-top: env(safe-area-inset-top, 0px);
+  --app-header-h: calc(4rem + env(safe-area-inset-top, 0px));
+}
+.pt-header { padding-top: var(--app-header-h); }
+.top-header { top: var(--app-header-h); }
+.nav-safe-top { padding-top: var(--app-safe-top); }
+
 /* Comment highlight when opened from notification (glow for ~3s) */
 .comment-highlight-glow {
   animation: comment-glow 3s ease-out;
