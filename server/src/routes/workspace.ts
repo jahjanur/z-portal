@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { verifyJWT, verifyAdmin } from "../middleware/auth";
 import prisma from "../lib/prisma";
+import { getAppSettings } from "./settings";
+import { convert } from "../lib/currency";
 
 const router = Router();
 
@@ -100,14 +102,18 @@ router.get("/erasphere-overview", verifyJWT, verifyAdmin, async (_req, res) => {
       }),
       prisma.invoice.findMany({
         where: { clientId: { in: clientIds } },
-        select: { amount: true, status: true },
+        select: { amount: true, currency: true, status: true },
       }),
     ]);
 
-    const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-    const pendingRevenue = invoices
-      .filter((inv) => inv.status !== "PAID")
-      .reduce((sum, inv) => sum + inv.amount, 0);
+    const s = await getAppSettings();
+    const r = (n: number) => Math.round(n * 100) / 100;
+    const totalRevenue = r(invoices.reduce((sum, inv) => sum + convert(inv.amount, inv.currency || "USD", s.displayCurrency, s), 0));
+    const pendingRevenue = r(
+      invoices
+        .filter((inv) => inv.status !== "PAID")
+        .reduce((sum, inv) => sum + convert(inv.amount, inv.currency || "USD", s.displayCurrency, s), 0)
+    );
 
     return res.json({
       partners: partnerIds.length,
@@ -117,6 +123,7 @@ router.get("/erasphere-overview", verifyJWT, verifyAdmin, async (_req, res) => {
       totalTasks: activeTasks + completedTasks,
       totalRevenue,
       pendingRevenue,
+      currency: s.displayCurrency,
     });
   } catch (err) {
     console.error("EraSphere overview error:", err);

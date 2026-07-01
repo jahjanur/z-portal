@@ -1,11 +1,13 @@
 import React from "react";
 import StatusBadge from "../ui/StatusBadge";
 import ProgressBar from "../ui/ProgressBar";
+import { formatMoney } from "../../utils/currency";
 
 interface Invoice {
   id: number;
   invoiceNumber: string;
   amount: number;
+  currency?: string | null;
   dueDate?: string | null;
   status?: string | null;
   description?: string | null;
@@ -18,7 +20,8 @@ interface InvoiceCardProps {
   invoice: Invoice;
   /** Legacy prop — statuses now render via StatusBadge; kept for API compatibility */
   getStatusColor: (status?: string | null) => string;
-  formatCurrency: (amount: number) => string;
+  /** Legacy prop — each invoice now formats in its own currency; kept for API compatibility */
+  formatCurrency?: (amount: number) => string;
   formatDate: (date?: string | null) => string;
   getDaysUntilDue: (date?: string | null) => number | null;
   /** Legacy prop — superseded by design tokens; kept for API compatibility */
@@ -27,13 +30,13 @@ interface InvoiceCardProps {
 
 const InvoiceCard: React.FC<InvoiceCardProps> = ({
   invoice,
-  formatCurrency,
   formatDate,
   getDaysUntilDue,
 }) => {
   const daysUntil = getDaysUntilDue(invoice.dueDate);
   const isOverdue =
     daysUntil !== null && daysUntil < 0 && invoice.status?.toUpperCase() !== "PAID";
+  const money = (n: number) => formatMoney(n, invoice.currency);
 
   return (
     <div className="card-panel card-panel-hover p-5 sm:p-6">
@@ -79,7 +82,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
           </div>
         </div>
         <p className="shrink-0 text-2xl font-bold tabular-nums tracking-tight text-[var(--color-text-primary)] sm:text-right">
-          {formatCurrency(invoice.amount)}
+          {money(invoice.amount)}
         </p>
       </div>
 
@@ -96,13 +99,13 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
             <ProgressBar percent={isPaid ? 100 : pct} size="sm" />
             <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
               <span className="font-semibold text-[var(--color-success-text)]">
-                {formatCurrency(isPaid ? total : paid)} paid
+                {money(isPaid ? total : paid)} paid
               </span>
               {isPaid ? (
                 <span className="font-semibold text-[var(--color-success-text)]">Fully paid</span>
               ) : (
                 <span className="font-semibold text-[var(--color-text-primary)]">
-                  {formatCurrency(remaining)} left
+                  {money(remaining)} left
                 </span>
               )}
             </div>

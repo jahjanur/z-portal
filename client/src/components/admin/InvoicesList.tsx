@@ -10,6 +10,7 @@ import ProgressBar from "../ui/ProgressBar";
 import EmptyState from "../ui/EmptyState";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
+import { formatMoney } from "../../utils/currency";
 
 interface Invoice extends AdminInvoice {}
 
@@ -22,7 +23,7 @@ interface InvoicesListProps {
   colors: { primary: string };
 }
 
-const fmt = (n: number) => `$${(n ?? 0).toFixed(2)}`;
+const fmt = (n: number, currency?: string | null) => formatMoney(n ?? 0, currency);
 
 const InvoicesList: React.FC<InvoicesListProps> = ({
   invoices,
@@ -176,7 +177,7 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
 
                 <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
                   <span className="text-xl font-bold tabular-nums text-[var(--color-text-primary)]">
-                    ${inv.amount.toFixed(2)}
+                    {fmt(inv.amount, inv.currency)}
                   </span>
                   {(inv.issueDate || inv.createdAt) && (
                     <span className="text-xs text-[var(--color-text-muted)]">
@@ -198,17 +199,17 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                   <div className="mt-2 max-w-sm">
                     <ProgressBar percent={inv.amount > 0 ? ((inv.amountPaid ?? 0) / inv.amount) * 100 : 0} size="xs" />
                     <div className="mt-1 flex justify-between text-xs tabular-nums">
-                      <span className="font-semibold text-[var(--color-success-text)]">{fmt(inv.amountPaid ?? 0)} paid</span>
-                      <span className="font-semibold text-[var(--color-text-primary)]">{fmt(inv.remaining ?? (inv.amount - (inv.amountPaid ?? 0)))} left</span>
+                      <span className="font-semibold text-[var(--color-success-text)]">{fmt(inv.amountPaid ?? 0, inv.currency)} paid</span>
+                      <span className="font-semibold text-[var(--color-text-primary)]">{fmt(inv.remaining ?? (inv.amount - (inv.amountPaid ?? 0)), inv.currency)} left</span>
                     </div>
                   </div>
                 )}
 
                 {inv.lineItems && inv.lineItems.length > 0 && (inv.subtotal != null || inv.taxAmount != null) && (
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-[var(--color-text-muted)]">
-                    {inv.subtotal != null && <span>Subtotal: ${inv.subtotal.toFixed(2)}</span>}
-                    {inv.taxRate != null && inv.taxRate > 0 && <span>Tax ({inv.taxRate}%): ${(inv.taxAmount ?? 0).toFixed(2)}</span>}
-                    <span className="font-medium text-[var(--color-text-secondary)]">Total: ${inv.amount.toFixed(2)}</span>
+                    {inv.subtotal != null && <span>Subtotal: {fmt(inv.subtotal, inv.currency)}</span>}
+                    {inv.taxRate != null && inv.taxRate > 0 && <span>Tax ({inv.taxRate}%): {fmt(inv.taxAmount ?? 0, inv.currency)}</span>}
+                    <span className="font-medium text-[var(--color-text-secondary)]">Total: {fmt(inv.amount, inv.currency)}</span>
                   </div>
                 )}
 
@@ -425,8 +426,8 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                             {li.description && <p className="text-xs text-[var(--color-text-muted)]">{li.description}</p>}
                           </td>
                           <td className="text-right tabular-nums">{li.quantity}</td>
-                          <td className="text-right tabular-nums">${(li.unitPrice ?? 0).toFixed(2)}</td>
-                          <td className="text-right tabular-nums">${((li.quantity ?? 0) * (li.unitPrice ?? 0)).toFixed(2)}</td>
+                          <td className="text-right tabular-nums">{fmt(li.unitPrice ?? 0, detailInvoice.currency)}</td>
+                          <td className="text-right tabular-nums">{fmt((li.quantity ?? 0) * (li.unitPrice ?? 0), detailInvoice.currency)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -436,25 +437,25 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                   {detailInvoice.subtotal != null && (
                     <div className="flex w-48 justify-between text-sm tabular-nums">
                       <span className="text-[var(--color-text-muted)]">Subtotal</span>
-                      <span>${detailInvoice.subtotal.toFixed(2)}</span>
+                      <span>{fmt(detailInvoice.subtotal, detailInvoice.currency)}</span>
                     </div>
                   )}
                   {detailInvoice.taxRate != null && detailInvoice.taxRate > 0 && (
                     <div className="flex w-48 justify-between text-sm tabular-nums">
                       <span className="text-[var(--color-text-muted)]">Tax ({detailInvoice.taxRate}%)</span>
-                      <span>${(detailInvoice.taxAmount ?? 0).toFixed(2)}</span>
+                      <span>{fmt(detailInvoice.taxAmount ?? 0, detailInvoice.currency)}</span>
                     </div>
                   )}
                   <div className="flex w-48 justify-between border-t border-[var(--color-border)] pt-2 font-bold tabular-nums text-[var(--color-text-primary)]">
                     <span>Total</span>
-                    <span>${detailInvoice.amount.toFixed(2)}</span>
+                    <span>{fmt(detailInvoice.amount, detailInvoice.currency)}</span>
                   </div>
                 </div>
               </>
             ) : (
               <div className="card-panel flex justify-between rounded-xl p-4">
                 <span className="text-[var(--color-text-muted)]">{detailInvoice.description || "Invoice amount"}</span>
-                <span className="font-bold tabular-nums text-[var(--color-text-primary)]">${detailInvoice.amount.toFixed(2)}</span>
+                <span className="font-bold tabular-nums text-[var(--color-text-primary)]">{fmt(detailInvoice.amount, detailInvoice.currency)}</span>
               </div>
             )}
             {/* Payments — record partial payments and track what's left */}
@@ -472,15 +473,15 @@ const InvoicesList: React.FC<InvoicesListProps> = ({
                   </div>
                   <ProgressBar percent={fullyPaid ? 100 : pct} size="md" />
                   <div className="mt-2 flex justify-between text-sm tabular-nums">
-                    <span className="font-semibold text-[var(--color-success-text)]">{fmt(paid)} paid</span>
-                    <span className="font-semibold text-[var(--color-text-primary)]">{fullyPaid ? "Fully paid" : `${fmt(remaining)} left`} of {fmt(total)}</span>
+                    <span className="font-semibold text-[var(--color-success-text)]">{fmt(paid, detailInvoice.currency)} paid</span>
+                    <span className="font-semibold text-[var(--color-text-primary)]">{fullyPaid ? "Fully paid" : `${fmt(remaining, detailInvoice.currency)} left`} of {fmt(total, detailInvoice.currency)}</span>
                   </div>
 
                   {(detailInvoice.payments ?? []).length > 0 && (
                     <ul className="mt-3 space-y-1.5 border-t border-[var(--color-border)] pt-3">
                       {(detailInvoice.payments ?? []).map((p) => (
                         <li key={p.id} className="flex items-center justify-between gap-2 text-sm">
-                          <span className="tabular-nums font-medium text-[var(--color-text-primary)]">{fmt(p.amount)}</span>
+                          <span className="tabular-nums font-medium text-[var(--color-text-primary)]">{fmt(p.amount, detailInvoice.currency)}</span>
                           <span className="flex-1 truncate text-xs text-[var(--color-text-muted)]">{formatDate(p.paidAt)}{p.note ? ` · ${p.note}` : ""}</span>
                           {p.receiptUrl && (
                             <a

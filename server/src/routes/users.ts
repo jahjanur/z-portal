@@ -13,12 +13,34 @@ import { uploadsDir } from "../lib/uploadsPath";
 import { clientScopeId } from "../lib/clientScope";
 import { sanitizeNickname, sanitizeEmoji, sanitizeSkills } from "../constants/workerProfile";
 import { issuePasswordReset } from "./auth";
+import { getAppSettings } from "./settings";
+import { convert, type Rates } from "../lib/currency";
 
 const router = Router();
 const SALT_ROUNDS = 10;
 
 /** Sum of payments recorded against an invoice (partial-payment aware). */
 const paidOf = (inv: { payments: { amount: number }[] }) => inv.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+
+/** Revenue totals converted into a single display currency (each invoice may be
+ *  in a different currency). */
+function revenueTotals(
+  invoices: { amount: number; currency?: string | null; payments: { amount: number }[] }[],
+  display: string,
+  rates: Rates
+) {
+  let total = 0, paid = 0, pending = 0;
+  for (const inv of invoices) {
+    const cur = inv.currency || "USD";
+    const amt = convert(inv.amount, cur, display, rates);
+    const p = convert(paidOf(inv), cur, display, rates);
+    total += amt;
+    paid += p;
+    pending += Math.max(0, amt - p);
+  }
+  const r = (n: number) => Math.round(n * 100) / 100;
+  return { totalRevenue: r(total), paidRevenue: r(paid), pendingRevenue: r(pending) };
+}
 
 const filesDir = path.join(uploadsDir, "files");
 if (!fs.existsSync(filesDir)) {
@@ -255,14 +277,12 @@ router.get("/erasphere/admin-analytics", verifyJWT, verifyAdmin, async (req: any
       }),
       prisma.invoice.findMany({
         where: { clientId: { in: clientIds } },
-        select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
+        select: { id: true, amount: true, currency: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
       }),
     ]);
 
-    const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-    const paidRevenue = invoices.reduce((sum, inv) => sum + paidOf(inv), 0);
-    // Outstanding = what's still owed across all invoices (partial-payment aware).
-    const pendingRevenue = invoices.reduce((sum, inv) => sum + Math.max(0, inv.amount - paidOf(inv)), 0);
+    const settings = await getAppSettings();
+    const { totalRevenue, paidRevenue, pendingRevenue } = revenueTotals(invoices, settings.displayCurrency, settings);
 
     res.json({
       clients: erasphereClients,
@@ -279,6 +299,7 @@ router.get("/erasphere/admin-analytics", verifyJWT, verifyAdmin, async (req: any
         totalRevenue,
         paidRevenue,
         pendingRevenue,
+        currency: settings.displayCurrency,
       },
     });
   } catch (error) {
@@ -320,14 +341,12 @@ router.get("/erasphere/analytics", verifyJWT, async (req: any, res) => {
       }),
       prisma.invoice.findMany({
         where: { clientId: { in: clientIds } },
-        select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
+        select: { id: true, amount: true, currency: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
       }),
     ]);
 
-    const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-    const paidRevenue = invoices.reduce((sum, inv) => sum + paidOf(inv), 0);
-    // Outstanding = what's still owed across all invoices (partial-payment aware).
-    const pendingRevenue = invoices.reduce((sum, inv) => sum + Math.max(0, inv.amount - paidOf(inv)), 0);
+    const settings = await getAppSettings();
+    const { totalRevenue, paidRevenue, pendingRevenue } = revenueTotals(invoices, settings.displayCurrency, settings);
 
     res.json({
       clients: myClients,
@@ -343,6 +362,7 @@ router.get("/erasphere/analytics", verifyJWT, async (req: any, res) => {
         totalRevenue,
         paidRevenue,
         pendingRevenue,
+        currency: settings.displayCurrency,
       },
     });
   } catch (error) {

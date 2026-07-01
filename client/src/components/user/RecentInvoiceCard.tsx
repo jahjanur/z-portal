@@ -1,11 +1,13 @@
 import React from "react";
 import StatusBadge from "../ui/StatusBadge";
 import { isInvoiceOverdue } from "../../utils";
+import { formatMoney } from "../../utils/currency";
 
 interface Invoice {
   id: number;
   invoiceNumber: string;
   amount: number;
+  currency?: string | null;
   dueDate?: string | null;
   status?: string | null;
 }
@@ -14,7 +16,8 @@ interface RecentInvoiceCardProps {
   invoice: Invoice;
   /** Legacy prop — statuses now render via StatusBadge; kept for API compatibility */
   getStatusColor: (status?: string | null) => string;
-  formatCurrency: (amount: number) => string;
+  /** Legacy prop — each invoice now formats in its own currency; kept for API compatibility */
+  formatCurrency?: (amount: number) => string;
   formatDate: (date?: string | null) => string;
   /** Legacy prop — superseded by design tokens; kept for API compatibility */
   primaryColor: string;
@@ -22,7 +25,6 @@ interface RecentInvoiceCardProps {
 
 const RecentInvoiceCard: React.FC<RecentInvoiceCardProps> = ({
   invoice,
-  formatCurrency,
   formatDate,
 }) => {
   return (
@@ -38,7 +40,7 @@ const RecentInvoiceCard: React.FC<RecentInvoiceCardProps> = ({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           <p className="text-base font-bold tabular-nums text-[var(--color-text-primary)]">
-            {formatCurrency(invoice.amount)}
+            {formatMoney(invoice.amount, invoice.currency)}
           </p>
           <StatusBadge status={isInvoiceOverdue(invoice) ? "OVERDUE" : invoice.status} />
         </div>

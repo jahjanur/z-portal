@@ -18,10 +18,27 @@ const uploadsPath_1 = require("../lib/uploadsPath");
 const clientScope_1 = require("../lib/clientScope");
 const workerProfile_1 = require("../constants/workerProfile");
 const auth_2 = require("./auth");
+const settings_1 = require("./settings");
+const currency_1 = require("../lib/currency");
 const router = (0, express_1.Router)();
 const SALT_ROUNDS = 10;
 /** Sum of payments recorded against an invoice (partial-payment aware). */
 const paidOf = (inv) => inv.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+/** Revenue totals converted into a single display currency (each invoice may be
+ *  in a different currency). */
+function revenueTotals(invoices, display, rates) {
+    let total = 0, paid = 0, pending = 0;
+    for (const inv of invoices) {
+        const cur = inv.currency || "USD";
+        const amt = (0, currency_1.convert)(inv.amount, cur, display, rates);
+        const p = (0, currency_1.convert)(paidOf(inv), cur, display, rates);
+        total += amt;
+        paid += p;
+        pending += Math.max(0, amt - p);
+    }
+    const r = (n) => Math.round(n * 100) / 100;
+    return { totalRevenue: r(total), paidRevenue: r(paid), pendingRevenue: r(pending) };
+}
 const filesDir = path_1.default.join(uploadsPath_1.uploadsDir, "files");
 if (!fs_1.default.existsSync(filesDir)) {
     fs_1.default.mkdirSync(filesDir, { recursive: true });
@@ -249,13 +266,11 @@ router.get("/erasphere/admin-analytics", auth_1.verifyJWT, auth_1.verifyAdmin, a
             }),
             prisma_1.default.invoice.findMany({
                 where: { clientId: { in: clientIds } },
-                select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
+                select: { id: true, amount: true, currency: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
             }),
         ]);
-        const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-        const paidRevenue = invoices.reduce((sum, inv) => sum + paidOf(inv), 0);
-        // Outstanding = what's still owed across all invoices (partial-payment aware).
-        const pendingRevenue = invoices.reduce((sum, inv) => sum + Math.max(0, inv.amount - paidOf(inv)), 0);
+        const settings = await (0, settings_1.getAppSettings)();
+        const { totalRevenue, paidRevenue, pendingRevenue } = revenueTotals(invoices, settings.displayCurrency, settings);
         res.json({
             clients: erasphereClients,
             tasks,
@@ -271,6 +286,7 @@ router.get("/erasphere/admin-analytics", auth_1.verifyJWT, auth_1.verifyAdmin, a
                 totalRevenue,
                 paidRevenue,
                 pendingRevenue,
+                currency: settings.displayCurrency,
             },
         });
     }
@@ -309,13 +325,11 @@ router.get("/erasphere/analytics", auth_1.verifyJWT, async (req, res) => {
             }),
             prisma_1.default.invoice.findMany({
                 where: { clientId: { in: clientIds } },
-                select: { id: true, amount: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
+                select: { id: true, amount: true, currency: true, status: true, clientId: true, createdAt: true, invoiceNumber: true, paidAt: true, payments: { select: { amount: true } } },
             }),
         ]);
-        const totalRevenue = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-        const paidRevenue = invoices.reduce((sum, inv) => sum + paidOf(inv), 0);
-        // Outstanding = what's still owed across all invoices (partial-payment aware).
-        const pendingRevenue = invoices.reduce((sum, inv) => sum + Math.max(0, inv.amount - paidOf(inv)), 0);
+        const settings = await (0, settings_1.getAppSettings)();
+        const { totalRevenue, paidRevenue, pendingRevenue } = revenueTotals(invoices, settings.displayCurrency, settings);
         res.json({
             clients: myClients,
             tasks,
@@ -330,6 +344,7 @@ router.get("/erasphere/analytics", auth_1.verifyJWT, async (req, res) => {
                 totalRevenue,
                 paidRevenue,
                 pendingRevenue,
+                currency: settings.displayCurrency,
             },
         });
     }

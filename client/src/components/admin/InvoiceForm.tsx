@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { CONTROL_INPUT, CONTROL_LABEL, CONTROL_SELECT, CONTROL_TEXTAREA } from "../ui/controls";
 import DatePicker from "../ui/DatePicker";
 import Button from "../ui/Button";
+import { CURRENCIES, CURRENCY_LABEL, currencySymbol } from "../../utils/currency";
 
 interface User {
   id: number;
@@ -34,6 +35,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients }) => {
   const [formData, setFormData] = useState({
     clientId: "",
     amount: "",
+    currency: "USD",
     dueDate: "",
     issueDate: "",
     paymentLink: "",
@@ -90,6 +92,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients }) => {
     try {
       const submitData = new FormData();
       submitData.append("clientId", formData.clientId);
+      submitData.append("currency", formData.currency);
       submitData.append("dueDate", formData.dueDate);
       if (formData.paymentLink) submitData.append("paymentLink", formData.paymentLink);
       submitData.append("sendEmail", sendEmail.toString());
@@ -112,6 +115,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients }) => {
       setFormData({
         clientId: "",
         amount: "",
+        currency: "USD",
         dueDate: "",
         issueDate: "",
         paymentLink: "",
@@ -131,6 +135,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients }) => {
     setFormData({
       clientId: "",
       amount: "",
+      currency: "USD",
       dueDate: "",
       issueDate: "",
       paymentLink: "",
@@ -193,6 +198,19 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients }) => {
               placeholder="yyyy/mm/dd"
               usePortal
             />
+          </div>
+
+          <div className="w-full">
+            <label className={CONTROL_LABEL}>Currency</label>
+            <select
+              value={formData.currency}
+              onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+              className={CONTROL_SELECT}
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>{CURRENCY_LABEL[c]}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -333,14 +351,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients }) => {
               Amount <span className="text-[var(--color-destructive-text)]">*</span>
             </label>
             <div className="relative w-full">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[var(--color-text-muted)]">$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-[var(--color-text-muted)]">{currencySymbol(formData.currency)}</span>
               <input
                 type="number"
                 step="0.01"
                 placeholder="0.00"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className={`${CONTROL_INPUT} pl-8`}
+                className={`${CONTROL_INPUT} pl-10`}
               />
             </div>
             <p className="mt-1 text-xs text-[var(--color-text-muted)]">Or add line items for itemized billing</p>
@@ -356,7 +374,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients }) => {
             <div className="card-panel w-full max-w-xs rounded-xl p-4">
               <div className="flex justify-between text-sm tabular-nums">
                 <span className="text-[var(--color-text-muted)]">Subtotal</span>
-                <span className="font-medium text-[var(--color-text-primary)]">${subtotal.toFixed(2)}</span>
+                <span className="font-medium text-[var(--color-text-primary)]">{currencySymbol(formData.currency)}{subtotal.toFixed(2)}</span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-2 text-sm">
                 <span className="text-[var(--color-text-muted)]">Tax (%)</span>
@@ -375,12 +393,12 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ onSubmit, clients }) => {
               {taxRateNum > 0 && (
                 <div className="mt-2 flex justify-between text-sm tabular-nums">
                   <span className="text-[var(--color-text-muted)]">Tax amount</span>
-                  <span className="font-medium text-[var(--color-text-primary)]">${taxAmount.toFixed(2)}</span>
+                  <span className="font-medium text-[var(--color-text-primary)]">{currencySymbol(formData.currency)}{taxAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="mt-3 flex justify-between border-t border-[var(--color-border)] pt-3 text-base font-bold tabular-nums text-[var(--color-text-primary)]">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{currencySymbol(formData.currency)}{total.toFixed(2)}</span>
               </div>
             </div>
           </div>

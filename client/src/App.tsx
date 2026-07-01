@@ -1,5 +1,8 @@
+import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import API from "./api";
+import { setCurrencySettings } from "./utils";
 import AuthPage from "./pages/Authpage";
 import Dashboard from "./pages/Dashboard";
 import HomePage from "./pages/Homepage";
@@ -8,6 +11,7 @@ import ResetPassword from "./pages/ResetPassword";
 import InviteAcceptPage from "./pages/InviteAcceptPage";
 import NotificationPreferencesPage from "./pages/NotificationPreferencesPage";
 import ProfileSettingsPage from "./pages/ProfileSettingsPage";
+import CurrencySettingsPage from "./pages/CurrencySettingsPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import TaskDetailPage from "./pages/TaskDetailPage";
 import ClientDetailPage from "./pages/ClientDetailPage";
@@ -41,6 +45,16 @@ import { MobileMenuProvider } from "./contexts/MobileMenuContext";
 function AppShell() {
   const token = localStorage.getItem("token");
   const role = localStorage.getItem("role");
+
+  // Load the display-currency settings once so dashboard totals convert. The
+  // counter bump re-renders the tree after the module cache is populated.
+  const [, bumpCurrency] = useState(0);
+  useEffect(() => {
+    if (!token) return;
+    API.get("/settings/currency")
+      .then(({ data }) => { setCurrencySettings(data); bumpCurrency((n) => n + 1); })
+      .catch(() => {});
+  }, [token]);
   const isAdmin = role === "ADMIN";
   const isEraSphere = role === "ERASPHERE";
   const isAdminOrEraSphere = isAdmin || isEraSphere;
@@ -151,6 +165,10 @@ function AppShell() {
             <Route
               path="/settings/profile"
               element={token ? <ProfileSettingsPage /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/settings/currency"
+              element={token && isAdmin ? <CurrencySettingsPage /> : <Navigate to="/login" />}
             />
 
             {/* Task Detail Page - All authenticated users */}

@@ -13,6 +13,7 @@ const notificationEngine_1 = require("../services/notificationEngine");
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const uploadsPath_1 = require("../lib/uploadsPath");
 const clientScope_1 = require("../lib/clientScope");
+const currency_1 = require("../lib/currency");
 const router = (0, express_1.Router)();
 /** Attach computed payment totals (amountPaid / remaining) from the payments list. */
 function attachPayments(inv) {
@@ -230,6 +231,7 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
         if (!clientId || !dueDate) {
             return res.status(400).json({ error: "clientId and dueDate are required" });
         }
+        const currency = (0, currency_1.isCurrency)(req.body.currency) ? req.body.currency : "USD";
         const lineItems = typeof lineItemsRaw === "string" ? JSON.parse(lineItemsRaw || "[]") : (lineItemsRaw || []);
         const hasLineItems = Array.isArray(lineItems) && lineItems.length > 0;
         let totalAmount;
@@ -260,6 +262,7 @@ router.post("/", auth_1.verifyJWT, uploadInvoice.single("file"), async (req, res
             data: {
                 clientId: Number(clientId),
                 amount: totalAmount,
+                currency,
                 dueDate: new Date(dueDate),
                 invoiceNumber,
                 fileUrl: req.file ? `/uploads/invoices/${req.file.filename}` : null,
@@ -445,7 +448,7 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
             return res.status(403).json({ error: "Only admins can update invoices" });
         }
         const invoiceId = Number(req.params.id);
-        const { amount, dueDate, status, description, paidAt, paymentLink, issueDate, paymentTerms, notes, taxRate, lineItems: lineItemsRaw } = req.body;
+        const { amount, currency, dueDate, status, description, paidAt, paymentLink, issueDate, paymentTerms, notes, taxRate, lineItems: lineItemsRaw } = req.body;
         const existingInvoice = await prisma_1.default.invoice.findUnique({
             where: { id: invoiceId },
             include: { lineItems: true },
@@ -456,6 +459,8 @@ router.put("/:id", auth_1.verifyJWT, async (req, res) => {
         const lineItems = typeof lineItemsRaw === "string" ? JSON.parse(lineItemsRaw || "[]") : (lineItemsRaw || []);
         const hasLineItems = Array.isArray(lineItems) && lineItems.length > 0;
         const updateData = {};
+        if (currency !== undefined && (0, currency_1.isCurrency)(currency))
+            updateData.currency = currency;
         if (dueDate !== undefined)
             updateData.dueDate = new Date(dueDate);
         if (status !== undefined)

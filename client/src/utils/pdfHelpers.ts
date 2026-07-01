@@ -5,6 +5,7 @@
  */
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { currencySymbol } from "./currency";
 
 // Grayscale palette
 const GRAY = {
@@ -289,6 +290,7 @@ export async function generateInvoicePdf(
   invoice: InvoicePdfData,
   options?: { companyInfo?: CompanyInfo; filename?: string }
 ): Promise<void> {
+  const sym = currencySymbol((invoice as { currency?: string | null }).currency);
   // Load logo from public folder (main platform logo); fallback to text "Zulbera" if it fails or times out
   const logoPath = "/Zulbera-Text-Logo.svg";
   let logoUrl: string | null = null;
@@ -380,13 +382,13 @@ export async function generateInvoicePdf(
         li.name,
         (li.description || "").slice(0, 40),
         String(li.quantity),
-        `$${li.unitPrice.toFixed(2)}`,
-        `$${total.toFixed(2)}`,
+        `${sym}${li.unitPrice.toFixed(2)}`,
+        `${sym}${total.toFixed(2)}`,
       ];
     });
   } else {
     const description = invoice.description?.trim() || "Invoice amount";
-    rows = [[description, "", "1", `$${invoice.amount.toFixed(2)}`, `$${invoice.amount.toFixed(2)}`]];
+    rows = [[description, "", "1", `${sym}${invoice.amount.toFixed(2)}`, `${sym}${invoice.amount.toFixed(2)}`]];
   }
 
   y = renderTable(doc, columns, rows, {
@@ -403,12 +405,12 @@ export async function generateInvoicePdf(
   y += 10;
   const totalsItems: { label: string; value: string }[] = [];
   if (hasLineItems && invoice.subtotal != null) {
-    totalsItems.push({ label: "Subtotal", value: `$${invoice.subtotal.toFixed(2)}` });
+    totalsItems.push({ label: "Subtotal", value: `${sym}${invoice.subtotal.toFixed(2)}` });
     if (invoice.taxRate != null && invoice.taxRate > 0 && invoice.taxAmount != null) {
-      totalsItems.push({ label: `Tax (${invoice.taxRate}%)`, value: `$${invoice.taxAmount.toFixed(2)}` });
+      totalsItems.push({ label: `Tax (${invoice.taxRate}%)`, value: `${sym}${invoice.taxAmount.toFixed(2)}` });
     }
   }
-  totalsItems.push({ label: "Total", value: `$${invoice.amount.toFixed(2)}` });
+  totalsItems.push({ label: "Total", value: `${sym}${invoice.amount.toFixed(2)}` });
   doc.setFontSize(10);
   doc.setTextColor(...GRAY.DARK);
   totalsItems.forEach(({ label, value }) => {

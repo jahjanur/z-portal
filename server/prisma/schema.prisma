@@ -199,6 +199,7 @@ model Invoice {
   id            Int       @id @default(autoincrement())
   invoiceNumber String    @unique
   amount        Float
+  currency      String    @default("USD")
   dueDate       DateTime
   status        String    @default("PENDING")
   description   String?
@@ -242,6 +243,16 @@ model InvoiceLineItem {
   sortOrder   Int      @default(0)
 
   @@index([invoiceId])
+}
+
+// Singleton (id=1) app-wide settings. Currency conversion: rates are expressed
+// as how many USD one unit of the currency is worth (USD is the pivot).
+model AppSetting {
+  id              Int      @id @default(1)
+  displayCurrency String   @default("USD")
+  usdPerEur       Float    @default(1.08)
+  usdPerCad       Float    @default(0.73)
+  updatedAt       DateTime @default(now()) @updatedAt
 }
 
 model TimesheetProject {

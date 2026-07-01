@@ -8,6 +8,7 @@ import { emit, EventType } from "../services/notificationEngine";
 import prisma from "../lib/prisma";
 import { uploadsDir } from "../lib/uploadsPath";
 import { clientScopeId } from "../lib/clientScope";
+import { isCurrency } from "../lib/currency";
 
 const router = Router();
 
@@ -240,6 +241,8 @@ router.post("/", verifyJWT, uploadInvoice.single("file"), async (req: any, res) 
       return res.status(400).json({ error: "clientId and dueDate are required" });
     }
 
+    const currency = isCurrency(req.body.currency) ? req.body.currency : "USD";
+
     const lineItems = typeof lineItemsRaw === "string" ? (JSON.parse(lineItemsRaw || "[]") as { name: string; description?: string; quantity: number; unitPrice: number }[]) : (lineItemsRaw || []);
     const hasLineItems = Array.isArray(lineItems) && lineItems.length > 0;
 
@@ -275,6 +278,7 @@ router.post("/", verifyJWT, uploadInvoice.single("file"), async (req: any, res) 
       data: {
         clientId: Number(clientId),
         amount: totalAmount,
+        currency,
         dueDate: new Date(dueDate),
         invoiceNumber,
         fileUrl: req.file ? `/uploads/invoices/${req.file.filename}` : null,
@@ -475,7 +479,7 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
     }
 
     const invoiceId = Number(req.params.id);
-    const { amount, dueDate, status, description, paidAt, paymentLink, issueDate, paymentTerms, notes, taxRate, lineItems: lineItemsRaw } = req.body;
+    const { amount, currency, dueDate, status, description, paidAt, paymentLink, issueDate, paymentTerms, notes, taxRate, lineItems: lineItemsRaw } = req.body;
 
     const existingInvoice = await prisma.invoice.findUnique({
       where: { id: invoiceId },
@@ -490,6 +494,7 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
     const hasLineItems = Array.isArray(lineItems) && lineItems.length > 0;
 
     const updateData: any = {};
+    if (currency !== undefined && isCurrency(currency)) updateData.currency = currency;
     if (dueDate !== undefined) updateData.dueDate = new Date(dueDate);
     if (status !== undefined) updateData.status = status;
     if (description !== undefined) updateData.description = description;

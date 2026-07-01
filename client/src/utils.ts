@@ -27,11 +27,35 @@ export const formatDate = (dateString?: string | null) => {
       });
 };
 
-export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount);
+// --- Display currency + conversion (populated from GET /settings/currency on
+//     app load). Aggregate/dashboard money uses the display currency; each
+//     individual invoice is still shown in its own currency elsewhere. ---
+type CurrencySettings = { displayCurrency: string; usdPerEur: number; usdPerCad: number };
+let _cur: CurrencySettings = { displayCurrency: "USD", usdPerEur: 1.08, usdPerCad: 0.73 };
+
+export function setCurrencySettings(s: Partial<CurrencySettings>) {
+  _cur = { ..._cur, ...s };
+}
+export function getDisplayCurrency() {
+  return _cur.displayCurrency;
+}
+function usdPer(c?: string | null): number {
+  return c === "EUR" ? _cur.usdPerEur : c === "CAD" ? _cur.usdPerCad : 1;
+}
+/** Convert an amount from its currency into the current display currency. */
+export function toDisplay(amount: number, from?: string | null): number {
+  const to = _cur.displayCurrency;
+  if ((from || "USD") === to) return amount;
+  return (amount * usdPer(from)) / usdPer(to);
+}
+
+export const formatCurrency = (amount: number, currency?: string) => {
+  const cur = currency || _cur.displayCurrency;
+  try {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: cur }).format(amount ?? 0);
+  } catch {
+    return `${(amount ?? 0).toFixed(2)} ${cur}`;
+  }
 };
 
 export const getDaysUntilDue = (dueDate?: string | null) => {
@@ -82,6 +106,7 @@ interface RevenueInvoice {
   amount: number;
   amountPaid?: number | null;
   remaining?: number | null;
+  currency?: string | null;
 }
 
 /** How much of a single invoice is actually paid (partial payments aware). */
@@ -107,7 +132,9 @@ export function computeInvoiceRevenue(invoices: RevenueInvoice[]): {
   totalPending: number;
   totalRevenue: number;
 } {
-  const totalPaid = invoices.reduce((sum, i) => sum + invoicePaid(i), 0);
-  const totalPending = invoices.reduce((sum, i) => sum + invoiceRemaining(i), 0);
+  // Convert each invoice from its own currency into the display currency so
+  // totals across mixed-currency invoices reconcile in one number.
+  const totalPaid = invoices.reduce((sum, i) => sum + toDisplay(invoicePaid(i), i.currency), 0);
+  const totalPending = invoices.reduce((sum, i) => sum + toDisplay(invoiceRemaining(i), i.currency), 0);
   return { totalPaid, totalPending, totalRevenue: totalPaid + totalPending };
 }

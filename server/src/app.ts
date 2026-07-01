@@ -12,6 +12,7 @@ import notificationRoutes from "./routes/notifications";
 import workspaceRoutes from "./routes/workspace";
 import inviteRoutes from "./routes/invites";
 import commentsRoutes from "./routes/comments";
+import settingsRoutes from "./routes/settings";
 import { ensureUploadsDir } from "./lib/uploadsPath";
 import filesRoutes from "./routes/files";
 
@@ -57,6 +58,7 @@ app.use("/notifications", notificationRoutes);
 app.use("/workspace", workspaceRoutes);
 app.use("/invites", inviteRoutes);
 app.use("/comments", commentsRoutes);
+app.use("/settings", settingsRoutes);
 
 app.get("/api", (req, res) => res.send("API is running"));
 
