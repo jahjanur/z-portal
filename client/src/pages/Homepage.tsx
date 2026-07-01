@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api";
-import { formatCurrency, formatDate, computeInvoiceRevenue, isInvoiceOverdue } from "../utils";
+import { formatCurrency, formatDate, computeInvoiceRevenue, isInvoiceOverdue, computeRevenueTrend, getDisplayCurrency } from "../utils";
+import { currencySymbol } from "../utils/currency";
 import {
   BarChart,
   Bar,
@@ -387,42 +388,6 @@ export default function HomePage() {
     },
   ];
 
-  const getRevenueByPeriod = () => {
-    const periodData: Record<string, { paid: number; pending: number }> = {};
-
-    filteredInvoices.forEach(inv => {
-      const date = new Date(inv.paidAt || inv.createdAt);
-      let periodKey = "";
-
-      if (timeRange === "week") {
-        periodKey = date.toLocaleDateString('en-US', { weekday: 'short' });
-      } else if (timeRange === "month") {
-        periodKey = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      } else {
-        periodKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      }
-
-      if (!periodData[periodKey]) {
-        periodData[periodKey] = { paid: 0, pending: 0 };
-      }
-
-      if (inv.status === "PAID") {
-        periodData[periodKey].paid += inv.amount;
-      } else {
-        periodData[periodKey].pending += inv.amount;
-      }
-    });
-
-    return Object.entries(periodData)
-      .map(([period, data]) => ({
-        period,
-        paid: data.paid,
-        pending: data.pending,
-        total: data.paid + data.pending,
-      }))
-      .slice(-10);
-  };
-
   const getTaskCompletionTrend = () => {
     const days = timeRange === "week" ? 7 : timeRange === "month" ? 30 : 365;
     const dataPoints = timeRange === "week" ? 7 : timeRange === "month" ? 10 : 12;
@@ -527,7 +492,9 @@ export default function HomePage() {
     );
   }
 
-  const revenueByPeriod = getRevenueByPeriod();
+  // Trend spans several periods (payment-date & partial-payment aware) so
+  // payments made in earlier months are visible — not collapsed onto today.
+  const revenueByPeriod = computeRevenueTrend(adminOwnInvoices, timeRange);
   const topClients = getTopClientsByRevenue();
   const workerPerformance = getWorkerPerformance();
   const recentInvoices = adminOwnInvoices
@@ -704,7 +671,7 @@ export default function HomePage() {
                     </defs>
                     <CartesianGrid {...gridProps} />
                     <XAxis dataKey="period" {...xAxisProps} padding={{ left: 8, right: 8 }} />
-                    <YAxis {...yAxisProps} tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} width={44} />
+                    <YAxis {...yAxisProps} tickFormatter={(value) => `${currencySymbol(getDisplayCurrency())}${(value / 1000).toFixed(0)}k`} width={44} />
                     <Tooltip content={<RevenueTooltip />} cursor={{ stroke: "var(--color-border-hover)", strokeWidth: 1, strokeDasharray: "4 4" }} />
                     <Legend wrapperStyle={legendWrapperStyle} iconType="circle" iconSize={9} />
                     {/* Stacked so the heights sum to total revenue (no muddy overlap) */}

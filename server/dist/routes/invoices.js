@@ -610,6 +610,50 @@ router.post("/:id/payments", auth_1.verifyJWT, uploadInvoice.single("receipt"), 
     }
 });
 // DELETE /invoices/:id/payments/:paymentId — remove a payment
+// PATCH /invoices/:id/payments/:paymentId — edit a payment (amount/date/note,
+// optionally replace or remove its receipt).
+router.patch("/:id/payments/:paymentId", auth_1.verifyJWT, uploadInvoice.single("receipt"), async (req, res) => {
+    try {
+        if (req.user.role !== "ADMIN")
+            return res.status(403).json({ error: "Only admins can edit payments" });
+        const invoiceId = Number(req.params.id);
+        const paymentId = Number(req.params.paymentId);
+        const payment = await prisma_1.default.payment.findFirst({ where: { id: paymentId, invoiceId } });
+        if (!payment)
+            return res.status(404).json({ error: "Payment not found" });
+        const data = {};
+        if (req.body.amount !== undefined) {
+            const amount = Number(req.body.amount);
+            if (!Number.isFinite(amount) || amount <= 0)
+                return res.status(400).json({ error: "A positive amount is required" });
+            data.amount = Math.round(amount * 100) / 100;
+        }
+        if (req.body.paidAt !== undefined) {
+            const d = req.body.paidAt ? new Date(req.body.paidAt) : new Date();
+            data.paidAt = isNaN(d.getTime()) ? payment.paidAt : d;
+        }
+        if (req.body.note !== undefined) {
+            data.note = req.body.note ? String(req.body.note).slice(0, 300) : null;
+        }
+        if (req.file) {
+            data.receiptUrl = `/uploads/invoices/${req.file.filename}`;
+        }
+        else if (req.body.removeReceipt === "true" || req.body.removeReceipt === true) {
+            data.receiptUrl = null;
+        }
+        await prisma_1.default.payment.update({ where: { id: paymentId }, data });
+        await recomputeInvoiceStatus(invoiceId);
+        const updated = await prisma_1.default.invoice.findUnique({
+            where: { id: invoiceId },
+            include: { client: { select: clientSelectWithContact }, lineItems: { orderBy: { sortOrder: "asc" } }, payments: { orderBy: { paidAt: "asc" } } },
+        });
+        res.json(attachPayments(updated));
+    }
+    catch (err) {
+        console.error("Error updating payment:", err);
+        res.status(500).json({ error: "Failed to update payment" });
+    }
+});
 router.delete("/:id/payments/:paymentId", auth_1.verifyJWT, async (req, res) => {
     try {
         if (req.user.role !== "ADMIN")

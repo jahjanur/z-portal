@@ -138,3 +138,81 @@ export function computeInvoiceRevenue(invoices: RevenueInvoice[]): {
   const totalPending = invoices.reduce((sum, i) => sum + toDisplay(invoiceRemaining(i), i.currency), 0);
   return { totalPaid, totalPending, totalRevenue: totalPaid + totalPending };
 }
+
+/* ------------------------------ Revenue trend ----------------------------- */
+
+export interface TrendInvoice {
+  amount: number;
+  currency?: string | null;
+  status?: string | null;
+  createdAt: string;
+  issueDate?: string | null;
+  payments?: { amount: number; paidAt: string }[];
+}
+
+export interface TrendPoint {
+  period: string;
+  paid: number;
+  pending: number;
+  total: number;
+}
+
+/**
+ * Revenue over time — partial-payment & currency aware.
+ *  - PAID is bucketed by each payment's own date (so a payment made 2 months
+ *    ago shows in that month, not on the invoice's date).
+ *  - PENDING (still outstanding) is bucketed on the invoice's issue date.
+ *  - Every amount is converted into the display currency.
+ * Periods are seeded continuously so the axis has no gaps.
+ */
+export function computeRevenueTrend(invoices: TrendInvoice[], range: "week" | "month" | "year"): TrendPoint[] {
+  const now = new Date();
+  type Bucket = { label: string; start: number; end: number; paid: number; pending: number };
+  const buckets: Bucket[] = [];
+
+  if (range === "week") {
+    // last 8 rolling 7-day windows
+    for (let i = 7; i >= 0; i--) {
+      const end = new Date(now); end.setHours(23, 59, 59, 999); end.setDate(end.getDate() - i * 7);
+      const start = new Date(end); start.setDate(start.getDate() - 6); start.setHours(0, 0, 0, 0);
+      buckets.push({ label: start.toLocaleDateString("en-US", { month: "short", day: "numeric" }), start: start.getTime(), end: end.getTime(), paid: 0, pending: 0 });
+    }
+  } else {
+    const n = range === "month" ? 6 : 12;
+    for (let i = n - 1; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1, 0, 0, 0, -1);
+      buckets.push({
+        label: start.toLocaleDateString("en-US", { month: "short", year: range === "year" ? "2-digit" : undefined }),
+        start: start.getTime(),
+        end: end.getTime(),
+        paid: 0,
+        pending: 0,
+      });
+    }
+  }
+
+  const add = (time: number, key: "paid" | "pending", amt: number) => {
+    if (!Number.isFinite(time) || amt <= 0) return;
+    const b = buckets.find((b) => time >= b.start && time <= b.end);
+    if (b) b[key] += amt;
+  };
+
+  for (const inv of invoices) {
+    const cur = inv.currency;
+    const payments = inv.payments ?? [];
+    if (payments.length > 0) {
+      for (const p of payments) add(new Date(p.paidAt).getTime(), "paid", toDisplay(p.amount, cur));
+    } else if ((inv.status ?? "").toUpperCase() === "PAID") {
+      add(new Date(inv.issueDate || inv.createdAt).getTime(), "paid", toDisplay(inv.amount, cur));
+    }
+    const paidSum = payments.length > 0
+      ? payments.reduce((s, p) => s + p.amount, 0)
+      : ((inv.status ?? "").toUpperCase() === "PAID" ? inv.amount : 0);
+    const remaining = Math.max(0, inv.amount - paidSum);
+    add(new Date(inv.issueDate || inv.createdAt).getTime(), "pending", toDisplay(remaining, cur));
+  }
+
+  const r = (n: number) => Math.round(n * 100) / 100;
+  return buckets.map((b) => ({ period: b.label, paid: r(b.paid), pending: r(b.pending), total: r(b.paid + b.pending) }));
+}

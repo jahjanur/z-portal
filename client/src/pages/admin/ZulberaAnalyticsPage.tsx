@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
-import { formatCurrency, formatDate, computeInvoiceRevenue, invoicePaid, invoiceRemaining, isInvoiceOverdue } from "../../utils";
+import { formatCurrency, formatDate, computeInvoiceRevenue, isInvoiceOverdue, computeRevenueTrend } from "../../utils";
 import {
   PieChart,
   Pie,
@@ -229,23 +229,6 @@ export default function ZulberaAnalyticsPage() {
   }).length;
   const totalDomainAlerts = expiringDomains + expiringHosting + expiringSSL;
 
-  const getRevenueByPeriod = () => {
-    const periodData: Record<string, { paid: number; pending: number }> = {};
-    filteredInvoices.forEach((inv) => {
-      const date = new Date(inv.paidAt || inv.createdAt);
-      let periodKey = "";
-      if (timeRange === "week") periodKey = date.toLocaleDateString("en-US", { weekday: "short" });
-      else if (timeRange === "month") periodKey = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      else periodKey = date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-      if (!periodData[periodKey]) periodData[periodKey] = { paid: 0, pending: 0 };
-      periodData[periodKey].paid += invoicePaid(inv);
-      periodData[periodKey].pending += invoiceRemaining(inv);
-    });
-    return Object.entries(periodData)
-      .map(([period, data]) => ({ period, paid: data.paid, pending: data.pending, total: data.paid + data.pending }))
-      .slice(-10);
-  };
-
   const taskDistribution = [
     { name: "Completed", value: completedTasks, color: colors.success },
     { name: "In Progress", value: activeTasks, color: "rgba(255,255,255,0.7)" },
@@ -272,7 +255,7 @@ export default function ZulberaAnalyticsPage() {
     );
   }
 
-  const revenueByPeriod = getRevenueByPeriod();
+  const revenueByPeriod = computeRevenueTrend(adminOwnInvoices, timeRange);
   const revMax = Math.max(...revenueByPeriod.map((d) => d.total), 1);
   const topClients = getTopClientsByRevenue();
   const recentInvoices = adminOwnInvoices
