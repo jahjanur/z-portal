@@ -803,7 +803,6 @@ export default function TaskConversation(p: any) {
           </div>
           <div className="mt-1.5 flex items-center gap-3 px-1 text-[11px] text-[var(--color-text-muted)]">
             <button onClick={p.onRefresh} className="inline-flex items-center gap-1 hover:text-[var(--color-text-primary)]"><RefreshCw className={`h-3 w-3 ${p.refreshing ? "animate-spin" : ""}`} /> Refresh</button>
-            <span>Enter to send · Shift+Enter for a new line</span>
           </div>
         </div>
         </div>

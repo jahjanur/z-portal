@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, FolderKanban, Trash2, Pencil, User as UserIcon } from "lucide-react";
+import { Calendar, FolderKanban, Trash2, Pencil, User as UserIcon, ChevronDown } from "lucide-react";
 import type { Task } from "../../contexts/AdminContext";
 import { avatarGlyph } from "../../constants/workerProfile";
 import ProgressBar from "../ui/ProgressBar";
@@ -105,27 +105,30 @@ function TaskCard({
         <h4 className="min-w-0 break-words pr-1 text-[0.9375rem] font-semibold leading-snug text-[var(--color-text-primary)]">
           {task.title}
         </h4>
-        {onEdit && (
+        {/* action cluster — subtle, reveals on hover/focus */}
+        <div className="flex shrink-0 items-center gap-0.5 rounded-lg opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onEdit(task); }}
+              aria-label={`Edit task: ${task.title}`}
+              className="rounded-md p-1.5 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
           <button
             type="button"
-            onClick={(e) => { e.stopPropagation(); onEdit(task); }}
-            aria-label={`Edit task: ${task.title}`}
-            className="shrink-0 rounded-lg p-1.5 text-[var(--color-text-muted)] opacity-0 transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] focus-visible:opacity-100 group-hover:opacity-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm(`Delete task "${task.title}"?`)) onDelete(task.id);
+            }}
+            aria-label={`Delete task: ${task.title}`}
+            className="rounded-md p-1.5 text-[var(--color-text-muted)] transition hover:bg-[var(--color-destructive-bg)] hover:text-[var(--color-destructive-text)]"
           >
-            <Pencil className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
           </button>
-        )}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (confirm(`Delete task "${task.title}"?`)) onDelete(task.id);
-          }}
-          aria-label={`Delete task: ${task.title}`}
-          className="shrink-0 rounded-lg p-1.5 text-[var(--color-text-muted)] opacity-0 transition hover:bg-[var(--color-destructive-bg)] hover:text-[var(--color-destructive-text)] focus-visible:opacity-100 group-hover:opacity-100"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        </div>
       </div>
 
       {task.project && (
@@ -199,7 +202,15 @@ function TaskCard({
 export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onChangeStatus }: TaskBoardProps) {
   const navigate = useNavigate();
   const [dragOverCol, setDragOverCol] = useState<ColumnKey | null>(null);
+  const [collapsedCols, setCollapsedCols] = useState<Set<ColumnKey>>(new Set());
+  const [expandedCols, setExpandedCols] = useState<Set<ColumnKey>>(new Set());
+  const COLLAPSE_LIMIT = 6;
   const dnd = !!onChangeStatus;
+
+  const toggleCollapse = (k: ColumnKey) =>
+    setCollapsedCols((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
+  const toggleExpand = (k: ColumnKey) =>
+    setExpandedCols((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
   if (view === "list") {
     const ordered = [...tasks].sort((a, b) => {
@@ -254,24 +265,26 @@ export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onC
                 </span>
               )}
               <span className="shrink-0 rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">{col.label}</span>
-              {onEdit && (
+              <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onEdit(t); }}
+                    aria-label={`Edit task: ${t.title}`}
+                    className="rounded-md p-1.5 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onEdit(t); }}
-                  aria-label={`Edit task: ${t.title}`}
-                  className="shrink-0 rounded-lg p-1.5 text-[var(--color-text-muted)] opacity-0 transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)] focus-visible:opacity-100 group-hover:opacity-100"
+                  onClick={(e) => { e.stopPropagation(); if (confirm(`Delete task "${t.title}"?`)) onDelete(t.id); }}
+                  aria-label={`Delete task: ${t.title}`}
+                  className="rounded-md p-1.5 text-[var(--color-text-muted)] transition hover:bg-[var(--color-destructive-bg)] hover:text-[var(--color-destructive-text)]"
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); if (confirm(`Delete task "${t.title}"?`)) onDelete(t.id); }}
-                aria-label={`Delete task: ${t.title}`}
-                className="shrink-0 rounded-lg p-1.5 text-[var(--color-text-muted)] opacity-0 transition hover:bg-[var(--color-destructive-bg)] hover:text-[var(--color-destructive-text)] focus-visible:opacity-100 group-hover:opacity-100"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              </div>
             </div>
           );
         })}
@@ -284,6 +297,9 @@ export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onC
       {COLUMNS.map((col) => {
         const colTasks = tasks.filter(col.match);
         const isOver = dragOverCol === col.key;
+        const isCollapsed = collapsedCols.has(col.key);
+        const isExpanded = expandedCols.has(col.key);
+        const visibleTasks = isExpanded ? colTasks : colTasks.slice(0, COLLAPSE_LIMIT);
         return (
           <div
             key={col.key}
@@ -295,37 +311,57 @@ export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onC
               setDragOverCol(null);
               if (id) onChangeStatus?.(id, col.status);
             } : undefined}
-            className={`flex min-w-0 flex-col rounded-2xl border bg-[var(--color-surface-2)] transition-colors ${isOver ? "border-[var(--card-hover-border)] bg-[var(--color-surface-3)] ring-2 ring-[var(--color-focus-ring)]" : "border-[var(--color-border)]"}`}
+            className={`flex min-w-0 flex-col self-start rounded-2xl border bg-[var(--color-surface-2)] transition-colors ${isOver ? "border-[var(--card-hover-border)] bg-[var(--color-surface-3)] ring-2 ring-[var(--color-focus-ring)]" : "border-[var(--color-border)]"}`}
           >
-            <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-4 py-3">
+            {/* header doubles as a fold toggle */}
+            <button
+              type="button"
+              onClick={() => toggleCollapse(col.key)}
+              aria-expanded={!isCollapsed}
+              className={`flex items-center justify-between gap-2 px-4 py-3 text-left transition hover:bg-[var(--color-surface-3)]/60 ${isCollapsed ? "" : "border-b border-[var(--color-border)]"}`}
+            >
               <div className="flex items-center gap-2">
+                <ChevronDown className={`h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: col.dot }} aria-hidden />
                 <h3 className="text-sm font-bold text-[var(--color-text-primary)]">{col.label}</h3>
               </div>
               <span className="rounded-full bg-[var(--color-surface-3)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[var(--color-text-secondary)]">
                 {colTasks.length}
               </span>
-            </div>
-            <div className="flex flex-1 flex-col gap-3 p-3">
-              {colTasks.length === 0 ? (
-                <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] py-10 text-center text-xs text-[var(--color-text-muted)]">
-                  {isOver ? `Drop to mark ${col.label}` : `No ${col.label.toLowerCase()} tasks`}
-                </div>
-              ) : (
-                colTasks.map((t) => (
-                  <TaskCard
-                    onEdit={onEdit}
-                    key={t.id}
-                    task={t}
-                    accent={col.accent}
-                    onDelete={onDelete}
-                    navigate={navigate}
-                    draggable={dnd}
-                    onDragStart={dnd ? (e) => { e.dataTransfer.setData("text/plain", String(t.id)); e.dataTransfer.effectAllowed = "move"; } : undefined}
-                  />
-                ))
-              )}
-            </div>
+            </button>
+            {!isCollapsed && (
+              <div className="flex flex-1 flex-col gap-3 p-3">
+                {colTasks.length === 0 ? (
+                  <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] py-10 text-center text-xs text-[var(--color-text-muted)]">
+                    {isOver ? `Drop to mark ${col.label}` : `No ${col.label.toLowerCase()} tasks`}
+                  </div>
+                ) : (
+                  <>
+                    {visibleTasks.map((t) => (
+                      <TaskCard
+                        onEdit={onEdit}
+                        key={t.id}
+                        task={t}
+                        accent={col.accent}
+                        onDelete={onDelete}
+                        navigate={navigate}
+                        draggable={dnd}
+                        onDragStart={dnd ? (e) => { e.dataTransfer.setData("text/plain", String(t.id)); e.dataTransfer.effectAllowed = "move"; } : undefined}
+                      />
+                    ))}
+                    {colTasks.length > COLLAPSE_LIMIT && (
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(col.key)}
+                        className="rounded-xl border border-dashed border-[var(--color-border-hover)] py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                      >
+                        {isExpanded ? "Show less" : `Show all ${colTasks.length}`}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         );
       })}
