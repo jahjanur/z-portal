@@ -26,9 +26,9 @@ export function setAmountsHidden(v: boolean): void {
   try { localStorage.setItem("hideAmounts", v ? "1" : "0"); } catch { /* ignore */ }
   if (typeof window !== "undefined") window.dispatchEvent(new Event(AMOUNTS_EVENT));
 }
-/** The masked placeholder shown in privacy mode, e.g. "€••••". */
+/** The masked placeholder shown in privacy mode, e.g. "€****". */
 export function maskedAmount(currency?: string | null): string {
-  return `${currencySymbol(currency)}••••`;
+  return `${currencySymbol(currency)}****`;
 }
 
 /** Format an amount in its currency, e.g. $1,200.00 / €1,200.00 / CA$1,200.00. */
