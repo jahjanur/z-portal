@@ -287,8 +287,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const completeClients = clients.filter((c) => c.profileStatus?.trim().toUpperCase() === "COMPLETE");
   const activeTasks = tasks.filter((t) => t.status !== "COMPLETED");
   const completedTasks = tasks.filter((t) => t.status === "COMPLETED");
-  const pendingInvoices = invoices.filter((i) => i.status === "PENDING");
-  const paidInvoices = invoices.filter((i) => i.status === "PAID");
+  // "Paid" = fully settled (status PAID). "Pending" = everything else that
+  // isn't fully paid — including OVERDUE — so no invoice ever disappears from
+  // both lists (it used to when status was OVERDUE).
+  const isPaid = (i: Invoice) => (i.status || "").toUpperCase() === "PAID";
+  const pendingInvoices = invoices.filter((i) => !isPaid(i));
+  const paidInvoices = invoices.filter((i) => isPaid(i));
 
   const adminOwnClients = clients.filter((c) => c.role === "CLIENT" && c.referredById == null);
   const adminOwnClientIds = new Set(adminOwnClients.map((c) => c.id));
@@ -299,8 +303,8 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const adminOwnCompleteClients = adminOwnClients.filter((c) => c.profileStatus?.trim().toUpperCase() === "COMPLETE");
   const adminOwnTasks = tasks.filter((t) => t.client == null || t.client.referredById == null);
   const adminOwnInvoices = invoices.filter((i) => !i.client || adminOwnClientIds.has(i.client.id));
-  const adminOwnPendingInvoices = adminOwnInvoices.filter((i) => i.status === "PENDING");
-  const adminOwnPaidInvoices = adminOwnInvoices.filter((i) => i.status === "PAID");
+  const adminOwnPendingInvoices = adminOwnInvoices.filter((i) => !isPaid(i));
+  const adminOwnPaidInvoices = adminOwnInvoices.filter((i) => isPaid(i));
   const adminOwnDomains = domains.filter((d) => adminOwnClientIds.has(d.client.id));
 
   const createWorker = async (data: { email: string; password: string; name: string; role?: string; company?: string }) => {

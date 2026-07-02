@@ -26,12 +26,15 @@ interface Invoice {
   id: number;
   invoiceNumber: string;
   amount: number;
+  currency?: string | null;
   status: string;
   dueDate: string;
   paidAt?: string;
   createdAt: string;
   fileUrl?: string;
   paymentLink?: string;
+  amountPaid?: number;
+  remaining?: number;
 }
 
 interface Domain {
@@ -242,11 +245,12 @@ const fetchAllFiles = async () => {
     fetchAllFiles();
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
+  const formatCurrency = (amount: number, currency = "USD") => {
+    try {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount ?? 0);
+    } catch {
+      return `${(amount ?? 0).toFixed(2)} ${currency}`;
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -362,10 +366,15 @@ const fetchAllFiles = async () => {
 
   const activeTasks = client.clientTasks.filter(t => t.status !== "COMPLETED");
   const completedTasks = client.clientTasks.filter(t => t.status === "COMPLETED");
-  const pendingInvoices = client.invoices.filter(i => i.status === "PENDING");
-  const paidInvoices = client.invoices.filter(i => i.status === "PAID");
+  // "Paid" = fully settled; "Pending" = everything not fully paid (incl. OVERDUE)
+  // so invoices never fall out of both lists. Outstanding is partial-aware.
+  const isPaidInv = (i: Invoice) => (i.status || "").toUpperCase() === "PAID";
+  const pendingInvoices = client.invoices.filter(i => !isPaidInv(i));
+  const paidInvoices = client.invoices.filter(i => isPaidInv(i));
   const totalRevenue = client.invoices.reduce((sum, inv) => sum + inv.amount, 0);
-  const outstandingAmount = pendingInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const outstandingAmount = pendingInvoices.reduce((sum, inv) => sum + (inv.remaining ?? Math.max(0, inv.amount - (inv.amountPaid ?? 0))), 0);
+  const invCurrencies = Array.from(new Set(client.invoices.map((i) => i.currency || "USD")));
+  const clientCur = invCurrencies.length === 1 ? invCurrencies[0] : "USD";
 
   const domains = client.domains || [];
 
@@ -489,7 +498,7 @@ const fetchAllFiles = async () => {
           />
           <StatCard
             label="Total Revenue"
-            value={formatCurrency(totalRevenue)}
+            value={formatCurrency(totalRevenue, clientCur)}
             tone="neutral"
             icon={
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -499,7 +508,7 @@ const fetchAllFiles = async () => {
           />
           <StatCard
             label="Outstanding"
-            value={formatCurrency(outstandingAmount)}
+            value={formatCurrency(outstandingAmount, clientCur)}
             tone="warning"
             hint={`${pendingInvoices.length} pending invoice${pendingInvoices.length === 1 ? "" : "s"}`}
             icon={
@@ -736,7 +745,7 @@ const fetchAllFiles = async () => {
                             <StatusBadge status={invoice.status} />
                           </div>
                           <p className="text-sm text-[var(--color-text-secondary)]">
-                            {formatCurrency(invoice.amount)} • Due: {formatDate(invoice.dueDate)}
+                            {formatCurrency(invoice.amount, invoice.currency || undefined)} • Due: {formatDate(invoice.dueDate)}
                           </p>
                         </div>
                         {invoice.paymentLink && (
@@ -777,7 +786,7 @@ const fetchAllFiles = async () => {
                             <StatusBadge status={invoice.status} />
                           </div>
                           <p className="text-sm text-[var(--color-text-secondary)]">
-                            {formatCurrency(invoice.amount)} • Paid: {invoice.paidAt ? formatDate(invoice.paidAt) : formatDate(invoice.createdAt)}
+                            {formatCurrency(invoice.amount, invoice.currency || undefined)} • Paid: {invoice.paidAt ? formatDate(invoice.paidAt) : formatDate(invoice.createdAt)}
                           </p>
                         </div>
                         {invoice.fileUrl && (
