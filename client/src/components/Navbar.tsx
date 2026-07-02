@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { LayoutDashboard, UsersRound, Building2, SquareKanban, MessageSquare, Receipt, Globe, Send, CalendarClock, Handshake, Image as ImageIcon } from "lucide-react";
+import { LayoutDashboard, UsersRound, Building2, SquareKanban, MessageSquare, Receipt, Globe, Send, CalendarClock, Handshake, Image as ImageIcon, Eye, EyeOff } from "lucide-react";
+import { isAmountsHidden, setAmountsHidden } from "../utils/currency";
 import { useMobileMenu } from "../contexts/MobileMenuContext";
 import { ThemeToggle } from "./ThemeToggle";
 import NotificationDropdown from "./NotificationDropdown";
@@ -293,6 +294,15 @@ export default function Navbar() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
                           Notification settings
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => { setAmountsHidden(!isAmountsHidden()); }}
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
+                        >
+                          {isAmountsHidden() ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          {isAmountsHidden() ? "Show amounts" : "Hide amounts"}
                         </button>
                         {isAdmin && (
                           <button

@@ -1,4 +1,5 @@
 // utils.ts - Shared utility functions
+import { isAmountsHidden, maskedAmount } from "./utils/currency";
 
 export const getStatusColor = (status?: string | null) => {
   const base = "bg-[var(--color-surface-3)] text-[var(--color-text-secondary)] border border-[var(--color-border-hover)]";
@@ -51,6 +52,7 @@ export function toDisplay(amount: number, from?: string | null): number {
 
 export const formatCurrency = (amount: number, currency?: string) => {
   const cur = currency || _cur.displayCurrency;
+  if (isAmountsHidden()) return maskedAmount(cur);
   try {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: cur }).format(amount ?? 0);
   } catch {

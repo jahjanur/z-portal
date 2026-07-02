@@ -16,6 +16,7 @@ import StatCard from "../../components/ui/StatCard";
 import StatusBadge from "../../components/ui/StatusBadge";
 import EmptyState from "../../components/ui/EmptyState";
 import { SkeletonDashboard } from "../../components/ui/Skeleton";
+import { isAmountsHidden, maskedAmount } from "../../utils/currency";
 
 interface Partner {
   id: number;
@@ -76,6 +77,7 @@ interface AnalyticsData {
 }
 
 function formatCurrency(amount: number, currency = "USD"): string {
+  if (isAmountsHidden()) return maskedAmount(currency);
   try {
     return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount ?? 0);
   } catch {

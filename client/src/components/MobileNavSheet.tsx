@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, useNavigate } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
-import { X, LogOut, Bell, ChevronRight } from "lucide-react";
+import { X, LogOut, Bell, ChevronRight, Eye, EyeOff, Coins, Settings as SettingsIcon } from "lucide-react";
+import { isAmountsHidden, setAmountsHidden } from "../utils/currency";
 
 export interface SheetItem {
   path: string;
@@ -135,6 +136,43 @@ export default function MobileNavSheet({ open, onClose, title, subtitle, section
               </div>
             </div>
           ))}
+        </div>
+
+        {/* settings + preferences */}
+        <div className="border-t border-[var(--color-border)] px-3 pt-3">
+          <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-2)]">
+            <button
+              onClick={() => setAmountsHidden(!isAmountsHidden())}
+              className="flex w-full items-center gap-3 px-3.5 py-3 text-[15px] font-medium text-[var(--color-text-secondary)]"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-surface-3)] text-[var(--color-text-muted)]">
+                {isAmountsHidden() ? <Eye className="h-[18px] w-[18px]" /> : <EyeOff className="h-[18px] w-[18px]" />}
+              </span>
+              <span className="flex-1 text-left">{isAmountsHidden() ? "Show amounts" : "Hide amounts"}</span>
+            </button>
+            {localStorage.getItem("role") === "ADMIN" && (
+              <button
+                onClick={() => { onClose(); navigate("/settings/currency"); }}
+                className="flex w-full items-center gap-3 border-t border-[var(--color-border)] px-3.5 py-3 text-[15px] font-medium text-[var(--color-text-secondary)]"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-surface-3)] text-[var(--color-text-muted)]">
+                  <Coins className="h-[18px] w-[18px]" />
+                </span>
+                <span className="flex-1 text-left">Currency</span>
+                <ChevronRight className="h-4 w-4 text-[var(--color-text-muted)] opacity-50" />
+              </button>
+            )}
+            <button
+              onClick={() => { onClose(); navigate("/settings/profile"); }}
+              className="flex w-full items-center gap-3 border-t border-[var(--color-border)] px-3.5 py-3 text-[15px] font-medium text-[var(--color-text-secondary)]"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-surface-3)] text-[var(--color-text-muted)]">
+                <SettingsIcon className="h-[18px] w-[18px]" />
+              </span>
+              <span className="flex-1 text-left">Profile settings</span>
+              <ChevronRight className="h-4 w-4 text-[var(--color-text-muted)] opacity-50" />
+            </button>
+          </div>
         </div>
 
         {/* log out */}

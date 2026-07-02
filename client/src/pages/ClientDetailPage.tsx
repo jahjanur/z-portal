@@ -11,6 +11,7 @@ import EmptyState from "../components/ui/EmptyState";
 import Spinner from "../components/ui/Spinner";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
 import ClientTeamMembers from "../components/admin/ClientTeamMembers";
+import { isAmountsHidden, maskedAmount } from "../utils/currency";
 
 interface Task {
   id: number;
@@ -246,6 +247,7 @@ const fetchAllFiles = async () => {
   };
 
   const formatCurrency = (amount: number, currency = "USD") => {
+    if (isAmountsHidden()) return maskedAmount(currency);
     try {
       return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount ?? 0);
     } catch {

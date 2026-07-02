@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from "r
 import { Toaster } from "react-hot-toast";
 import API from "./api";
 import { setCurrencySettings } from "./utils";
+import { AMOUNTS_EVENT } from "./utils/currency";
 import AuthPage from "./pages/Authpage";
 import Dashboard from "./pages/Dashboard";
 import HomePage from "./pages/Homepage";
@@ -55,6 +56,14 @@ function AppShell() {
       .then(({ data }) => { setCurrencySettings(data); bumpCurrency((n) => n + 1); })
       .catch(() => {});
   }, [token]);
+
+  // Re-render the whole tree when the "hide amounts" privacy toggle changes so
+  // every money figure re-formats (masked ↔ shown).
+  useEffect(() => {
+    const h = () => bumpCurrency((n) => n + 1);
+    window.addEventListener(AMOUNTS_EVENT, h);
+    return () => window.removeEventListener(AMOUNTS_EVENT, h);
+  }, []);
   const isAdmin = role === "ADMIN";
   const isEraSphere = role === "ERASPHERE";
   const isAdminOrEraSphere = isAdmin || isEraSphere;
