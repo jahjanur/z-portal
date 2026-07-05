@@ -10,6 +10,7 @@ import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import StatusBadge from "../../components/ui/StatusBadge";
 import EmptyState from "../../components/ui/EmptyState";
+import SeoPackageDetails from "../../components/seo/SeoPackageDetails";
 
 interface DaLine { da: number; qty: number }
 interface ContentPiece { qty: number; label: string }
@@ -54,6 +55,7 @@ export default function AdminSeoPage() {
   const [seeding, setSeeding] = useState(false);
   const [activatePkg, setActivatePkg] = useState<SeoPackage | null>(null);
   const [editPkg, setEditPkg] = useState<SeoPackage | null>(null);
+  const [detailsPkg, setDetailsPkg] = useState<SeoPackage | null>(null);
 
   const allInvoices = useMemo(() => [...adminOwnPendingInvoices, ...adminOwnPaidInvoices], [adminOwnPendingInvoices, adminOwnPaidInvoices]);
 
@@ -157,7 +159,8 @@ export default function AdminSeoPage() {
                         <li key={i} className="flex items-start gap-1.5 text-xs text-[var(--color-text-muted)]"><span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-[var(--color-text-muted)]" />{f}</li>
                       ))}
                     </ul>
-                    <div className="mt-4 flex flex-wrap gap-1.5">
+                    <button onClick={() => setDetailsPkg(pkg)} className="mt-3 text-xs font-semibold text-[var(--color-text-muted)] transition hover:text-[var(--color-text-primary)]">See what's included →</button>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
                       <Button variant="primary" size="sm" className="flex-1" onClick={() => setActivatePkg(pkg)}>Activate</Button>
                       <button onClick={() => setEditPkg(pkg)} title="Edit" className="rounded-lg border border-[var(--color-border)] p-2 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"><Pencil className="h-4 w-4" /></button>
                       <button onClick={() => toggleActive(pkg)} title={pkg.active ? "Deactivate" : "Activate"} className="rounded-lg border border-[var(--color-border)] p-2 text-[var(--color-text-muted)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"><Power className="h-4 w-4" /></button>
@@ -222,6 +225,11 @@ export default function AdminSeoPage() {
           onClose={() => setEditPkg(null)}
           onDone={() => { setEditPkg(null); load(); }}
         />
+      )}
+      {detailsPkg && (
+        <Modal isOpen onClose={() => setDetailsPkg(null)} title={`${detailsPkg.name} — what's included`} maxWidth="lg">
+          <SeoPackageDetails pkg={detailsPkg} />
+        </Modal>
       )}
     </div>
   );

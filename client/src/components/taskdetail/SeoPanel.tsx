@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Search, Check, Link2, Globe, Clock, ShieldCheck, Pencil } from "lucide-react";
+import { Search, Check, Link2, Globe, Clock, ShieldCheck, Pencil, ListChecks } from "lucide-react";
 import API from "../../api";
 import { formatMoney } from "../../utils/currency";
+import Modal from "../ui/Modal";
+import SeoPackageDetails from "../seo/SeoPackageDetails";
 
 export interface SeoPackageLite {
   id: number;
@@ -11,12 +13,16 @@ export interface SeoPackageLite {
   price: number;
   currency?: string;
   features?: string[];
+  highlights?: string[];
   backlinks: number;
   packageItems: number;
   maxKeywords: number;
   deliveryDaysMin: number;
   deliveryDaysMax: number;
+  processingHours?: number;
   guaranteeMonths: number;
+  contentPieces?: { qty: number; label: string }[] | null;
+  backlinkProfile?: { da: number; qty: number }[] | null;
 }
 
 export interface SeoOrder {
@@ -65,6 +71,7 @@ export default function SeoPanel({ order, isAdmin, canEdit, onChanged }: Props) 
 
   const [editing, setEditing] = useState(!hasIntake && canEdit && !locked);
   const [savingStatus, setSavingStatus] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   const setStatus = async (status: string) => {
     setSavingStatus(true);
@@ -97,6 +104,13 @@ export default function SeoPanel({ order, isAdmin, canEdit, onChanged }: Props) 
           <Stat icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Guarantee" value={`${pkg.guaranteeMonths} months`} />
         </div>
         <p className="mt-2 text-sm font-bold text-[var(--color-text-primary)]">{formatMoney(pkg.price, pkg.currency)}</p>
+        <button
+          type="button"
+          onClick={() => setShowDetails(true)}
+          className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+        >
+          <ListChecks className="h-3.5 w-3.5" /> See what's included
+        </button>
       </div>
 
       {/* status stepper */}
@@ -160,6 +174,10 @@ export default function SeoPanel({ order, isAdmin, canEdit, onChanged }: Props) 
           </p>
         )}
       </div>
+
+      <Modal isOpen={showDetails} onClose={() => setShowDetails(false)} title={`${pkg.name} — what's included`} maxWidth="lg">
+        <SeoPackageDetails pkg={pkg} />
+      </Modal>
     </div>
   );
 }
