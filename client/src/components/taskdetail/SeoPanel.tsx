@@ -46,6 +46,15 @@ const STAGES = [
 ];
 const ALL_STATUSES = [...STAGES.map((s) => s.key), "CANCELLED"];
 
+// Content languages the articles can be written in — English first, then the
+// major markets. "Other" lets the client type a custom one.
+const LANGUAGES = [
+  "English", "German", "French", "Italian", "Spanish", "Portuguese", "Dutch",
+  "Turkish", "Albanian", "Greek", "Polish", "Romanian", "Russian", "Ukrainian",
+  "Arabic", "Swedish", "Norwegian", "Danish", "Czech", "Hungarian", "Bulgarian",
+  "Croatian", "Serbian", "Finnish", "Other",
+];
+
 const STATUS_LABEL: Record<string, string> = {
   AWAITING_INFO: "Awaiting info",
   INFO_RECEIVED: "Info received",
@@ -230,7 +239,11 @@ function IntakeForm({ order, onCancel, onSaved }: { order: SeoOrder; onCancel: (
   const max = order.package.maxKeywords;
   const [websiteUrl, setWebsiteUrl] = useState(order.websiteUrl ?? "");
   const [sector, setSector] = useState(order.sector ?? "");
-  const [language, setLanguage] = useState(order.language ?? "English");
+  const initLang = order.language ?? "English";
+  const isPreset = LANGUAGES.includes(initLang) && initLang !== "Other";
+  const [langChoice, setLangChoice] = useState(isPreset ? initLang : "Other");
+  const [customLang, setCustomLang] = useState(isPreset ? "" : (order.language ?? ""));
+  const language = (langChoice === "Other" ? customLang.trim() : langChoice) || "English";
   const [chooseLinks, setChooseLinks] = useState(order.chooseLinks ?? false);
   const [note, setNote] = useState(order.note ?? "");
   const initialKw = useMemo(() => {
@@ -273,7 +286,12 @@ function IntakeForm({ order, onCancel, onSaved }: { order: SeoOrder; onCancel: (
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-[var(--color-text-muted)]">Content language</label>
-          <input value={language} onChange={(e) => setLanguage(e.target.value)} className="input-dark w-full px-3 py-2 text-sm" />
+          <select value={langChoice} onChange={(e) => setLangChoice(e.target.value)} className="input-dark w-full px-3 py-2 text-sm">
+            {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+          {langChoice === "Other" && (
+            <input value={customLang} onChange={(e) => setCustomLang(e.target.value)} placeholder="Enter language" className="input-dark mt-1.5 w-full px-3 py-2 text-sm" />
+          )}
         </div>
       </div>
 
