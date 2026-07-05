@@ -167,7 +167,7 @@ model SeoOrder {
   // intake (what we need from the client to start)
   websiteUrl  String?
   sector      String?
-  language    String?    @default("Turkish")
+  language    String?    @default("English")
   chooseLinks Boolean    @default(false)
   keywords    Json?      // [{keyword, targetUrl}]
   note        String?

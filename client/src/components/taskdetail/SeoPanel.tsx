@@ -230,7 +230,7 @@ function IntakeForm({ order, onCancel, onSaved }: { order: SeoOrder; onCancel: (
   const max = order.package.maxKeywords;
   const [websiteUrl, setWebsiteUrl] = useState(order.websiteUrl ?? "");
   const [sector, setSector] = useState(order.sector ?? "");
-  const [language, setLanguage] = useState(order.language ?? "Turkish");
+  const [language, setLanguage] = useState(order.language ?? "English");
   const [chooseLinks, setChooseLinks] = useState(order.chooseLinks ?? false);
   const [note, setNote] = useState(order.note ?? "");
   const initialKw = useMemo(() => {
