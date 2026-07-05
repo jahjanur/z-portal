@@ -53,17 +53,31 @@ router.get("/packages", verifyJWT, async (req: any, res) => {
   }
 });
 
-// Seed the four default packages (only ones whose name doesn't exist yet).
+// Seed / refresh the four default packages. Missing ones are created; existing
+// ones (matched by name) have their CONTENT refreshed to the latest catalog
+// (positioning, features, content pieces, backlink profile, provider spec…) so
+// old data is cleaned up — while the admin's price and active toggle are kept.
 router.post("/packages/seed-defaults", verifyJWT, verifyAdmin, async (_req, res) => {
   try {
-    const existing = await prisma.seoPackage.findMany({ select: { name: true } });
-    const have = new Set(existing.map((p) => p.name));
-    const toCreate = DEFAULT_SEO_PACKAGES.filter((p) => !have.has(p.name));
-    for (const pkg of toCreate) {
-      await prisma.seoPackage.create({ data: pkg as any });
+    const existing = await prisma.seoPackage.findMany();
+    const byName = new Map(existing.map((p) => [p.name, p]));
+    let created = 0;
+    let updated = 0;
+    for (const def of DEFAULT_SEO_PACKAGES) {
+      const found = byName.get(def.name);
+      if (!found) {
+        await prisma.seoPackage.create({ data: def as any });
+        created += 1;
+      } else {
+        // refresh content but preserve the admin's price + active state
+        const { price, currency, ...content } = def as any;
+        void price; void currency;
+        await prisma.seoPackage.update({ where: { id: found.id }, data: content });
+        updated += 1;
+      }
     }
     const packages = await prisma.seoPackage.findMany({ orderBy: [{ sortOrder: "asc" }, { id: "asc" }] });
-    res.json({ created: toCreate.length, packages });
+    res.json({ created, updated, packages });
   } catch (e) {
     console.error("Error seeding SEO packages:", e);
     res.status(500).json({ error: "Failed to seed packages" });

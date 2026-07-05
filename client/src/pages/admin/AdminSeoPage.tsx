@@ -76,7 +76,10 @@ export default function AdminSeoPage() {
     setSeeding(true);
     try {
       const { data } = await API.post("/seo/packages/seed-defaults");
-      toast.success(`Loaded ${data.created} package${data.created === 1 ? "" : "s"}`);
+      const parts = [];
+      if (data.created) parts.push(`${data.created} added`);
+      if (data.updated) parts.push(`${data.updated} refreshed`);
+      toast.success(parts.length ? `Catalog: ${parts.join(", ")}` : "Catalog is up to date");
       load();
     } catch (err: any) {
       toast.error(err?.response?.data?.error ?? "Couldn't load defaults");
@@ -117,7 +120,12 @@ export default function AdminSeoPage() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1200px] space-y-6">
       <PageHeader title="SEO packages" subtitle="Manage the backlink catalog and activate campaigns for clients">
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {packages.length > 0 && (
+            <Button variant="secondary" loading={seeding} onClick={seedDefaults}>
+              <Sparkles className="h-4 w-4" /> Reset to defaults
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => setEditPkg({} as SeoPackage)}>
             <PlusCircle className="h-4 w-4" /> New package
           </Button>
@@ -351,7 +359,7 @@ function PackageModal({ pkg, onClose, onDone }: { pkg: SeoPackage | null; onClos
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Text k="providerName" label="Provider" ph="Upstream provider" />
-          <Text k="providerPackage" label="Provider package" ph="Altın" />
+          <Text k="providerPackage" label="Provider package" ph="Altin" />
           <Text k="providerCost" label="Provider cost (₺)" />
           <Text k="providerListPrice" label="Provider list (₺)" />
         </div>
