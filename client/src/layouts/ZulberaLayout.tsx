@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   Receipt,
+  Search,
   Send,
   SquareKanban,
   UsersRound,
@@ -49,6 +50,7 @@ const ZULBERA_NAV_SECTIONS = [
     label: "Finance",
     items: [
       { path: "/admin/zulbera/invoices", label: "Invoices", icon: Receipt },
+      { path: "/admin/zulbera/seo", label: "SEO", icon: Search },
       { path: "/admin/zulbera/domains", label: "Domains", icon: Globe },
       { path: "/admin/zulbera/send-offer", label: "Send Offer", icon: Send },
     ],

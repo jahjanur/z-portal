@@ -42,6 +42,7 @@ model User {
   invoices       Invoice[]          @relation("ClientInvoices")
   clientProjects Project[]          @relation("ClientProjects")
   clientTasks    Task[]             @relation("ClientTasks")
+  seoOrders      SeoOrder[]         @relation("ClientSeoOrders")
   taskAssignments TaskWorker[]      @relation("TaskWorkers")
   taskComments   TaskComment[]
   projects       TimesheetProject[] @relation("UserProjects")
@@ -109,8 +110,72 @@ model Task {
   comments    TaskComment[]
   files       TaskFile[]
   milestones  Milestone[]
+  seoOrder    SeoOrder?
 
   @@index([projectId])
+}
+
+// ---------------- SEO backlink catalog (packages we resell) ----------------
+
+// A sellable SEO package: the client-facing offer AND the provider spec we buy
+// (both representations kept, per the catalog doc). backlinkProfile is
+// structured [{da, qty}]; contentPieces is [{qty, label}].
+model SeoPackage {
+  id                Int        @id @default(autoincrement())
+  name              String     // Core / Growth / Authority / Apex
+  positioning       String?
+  active            Boolean    @default(true)
+  sortOrder         Int        @default(0)
+  // sell side
+  price             Float
+  currency          String     @default("EUR")
+  features          String[]   @default([])   // client-facing bullets (cumulative up tiers)
+  highlights        String[]   @default([])   // öne çıkan özellikler
+  // buy side (provider spec)
+  providerName      String?    // upstream provider (future: multiple providers)
+  providerPackage   String?    // Altın / Vip / Elite Master / Elite Leader
+  providerCost      Float?     // ₺
+  providerListPrice Float?     // ₺
+  // volumes & timeline
+  backlinks         Int
+  packageItems      Int
+  maxKeywords       Int
+  deliveryDaysMin   Int
+  deliveryDaysMax   Int
+  processingHours   Int        @default(24)
+  guaranteeMonths   Int        @default(12)
+  contentPieces     Json?      // [{qty, label}]
+  backlinkProfile   Json?      // [{da, qty}]
+  createdAt         DateTime   @default(now())
+  orders            SeoOrder[]
+}
+
+// An activated package for a client. Linked 1:1 to a Task so chat/workers/
+// files/notifications come for free; the task detail shows an SEO panel
+// (intake + status) instead of To-dos.
+model SeoOrder {
+  id          Int        @id @default(autoincrement())
+  packageId   Int
+  package     SeoPackage @relation(fields: [packageId], references: [id])
+  clientId    Int
+  client      User       @relation("ClientSeoOrders", fields: [clientId], references: [id])
+  taskId      Int?       @unique
+  task        Task?      @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  invoiceId   Int?
+  // AWAITING_INFO → INFO_RECEIVED → SENT_TO_PROVIDER → IN_PROGRESS → DELIVERED (or CANCELLED)
+  status      String     @default("AWAITING_INFO")
+  // intake (what we need from the client to start)
+  websiteUrl  String?
+  sector      String?
+  language    String?    @default("Turkish")
+  chooseLinks Boolean    @default(false)
+  keywords    Json?      // [{keyword, targetUrl}]
+  note        String?
+  createdAt   DateTime   @default(now())
+  infoAt      DateTime?
+  completedAt DateTime?
+
+  @@index([clientId])
 }
 
 model Milestone {

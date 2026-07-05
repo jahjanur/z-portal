@@ -15,6 +15,7 @@ import AdminStatusControls from "./AdminStatusControls";
 import WorkerStatusControls from "./WorkerStatusControls";
 import ClientStatusView from "./ClientStatusView";
 import MilestonesPanel from "./MilestonesPanel";
+import SeoPanel from "./SeoPanel";
 
 /* ------------------------------------------------------------------ helpers */
 const roleTone = (role?: string): "info" | "neutral" | "success" =>
@@ -535,14 +536,23 @@ export default function TaskConversation(p: any) {
         {/* LEFT — task header + brand & assets + sibling tasks (desktop sidebar) */}
         <aside className="hidden shrink-0 flex-col gap-3 overflow-y-auto py-4 lg:flex lg:w-[380px]">
           <TaskHeaderCard task={task} p={p} />
-          <MilestonesPanel
-            taskId={task.id}
-            milestones={task.milestones}
-            canComplete={p.currentUserRole === "ADMIN" || (p.currentUserRole === "WORKER" && task.workers?.some((tw: any) => tw.user.id === p.currentUserId))}
-            currentUserId={p.currentUserId}
-            isAdmin={p.isAdmin}
-            onChanged={() => p.onRefresh?.()}
-          />
+          {task.seoOrder ? (
+            <SeoPanel
+              order={task.seoOrder}
+              isAdmin={p.isAdmin}
+              canEdit={p.isAdmin || p.currentUserRole === "CLIENT"}
+              onChanged={() => p.onRefresh?.()}
+            />
+          ) : (
+            <MilestonesPanel
+              taskId={task.id}
+              milestones={task.milestones}
+              canComplete={p.currentUserRole === "ADMIN" || (p.currentUserRole === "WORKER" && task.workers?.some((tw: any) => tw.user.id === p.currentUserId))}
+              currentUserId={p.currentUserId}
+              isAdmin={p.isAdmin}
+              onChanged={() => p.onRefresh?.()}
+            />
+          )}
           <BrandAssets task={task} p={p} />
           <SiblingTasks task={task} p={p} />
         </aside>
@@ -594,14 +604,23 @@ export default function TaskConversation(p: any) {
           </summary>
           <div className="mt-2 max-h-[65vh] space-y-2 overflow-y-auto overscroll-contain pr-1">
             <TaskHeaderCard task={task} p={p} hideTitle />
-            <MilestonesPanel
-              taskId={task.id}
-              milestones={task.milestones}
-              canComplete={p.currentUserRole === "ADMIN" || (p.currentUserRole === "WORKER" && task.workers?.some((tw: any) => tw.user.id === p.currentUserId))}
-              currentUserId={p.currentUserId}
-              isAdmin={p.isAdmin}
-              onChanged={() => p.onRefresh?.()}
-            />
+            {task.seoOrder ? (
+              <SeoPanel
+                order={task.seoOrder}
+                isAdmin={p.isAdmin}
+                canEdit={p.isAdmin || p.currentUserRole === "CLIENT"}
+                onChanged={() => p.onRefresh?.()}
+              />
+            ) : (
+              <MilestonesPanel
+                taskId={task.id}
+                milestones={task.milestones}
+                canComplete={p.currentUserRole === "ADMIN" || (p.currentUserRole === "WORKER" && task.workers?.some((tw: any) => tw.user.id === p.currentUserId))}
+                currentUserId={p.currentUserId}
+                isAdmin={p.isAdmin}
+                onChanged={() => p.onRefresh?.()}
+              />
+            )}
             <BrandAssets task={task} p={p} />
             <SiblingTasks task={task} p={p} />
           </div>

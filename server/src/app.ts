@@ -13,6 +13,7 @@ import workspaceRoutes from "./routes/workspace";
 import inviteRoutes from "./routes/invites";
 import commentsRoutes from "./routes/comments";
 import settingsRoutes from "./routes/settings";
+import seoRoutes from "./routes/seo";
 import { ensureUploadsDir } from "./lib/uploadsPath";
 import filesRoutes from "./routes/files";
 
@@ -59,6 +60,7 @@ app.use("/workspace", workspaceRoutes);
 app.use("/invites", inviteRoutes);
 app.use("/comments", commentsRoutes);
 app.use("/settings", settingsRoutes);
+app.use("/seo", seoRoutes);
 
 app.get("/api", (req, res) => res.send("API is running"));
 

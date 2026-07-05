@@ -269,11 +269,21 @@ router.get("/:id", auth_1.verifyJWT, async (req, res) => {
                         }
                     }
                 },
-                milestones: { orderBy: [{ order: "asc" }, { id: "asc" }] }
+                milestones: { orderBy: [{ order: "asc" }, { id: "asc" }] },
+                seoOrder: { include: { package: true } }
             }
         });
         if (!task) {
             return res.status(404).json({ error: "Task not found" });
+        }
+        // SEO orders replace the To-dos panel. Hide buy-side (provider) fields from
+        // everyone but admins.
+        if (role !== "ADMIN" && task.seoOrder?.package) {
+            const pkg = task.seoOrder.package;
+            delete pkg.providerName;
+            delete pkg.providerPackage;
+            delete pkg.providerCost;
+            delete pkg.providerListPrice;
         }
         const isAssignedWorker = task.workers.some((tw) => tw.userId === userId);
         if (role === "WORKER" && !isAssignedWorker) {

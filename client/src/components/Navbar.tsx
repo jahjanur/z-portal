@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { LayoutDashboard, UsersRound, Building2, SquareKanban, MessageSquare, Receipt, Globe, Send, CalendarClock, Handshake, Image as ImageIcon, Eye, EyeOff } from "lucide-react";
+import { LayoutDashboard, UsersRound, Building2, SquareKanban, MessageSquare, Receipt, Globe, Send, CalendarClock, Handshake, Image as ImageIcon, Eye, EyeOff, Search } from "lucide-react";
 import { isAmountsHidden, setAmountsHidden } from "../utils/currency";
 import { useMobileMenu } from "../contexts/MobileMenuContext";
 import { ThemeToggle } from "./ThemeToggle";
@@ -29,6 +29,7 @@ const ZULBERA_NAV_LINKS = [
   { path: "tasks", label: "Tasks", icon: SquareKanban },
   { path: "comments", label: "Comments", icon: MessageSquare },
   { path: "invoices", label: "Invoices", icon: Receipt },
+  { path: "seo", label: "SEO", icon: Search },
   { path: "domains", label: "Domains", icon: Globe },
   { path: "send-offer", label: "Send Offer", icon: Send },
   { path: "timesheets", label: "Timesheets", icon: CalendarClock },

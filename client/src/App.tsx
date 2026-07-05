@@ -31,6 +31,7 @@ import AdminDomainsPage from "./pages/admin/AdminDomainsPage";
 import AdminSendOfferPage from "./pages/admin/AdminSendOfferPage";
 import AdminTimesheetsPage from "./pages/admin/AdminTimesheetsPage";
 import AdminCommentsPage from "./pages/admin/AdminCommentsPage";
+import AdminSeoPage from "./pages/admin/AdminSeoPage";
 import AdminEraSpherePartnersPage from "./pages/admin/AdminEraSpherePartnersPage";
 import EraSphereAnalyticsPage from "./pages/admin/EraSphereAnalyticsPage";
 import EraSphereAnalyticsAdminPage from "./pages/admin/EraSphereAnalyticsAdminPage";
@@ -133,6 +134,7 @@ function AppShell() {
               <Route path="clients" element={<AdminClientsPage />} />
               <Route path="tasks" element={<AdminTasksPage />} />
               <Route path="invoices" element={<AdminInvoicesPage />} />
+              <Route path="seo" element={<AdminSeoPage />} />
               <Route path="domains" element={<AdminDomainsPage />} />
               <Route path="send-offer" element={<AdminSendOfferPage />} />
               <Route path="timesheets" element={<AdminTimesheetsPage />} />
