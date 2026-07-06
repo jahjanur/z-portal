@@ -90,6 +90,9 @@
   --color-info-bg: rgba(59, 130, 246, 0.12);
   --color-info-text: rgb(147, 197, 253);
   --color-info-border: rgba(59, 130, 246, 0.25);
+  /* Links (Zulbera indigo accent) — used for clickable URLs inside chat/text */
+  --color-link: #818cf8;
+  --color-link-hover: #a5b4fc;
   /* Elevation */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
@@ -201,6 +204,9 @@
   --color-info-bg: rgba(59, 130, 246, 0.1);
   --color-info-text: #1d4ed8;
   --color-info-border: rgba(59, 130, 246, 0.3);
+  /* Links (Zulbera indigo accent) — darker for light bg contrast */
+  --color-link: #4f46e5;
+  --color-link-hover: #4338ca;
   /* Elevation */
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
   --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.07);
@@ -337,6 +343,8 @@ html:not([data-theme]) {
   --color-info-bg: rgba(59, 130, 246, 0.12);
   --color-info-text: rgb(147, 197, 253);
   --color-info-border: rgba(59, 130, 246, 0.25);
+  --color-link: #818cf8;
+  --color-link-hover: #a5b4fc;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.45);

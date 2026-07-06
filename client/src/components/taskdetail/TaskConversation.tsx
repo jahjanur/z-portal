@@ -57,6 +57,35 @@ function statusDot(status: string): string {
   return "var(--color-warning-text)";
 }
 
+/** Turn plain message text into React nodes, rendering URLs as Zulbera-tinted clickable links. */
+const LINK_RE = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+function linkify(text?: string): React.ReactNode {
+  if (!text) return text ?? null;
+  return text.split(LINK_RE).map((part, i) => {
+    // split() with a capturing group puts the matched URLs at odd indexes
+    if (i % 2 === 0) return part;
+    // trailing punctuation usually isn't part of the URL — keep it as plain text
+    const m = part.match(/^([\s\S]*?)([.,;:!?)\]]*)$/);
+    const url = m ? m[1] : part;
+    const trail = m ? m[2] : "";
+    const href = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    return (
+      <React.Fragment key={i}>
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer noopener"
+          onClick={(e) => e.stopPropagation()}
+          className="break-words font-semibold text-[var(--color-link)] underline decoration-[var(--color-link)]/40 underline-offset-2 transition hover:text-[var(--color-link-hover)] hover:decoration-[var(--color-link-hover)]"
+        >
+          {url}
+        </a>
+        {trail}
+      </React.Fragment>
+    );
+  });
+}
+
 const fmtTime = (d: string) => new Date(d).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 function fmtDay(d: string): string {
   const date = new Date(d); const now = new Date();
@@ -194,7 +223,7 @@ function DeliverableCard({ file, p }: { file: any; p: any }) {
           {file.comments?.map((fc: any) => (
             <div key={fc.id} id={`file-comment-${fc.id}`} className="mb-2 scroll-mt-20">
               <p className="text-[11px]"><span className="font-semibold text-[var(--color-text-primary)]">{fc.user?.name || "User"}</span> <span className="text-[var(--color-text-muted)]">· {fmtTime(fc.createdAt)}</span></p>
-              <p className="text-xs text-[var(--color-text-secondary)]">{fc.content}</p>
+              <p className="whitespace-pre-wrap text-xs text-[var(--color-text-secondary)]">{linkify(fc.content)}</p>
             </div>
           ))}
           <div className="flex gap-2">
@@ -751,10 +780,10 @@ export default function TaskConversation(p: any) {
                         )}
                       </div>
                       {it.kind === "msg" ? (
-                        <p className="mt-0.5 whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--color-text-secondary)]">{d.content}</p>
+                        <p className="mt-0.5 whitespace-pre-wrap text-[14px] leading-relaxed text-[var(--color-text-secondary)]">{linkify(d.content)}</p>
                       ) : (
                         <>
-                          {d.caption && <p className="mt-0.5 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">{d.caption}</p>}
+                          {d.caption && <p className="mt-0.5 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">{linkify(d.caption)}</p>}
                           <DeliverableCard file={d} p={p} />
                         </>
                       )}
