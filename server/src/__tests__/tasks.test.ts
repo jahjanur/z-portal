@@ -110,4 +110,31 @@ describe("Task Routes", () => {
       expect(res.body.error).toBe("Only admins or EraSphere can delete tasks");
     });
   });
+
+  describe("PUT /tasks/:taskId/comments/:commentId/milestones (link message to to-dos)", () => {
+    it("returns 401 without auth token", async () => {
+      const res = await request(app)
+        .put("/tasks/1/comments/1/milestones")
+        .send({ milestoneIds: [1] });
+      expect(res.status).toBe(401);
+    });
+
+    it("returns 400 for an invalid id", async () => {
+      const token = makeToken({ userId: 1, role: "ADMIN" });
+      const res = await request(app)
+        .put("/tasks/abc/comments/1/milestones")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ milestoneIds: [] });
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 404 for a message that doesn't exist", async () => {
+      const token = makeToken({ userId: 1, role: "ADMIN" });
+      const res = await request(app)
+        .put("/tasks/999999/comments/999999/milestones")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ milestoneIds: [] });
+      expect(res.status).toBe(404);
+    });
+  });
 });

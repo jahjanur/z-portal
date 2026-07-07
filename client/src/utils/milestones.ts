@@ -1,3 +1,12 @@
+/** A chat message linked to a to-do (preview shown inside the to-do modal). */
+export interface LinkedComment {
+  id: number;
+  content: string;
+  createdAt: string;
+  visibleToClient: boolean;
+  user?: { id: number; name?: string | null; nickname?: string | null; avatarEmoji?: string | null; role?: string | null } | null;
+}
+
 export interface Milestone {
   id: number;
   taskId: number;
@@ -13,6 +22,8 @@ export interface Milestone {
   createdById: number;
   order: number;
   createdAt: string;
+  /** Messages linked to this to-do (join rows, each carrying the comment preview). */
+  commentLinks?: { comment: LinkedComment }[] | null;
 }
 
 const IMAGE_EXTS = ["jpg", "jpeg", "png", "gif", "webp", "avif", "svg", "bmp", "heic", "heif", "ico"];

@@ -194,8 +194,25 @@ model Milestone {
   order       Int       @default(0)
   createdAt   DateTime  @default(now())
   task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  commentLinks CommentMilestoneLink[]
 
   @@index([taskId])
+}
+
+// Many-to-many link between a chat message and a to-do (milestone). Lets a
+// message be attached to one or more to-dos; the to-do shows its linked
+// messages and each side can jump to the other.
+model CommentMilestoneLink {
+  id          Int         @id @default(autoincrement())
+  commentId   Int
+  milestoneId Int
+  createdAt   DateTime    @default(now())
+  comment     TaskComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  milestone   Milestone   @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, milestoneId])
+  @@index([commentId])
+  @@index([milestoneId])
 }
 
 model TaskWorker {
@@ -258,6 +275,7 @@ model TaskComment {
   createdAt       DateTime @default(now())
   task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id])
+  milestoneLinks  CommentMilestoneLink[]
 }
 
 model Invoice {

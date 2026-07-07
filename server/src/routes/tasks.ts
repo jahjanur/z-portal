@@ -271,10 +271,29 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
                 email: true,
                 role: true
               }
+            },
+            milestoneLinks: { select: { milestoneId: true } }
+          }
+        },
+        milestones: {
+          orderBy: [{ order: "asc" }, { id: "asc" }],
+          include: {
+            commentLinks: {
+              orderBy: { id: "asc" },
+              include: {
+                comment: {
+                  select: {
+                    id: true,
+                    content: true,
+                    createdAt: true,
+                    visibleToClient: true,
+                    user: { select: { id: true, name: true, nickname: true, avatarEmoji: true, role: true } }
+                  }
+                }
+              }
             }
           }
         },
-        milestones: { orderBy: [{ order: "asc" }, { id: "asc" }] },
         seoOrder: { include: { package: true } }
       }
     });
@@ -328,6 +347,17 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
     //   ERASPHERE → same as CLIENT
     //   WORKER    → only worker-channel content (visibleToClient: false)
     //   ADMIN     → all content, no filter
+    // Linked-message previews inside to-dos follow the same channel rules as
+    // the chat: a client must never see a worker-channel message through a to-do.
+    const filterMilestoneLinks = (keepClientVisible: boolean) => {
+      (task as any).milestones = ((task as any).milestones || []).map((m: any) => ({
+        ...m,
+        commentLinks: (m.commentLinks || []).filter(
+          (l: any) => !!l.comment?.visibleToClient === keepClientVisible
+        ),
+      }));
+    };
+
     if (role === "CLIENT" || role === "ERASPHERE") {
       (task as any).comments = (task as any).comments.filter((c: { visibleToClient: boolean }) => c.visibleToClient);
       (task as any).files = (task as any).files.filter((f: { visibleToClient: boolean }) => f.visibleToClient);
@@ -335,6 +365,7 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
         ...f,
         comments: f.comments.filter((c: { visibleToClient: boolean }) => c.visibleToClient),
       }));
+      filterMilestoneLinks(true);
       // Privacy: external viewers see worker codenames + emoji, never real names/emails.
       maskTaskWorkers(task);
     } else if (role === "WORKER") {
@@ -344,6 +375,7 @@ router.get("/:id", verifyJWT, async (req: any, res) => {
         ...f,
         comments: f.comments.filter((c: { visibleToClient: boolean }) => !c.visibleToClient),
       }));
+      filterMilestoneLinks(false);
     }
 
     // Privacy: a project's metadata may hold access credentials (logins) —
@@ -1061,6 +1093,80 @@ router.delete("/:taskId/comments/:commentId", verifyJWT, async (req: any, res) =
     if (error?.code === "P2025") return res.status(404).json({ error: "Comment not found" });
     console.error("Error deleting comment:", error);
     res.status(500).json({ error: "Failed to delete comment" });
+  }
+});
+
+// Link a chat message to one or more to-dos (milestones). Many-to-many: send the
+// FULL desired list of milestoneIds — the set is replaced. Everyone who can see
+// the message on their channel may link it (clients included).
+router.put("/:taskId/comments/:commentId/milestones", verifyJWT, async (req: any, res) => {
+  try {
+    const taskId = Number(req.params.taskId);
+    const commentId = Number(req.params.commentId);
+    if (isNaN(taskId) || isNaN(commentId)) return res.status(400).json({ error: "Invalid id" });
+    const { role, userId } = req.user;
+
+    const rawIds = Array.isArray(req.body?.milestoneIds) ? req.body.milestoneIds : [];
+    const milestoneIds = [
+      ...new Set(rawIds.map((n: any) => Number(n)).filter((n: number) => Number.isInteger(n))),
+    ] as number[];
+
+    const comment = await prisma.taskComment.findUnique({
+      where: { id: commentId },
+      select: { id: true, taskId: true, visibleToClient: true },
+    });
+    if (!comment || comment.taskId !== taskId) return res.status(404).json({ error: "Message not found" });
+
+    // Task access — mirror GET /:id: worker must be assigned, client must own,
+    // erasphere must have referred the client.
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      select: { clientId: true, workers: { select: { userId: true } } },
+    });
+    if (!task) return res.status(404).json({ error: "Task not found" });
+    const isAssignedWorker = task.workers.some((w) => w.userId === userId);
+    if (role === "WORKER" && !isAssignedWorker) return res.status(403).json({ error: "Not authorized" });
+    if (role === "CLIENT" && task.clientId !== clientScopeId(req.user)) return res.status(403).json({ error: "Not authorized" });
+    if (role === "ERASPHERE") {
+      const referredIds = await getReferredClientIds(userId);
+      if (task.clientId === null || !referredIds.includes(task.clientId)) return res.status(403).json({ error: "Not authorized" });
+    }
+
+    // Channel guard: non-admins may only link messages on their own channel.
+    if ((role === "CLIENT" || role === "ERASPHERE") && !comment.visibleToClient) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+    if (role === "WORKER" && comment.visibleToClient) {
+      return res.status(403).json({ error: "Not authorized" });
+    }
+
+    // Every milestone must belong to this task.
+    if (milestoneIds.length) {
+      const count = await prisma.milestone.count({ where: { id: { in: milestoneIds }, taskId } });
+      if (count !== milestoneIds.length) return res.status(400).json({ error: "One or more to-dos are invalid" });
+    }
+
+    await prisma.$transaction([
+      prisma.commentMilestoneLink.deleteMany({
+        where: { commentId, milestoneId: { notIn: milestoneIds.length ? milestoneIds : [-1] } },
+      }),
+      ...milestoneIds.map((milestoneId) =>
+        prisma.commentMilestoneLink.upsert({
+          where: { commentId_milestoneId: { commentId, milestoneId } },
+          create: { commentId, milestoneId },
+          update: {},
+        })
+      ),
+    ]);
+
+    const links = await prisma.commentMilestoneLink.findMany({
+      where: { commentId },
+      select: { milestoneId: true },
+    });
+    res.json({ milestoneIds: links.map((l) => l.milestoneId) });
+  } catch (error) {
+    console.error("Error linking message to to-dos:", error);
+    res.status(500).json({ error: "Failed to update links" });
   }
 });
 

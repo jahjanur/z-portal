@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 import {
   ArrowLeft, Paperclip, Send, Download, Maximize2, Check, RotateCcw,
   Image as ImageIcon, FileText, Palette, File as FileIcon, Calendar, RefreshCw, FolderKanban, ChevronDown, Trash2,
-  Copy, CornerUpRight,
+  Copy, CornerUpRight, Flag,
 } from "lucide-react";
 import Button from "../ui/Button";
 import StatusBadge from "../ui/StatusBadge";
@@ -14,7 +14,8 @@ import type { ServiceType } from "../../utils/serviceTypes";
 import AdminStatusControls from "./AdminStatusControls";
 import WorkerStatusControls from "./WorkerStatusControls";
 import ClientStatusView from "./ClientStatusView";
-import MilestonesPanel from "./MilestonesPanel";
+import MilestonesPanel, { TodoDetailModal } from "./MilestonesPanel";
+import type { Milestone, LinkedComment } from "../../utils/milestones";
 import SeoPanel from "./SeoPanel";
 
 /* ------------------------------------------------------------------ helpers */
@@ -538,6 +539,69 @@ export default function TaskConversation(p: any) {
 
   // which message's "forward to…" picker is open (key = `${kind}-${id}`)
   const [forwardFor, setForwardFor] = useState<string | null>(null);
+
+  /* ---- to-do (milestone) linking --------------------------------------- */
+  const milestones: Milestone[] = task.milestones || [];
+  // one shared to-do modal, opened either from the sidebar panel or a chat chip
+  const [openMilestoneId, setOpenMilestoneId] = useState<number | null>(null);
+  const openMilestone = openMilestoneId != null ? milestones.find((m) => m.id === openMilestoneId) ?? null : null;
+  // which message's "link to to-do" picker is open (key = comment id)
+  const [linkFor, setLinkFor] = useState<number | null>(null);
+
+  const canCompleteTodos =
+    p.currentUserRole === "ADMIN" ||
+    (p.currentUserRole === "WORKER" && task.workers?.some((tw: any) => tw.user.id === p.currentUserId));
+
+  /** Replace the full set of to-dos a message is linked to. */
+  const saveLinks = async (commentId: number, milestoneIds: number[]) => {
+    try {
+      await API.put(`/tasks/${task.id}/comments/${commentId}/milestones`, { milestoneIds });
+      p.onRefresh?.();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error ?? "Couldn't update to-do links");
+    }
+  };
+  const toggleLink = (comment: any, milestoneId: number) => {
+    const current: number[] = (comment.milestoneLinks || []).map((l: any) => l.milestoneId);
+    const next = current.includes(milestoneId) ? current.filter((x) => x !== milestoneId) : [...current, milestoneId];
+    saveLinks(comment.id, next);
+  };
+
+  const setMilestoneStage = async (m: Milestone, stage: "pushedToGithub" | "deployed", value: boolean) => {
+    try {
+      await API.patch(`/tasks/${task.id}/milestones/${m.id}`, { [stage]: value });
+      p.onRefresh?.();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error ?? "Couldn't update stage");
+    }
+  };
+  const removeMilestone = async (m: Milestone) => {
+    if (!window.confirm("Delete this to-do?")) return;
+    try {
+      await API.delete(`/tasks/${task.id}/milestones/${m.id}`);
+      setOpenMilestoneId(null);
+      p.onRefresh?.();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error ?? "Couldn't delete to-do");
+    }
+  };
+
+  /** From a to-do's linked message → close the modal and scroll the chat to it. */
+  const jumpToComment = (comment: LinkedComment) => {
+    setOpenMilestoneId(null);
+    // admins have two channels — switch to the one the message lives on
+    if (p.isAdmin) {
+      const ch = comment.visibleToClient ? "client" : "worker";
+      if (p.activeChannel !== ch) p.setActiveChannel(ch);
+    }
+    setTimeout(() => {
+      const el = document.getElementById(`task-comment-${comment.id}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("comment-highlight-glow");
+      setTimeout(() => el.classList.remove("comment-highlight-glow"), 3000);
+    }, 90);
+  };
   /** Forward a text message (quoted) or a file deliverable to a target channel. */
   const doForward = (item: any, fromName: string, toClient: boolean) => {
     if (item.kind === "msg") {
@@ -580,6 +644,7 @@ export default function TaskConversation(p: any) {
               currentUserId={p.currentUserId}
               isAdmin={p.isAdmin}
               onChanged={() => p.onRefresh?.()}
+              onOpenTodo={setOpenMilestoneId}
             />
           )}
           <BrandAssets task={task} p={p} />
@@ -648,6 +713,7 @@ export default function TaskConversation(p: any) {
                 currentUserId={p.currentUserId}
                 isAdmin={p.isAdmin}
                 onChanged={() => p.onRefresh?.()}
+                onOpenTodo={setOpenMilestoneId}
               />
             )}
             <BrandAssets task={task} p={p} />
@@ -764,6 +830,48 @@ export default function TaskConversation(p: any) {
                                   )}
                                 </div>
                               )}
+                              {it.kind === "msg" && milestones.length > 0 && (() => {
+                                const linkOpen = linkFor === d.id;
+                                const linkedIds: number[] = (d.milestoneLinks || []).map((l: any) => l.milestoneId);
+                                return (
+                                  <div className="relative">
+                                    <button
+                                      type="button"
+                                      onClick={() => setLinkFor(linkOpen ? null : d.id)}
+                                      title="Link to a to-do"
+                                      aria-label="Link this message to a to-do"
+                                      aria-expanded={linkOpen}
+                                      className={`transition focus:opacity-100 group-hover:opacity-100 ${linkOpen || linkedIds.length ? "text-[var(--color-link)] opacity-100" : "text-[var(--color-text-muted)] opacity-0 hover:text-[var(--color-link)]"}`}
+                                    >
+                                      <Flag className="h-3.5 w-3.5" />
+                                    </button>
+                                    {linkOpen && (
+                                      <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setLinkFor(null)} aria-hidden />
+                                        <div className="absolute right-0 top-6 z-50 max-h-72 w-56 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-panel-solid)] p-1 shadow-elev-lg animate-scale-in">
+                                          <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Link to to-do</p>
+                                          {milestones.map((m) => {
+                                            const on = linkedIds.includes(m.id);
+                                            return (
+                                              <button
+                                                key={m.id}
+                                                type="button"
+                                                onClick={() => toggleLink(d, m.id)}
+                                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
+                                              >
+                                                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${on ? "border-[var(--color-link)] bg-[var(--color-link)] text-white" : "border-[var(--color-border-hover)] text-transparent"}`}>
+                                                  <Check className="h-3 w-3" strokeWidth={3} />
+                                                </span>
+                                                <span className="flex-1 truncate">{m.title}</span>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </>
                           );
                         })()}
@@ -786,6 +894,27 @@ export default function TaskConversation(p: any) {
                           {d.caption && <p className="mt-0.5 text-[14px] leading-relaxed text-[var(--color-text-secondary)]">{linkify(d.caption)}</p>}
                           <DeliverableCard file={d} p={p} />
                         </>
+                      )}
+                      {/* to-dos this message is linked to — click a chip to open the to-do */}
+                      {it.kind === "msg" && (d.milestoneLinks?.length ?? 0) > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {(d.milestoneLinks as any[])
+                            .map((l) => milestones.find((m) => m.id === l.milestoneId))
+                            .filter((m): m is Milestone => !!m)
+                            .map((m) => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => setOpenMilestoneId(m.id)}
+                                title={`Open to-do: ${m.title}`}
+                                className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-[var(--color-link)]/40 bg-[var(--color-link)]/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-link)] transition hover:bg-[var(--color-link)]/20"
+                              >
+                                <Flag className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{m.title}</span>
+                                {m.isDone && <Check className="h-3 w-3 shrink-0" strokeWidth={3} />}
+                              </button>
+                            ))}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -855,6 +984,23 @@ export default function TaskConversation(p: any) {
         </div>
         </div>
       </div>
+
+      {/* One shared to-do modal — opened from the sidebar panel or a chat chip.
+          Its "Linked messages" section jumps back to the exact message in chat. */}
+      {openMilestone && (
+        <TodoDetailModal
+          key={openMilestone.id}
+          taskId={task.id}
+          milestone={openMilestone}
+          canComplete={canCompleteTodos}
+          canEdit={p.isAdmin || openMilestone.createdById === p.currentUserId}
+          onClose={() => setOpenMilestoneId(null)}
+          onSetStage={(stage, value) => setMilestoneStage(openMilestone, stage, value)}
+          onDelete={() => removeMilestone(openMilestone)}
+          onChanged={() => p.onRefresh?.()}
+          onJumpToComment={jumpToComment}
+        />
+      )}
     </div>
   );
 }

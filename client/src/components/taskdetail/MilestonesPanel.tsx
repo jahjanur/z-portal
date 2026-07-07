@@ -1,11 +1,16 @@
 import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, ChevronLeft, Github, Rocket, Pencil, RotateCcw, Paperclip, FileText } from "lucide-react";
+import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, ChevronLeft, Github, Rocket, Pencil, RotateCcw, Paperclip, FileText, MessageSquare } from "lucide-react";
 import API, { getFileUrl } from "../../api";
 import Modal from "../ui/Modal";
 import ProgressBar from "../ui/ProgressBar";
 import { useFileDrop } from "../../hooks/useFileDrop";
-import { type Milestone, milestoneProgress, milestoneImages, milestoneDocs, fileExt } from "../../utils/milestones";
+import { type Milestone, type LinkedComment, milestoneProgress, milestoneImages, milestoneDocs, fileExt } from "../../utils/milestones";
+
+const fmtWhen = (d: string) => {
+  const date = new Date(d);
+  return isNaN(date.getTime()) ? "" : date.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+};
 
 /** Images plus common document types the pickers accept. */
 const ATTACH_ACCEPT =
@@ -25,9 +30,12 @@ interface Props {
   currentUserId: number;
   isAdmin: boolean;
   onChanged: () => void;
+  /** When provided, clicking a to-do opens it via the parent (which renders one
+   *  shared modal, so chat chips and the panel open the same dialog). */
+  onOpenTodo?: (id: number) => void;
 }
 
-export default function MilestonesPanel({ taskId, milestones, canComplete, currentUserId, isAdmin, onChanged }: Props) {
+export default function MilestonesPanel({ taskId, milestones, canComplete, currentUserId, isAdmin, onChanged, onOpenTodo }: Props) {
   const list = milestones ?? [];
   const { total, done, percent } = milestoneProgress(list);
 
@@ -115,7 +123,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
             return (
               <li
                 key={m.id}
-                onClick={() => setOpenId(m.id)}
+                onClick={() => (onOpenTodo ? onOpenTodo(m.id) : setOpenId(m.id))}
                 className="group flex cursor-pointer items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2.5 transition hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-3)]"
               >
                 <span
@@ -249,7 +257,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
         </button>
       )}
 
-      {open && (
+      {!onOpenTodo && open && (
         <TodoDetailModal
           key={open.id}
           taskId={taskId}
@@ -268,8 +276,8 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
 
 /* ----------------------------- detail modal ------------------------------ */
 
-function TodoDetailModal({
-  taskId, milestone, canComplete, canEdit, onClose, onSetStage, onDelete, onChanged,
+export function TodoDetailModal({
+  taskId, milestone, canComplete, canEdit, onClose, onSetStage, onDelete, onChanged, onJumpToComment,
 }: {
   taskId: number;
   milestone: Milestone;
@@ -279,7 +287,12 @@ function TodoDetailModal({
   onSetStage: (stage: "pushedToGithub" | "deployed", value: boolean) => void;
   onDelete: () => void;
   onChanged: () => void;
+  /** Jump to a linked chat message (closes the modal + scrolls the chat to it). */
+  onJumpToComment?: (comment: LinkedComment) => void;
 }) {
+  const linkedMessages: LinkedComment[] = (milestone.commentLinks ?? [])
+    .map((l) => l.comment)
+    .filter(Boolean);
   const imgs = milestoneImages(milestone);
   const docs = milestoneDocs(milestone);
   // Lightbox tracks an index into imgs so you can page through with the arrows,
@@ -615,6 +628,40 @@ function TodoDetailModal({
             </div>
           )}
         </div>
+
+        {/* linked chat messages — click to jump to the message in the conversation */}
+        {onJumpToComment && linkedMessages.length > 0 && (
+          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-4">
+            <p className="mb-2.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+              <MessageSquare className="h-3.5 w-3.5" /> Linked messages · {linkedMessages.length}
+            </p>
+            <ul className="space-y-2">
+              {linkedMessages.map((c) => (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => onJumpToComment(c)}
+                    className="group flex w-full items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2.5 text-left transition hover:border-[var(--color-link)] hover:bg-[var(--color-surface-3)]"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-3)] text-sm">
+                      {c.user?.avatarEmoji || <MessageSquare className="h-4 w-4 text-[var(--color-text-muted)]" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2">
+                        <span className="truncate text-[13px] font-semibold text-[var(--color-text-primary)]">
+                          {c.user?.nickname || c.user?.name || "User"}
+                        </span>
+                        <span className="shrink-0 text-[11px] text-[var(--color-text-muted)]">{fmtWhen(c.createdAt)}</span>
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block text-xs text-[var(--color-text-secondary)]">{c.content}</span>
+                    </span>
+                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--color-link)]" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* footer: meta + delete */}
         <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-4">
