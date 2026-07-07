@@ -6,6 +6,7 @@ import {
   Copy, CornerUpRight, Flag,
 } from "lucide-react";
 import Button from "../ui/Button";
+import Modal from "../ui/Modal";
 import StatusBadge from "../ui/StatusBadge";
 import WorkerMultiSelect from "../ui/WorkerMultiSelect";
 import API, { getFileUrl } from "../../api";
@@ -545,8 +546,11 @@ export default function TaskConversation(p: any) {
   // one shared to-do modal, opened either from the sidebar panel or a chat chip
   const [openMilestoneId, setOpenMilestoneId] = useState<number | null>(null);
   const openMilestone = openMilestoneId != null ? milestones.find((m) => m.id === openMilestoneId) ?? null : null;
-  // which message's "link to to-do" picker is open (key = comment id)
-  const [linkFor, setLinkFor] = useState<number | null>(null);
+  // which message's "link to to-do" picker modal is open (comment id; live
+  // comment is derived from task.comments so it reflects toggles immediately)
+  const [linkTargetId, setLinkTargetId] = useState<number | null>(null);
+  const linkComment =
+    linkTargetId != null ? (task.comments || []).find((c: any) => c.id === linkTargetId) ?? null : null;
 
   const canCompleteTodos =
     p.currentUserRole === "ADMIN" ||
@@ -831,45 +835,17 @@ export default function TaskConversation(p: any) {
                                 </div>
                               )}
                               {it.kind === "msg" && milestones.length > 0 && (() => {
-                                const linkOpen = linkFor === d.id;
                                 const linkedIds: number[] = (d.milestoneLinks || []).map((l: any) => l.milestoneId);
                                 return (
-                                  <div className="relative">
-                                    <button
-                                      type="button"
-                                      onClick={() => setLinkFor(linkOpen ? null : d.id)}
-                                      title="Link to a to-do"
-                                      aria-label="Link this message to a to-do"
-                                      aria-expanded={linkOpen}
-                                      className={`transition focus:opacity-100 group-hover:opacity-100 ${linkOpen || linkedIds.length ? "text-[var(--color-link)] opacity-100" : "text-[var(--color-text-muted)] opacity-0 hover:text-[var(--color-link)]"}`}
-                                    >
-                                      <Flag className="h-3.5 w-3.5" />
-                                    </button>
-                                    {linkOpen && (
-                                      <>
-                                        <div className="fixed inset-0 z-40" onClick={() => setLinkFor(null)} aria-hidden />
-                                        <div className="absolute right-0 top-6 z-50 max-h-72 w-56 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-panel-solid)] p-1 shadow-elev-lg animate-scale-in">
-                                          <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Link to to-do</p>
-                                          {milestones.map((m) => {
-                                            const on = linkedIds.includes(m.id);
-                                            return (
-                                              <button
-                                                key={m.id}
-                                                type="button"
-                                                onClick={() => toggleLink(d, m.id)}
-                                                className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-text-primary)]"
-                                              >
-                                                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${on ? "border-[var(--color-link)] bg-[var(--color-link)] text-white" : "border-[var(--color-border-hover)] text-transparent"}`}>
-                                                  <Check className="h-3 w-3" strokeWidth={3} />
-                                                </span>
-                                                <span className="flex-1 truncate">{m.title}</span>
-                                              </button>
-                                            );
-                                          })}
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setLinkTargetId(d.id)}
+                                    title="Link to a to-do"
+                                    aria-label="Link this message to a to-do"
+                                    className={`transition focus:opacity-100 group-hover:opacity-100 ${linkedIds.length ? "text-[var(--color-link)] opacity-100" : "text-[var(--color-text-muted)] opacity-0 hover:text-[var(--color-link)]"}`}
+                                  >
+                                    <Flag className="h-3.5 w-3.5" />
+                                  </button>
                                 );
                               })()}
                             </>
@@ -1001,6 +977,73 @@ export default function TaskConversation(p: any) {
           onJumpToComment={jumpToComment}
         />
       )}
+
+      {/* Link-a-message-to-to-dos modal. A real modal (portaled + mobile sheet)
+          so it never gets clipped by the scrolling chat feed. */}
+      {linkComment && (() => {
+        const linkedIds: number[] = (linkComment.milestoneLinks || []).map((l: any) => l.milestoneId);
+        return (
+          <Modal isOpen onClose={() => setLinkTargetId(null)} maxWidth="md" title="Link to to-dos">
+            <div className="space-y-4">
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3">
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Message</p>
+                <p className="line-clamp-3 whitespace-pre-wrap text-sm text-[var(--color-text-secondary)]">{linkComment.content}</p>
+              </div>
+
+              <div>
+                <p className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">
+                  <span>Task to-dos</span>
+                  <span className="text-[var(--color-link)]">{linkedIds.length} linked</span>
+                </p>
+                <ul className="max-h-[52vh] space-y-2 overflow-y-auto pr-0.5">
+                  {milestones.map((m) => {
+                    const on = linkedIds.includes(m.id);
+                    return (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          onClick={() => toggleLink(linkComment, m.id)}
+                          aria-pressed={on}
+                          className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
+                            on
+                              ? "border-[var(--color-link)] bg-[var(--color-link)]/10"
+                              : "border-[var(--color-border)] bg-[var(--color-surface-2)] hover:border-[var(--color-border-hover)] hover:bg-[var(--color-surface-3)]"
+                          }`}
+                        >
+                          <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${on ? "border-[var(--color-link)] bg-[var(--color-link)] text-white" : "border-[var(--color-border-hover)] text-transparent"}`}>
+                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className={`block truncate text-sm font-semibold ${m.isDone ? "text-[var(--color-text-muted)] line-through" : "text-[var(--color-text-primary)]"}`}>
+                              {m.title}
+                            </span>
+                            <span className="mt-1 flex flex-wrap items-center gap-1.5">
+                              {m.isDone ? (
+                                <StatusBadge dot={false} tone="success" className="!px-1.5 !py-0 text-[9px] uppercase tracking-wide">Done</StatusBadge>
+                              ) : (
+                                <>
+                                  {m.pushedToGithub && <StatusBadge dot={false} tone="info" className="!px-1.5 !py-0 text-[9px] uppercase tracking-wide">GitHub</StatusBadge>}
+                                  {m.deployed && <StatusBadge dot={false} tone="info" className="!px-1.5 !py-0 text-[9px] uppercase tracking-wide">Deployed</StatusBadge>}
+                                  {!m.pushedToGithub && !m.deployed && <span className="text-[11px] text-[var(--color-text-muted)]">In progress</span>}
+                                </>
+                              )}
+                            </span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-[var(--color-border)] pt-3">
+                <p className="text-[11px] text-[var(--color-text-muted)]">Changes save automatically.</p>
+                <Button variant="primary" size="sm" onClick={() => setLinkTargetId(null)}>Done</Button>
+              </div>
+            </div>
+          </Modal>
+        );
+      })()}
     </div>
   );
 }
