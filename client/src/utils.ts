@@ -122,6 +122,10 @@ export function invoicePaid(i: RevenueInvoice): number {
 
 /** How much of a single invoice is still owed. */
 export function invoiceRemaining(i: RevenueInvoice): number {
+  // A PAID invoice owes nothing — must stay consistent with invoicePaid() so
+  // paid + remaining == amount (else a Paid-marked invoice with no payment rows
+  // in the server's `remaining` would be counted in BOTH paid and outstanding).
+  if ((i.status ?? "").toUpperCase() === "PAID") return 0;
   if (typeof i.remaining === "number") return i.remaining;
   return Math.max(0, i.amount - invoicePaid(i));
 }
