@@ -126,6 +126,39 @@ interface EditingDomain {
   renewalReminderSentAt?: string | null;
 }
 
+export interface Server {
+  id: number;
+  label: string;
+  provider?: string | null;
+  ipAddress?: string | null;
+  plan?: string | null;
+  location?: string | null;
+  notes?: string | null;
+  client: { id: number; name: string; company?: string };
+  createdAt: string;
+  activationDate?: string | null;
+  expirationDate?: string | null;
+  lifespanYears?: number | null;
+  status?: string;
+  isActive?: boolean;
+  renewalReminderSentAt?: string | null;
+}
+
+interface EditingServer {
+  id: number;
+  label: string;
+  provider?: string | null;
+  ipAddress?: string | null;
+  plan?: string | null;
+  location?: string | null;
+  notes?: string | null;
+  clientId: number;
+  activationDate?: string | null;
+  expirationDate?: string | null;
+  lifespanYears?: number | null;
+  status?: string;
+}
+
 interface AdminContextValue {
   clients: User[];
   workers: User[];
@@ -210,6 +243,37 @@ interface AdminContextValue {
   deleteDomain: (id: number) => void;
   handleEditDomain: (domain: Domain) => void;
   handleCancelEdit: () => void;
+  servers: Server[];
+  adminOwnServers: Server[];
+  editingServer: EditingServer | null;
+  createServer: (data: {
+    clientId: string;
+    label: string;
+    provider?: string;
+    ipAddress?: string;
+    plan?: string;
+    location?: string;
+    notes?: string;
+    activationDate?: string;
+    expirationDate?: string;
+    lifespanYears?: number | null;
+    status?: string;
+  }) => Promise<void>;
+  updateServer: (serverId: number, data: {
+    label: string;
+    provider?: string;
+    ipAddress?: string;
+    plan?: string;
+    location?: string;
+    notes?: string;
+    activationDate?: string;
+    expirationDate?: string;
+    lifespanYears?: number | null;
+    status?: string;
+  }) => Promise<void>;
+  deleteServer: (id: number) => void;
+  handleEditServer: (server: Server) => void;
+  handleCancelServerEdit: () => void;
 }
 
 const AdminContext = createContext<AdminContextValue | null>(null);
@@ -221,9 +285,11 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
+  const [servers, setServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingDomain, setEditingDomain] = useState<EditingDomain | null>(null);
+  const [editingServer, setEditingServer] = useState<EditingServer | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -246,6 +312,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
         const invoicesRes = await API.get("/invoices");
         setInvoices(invoicesRes.data);
         const allDomains: Domain[] = [];
+        const allServers: Server[] = [];
         for (const client of clientUsers) {
           try {
             const domainRes = await API.get(`/domains/client/${client.id}`);
@@ -253,11 +320,19 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
           } catch {
             // skip
           }
+          try {
+            const serverRes = await API.get(`/servers/client/${client.id}`);
+            allServers.push(...serverRes.data);
+          } catch {
+            // skip
+          }
         }
         setDomains(allDomains);
+        setServers(allServers);
       } else {
         setInvoices([]);
         setDomains([]);
+        setServers([]);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch data");
@@ -306,6 +381,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   const adminOwnPendingInvoices = adminOwnInvoices.filter((i) => !isPaid(i));
   const adminOwnPaidInvoices = adminOwnInvoices.filter((i) => isPaid(i));
   const adminOwnDomains = domains.filter((d) => adminOwnClientIds.has(d.client.id));
+  const adminOwnServers = servers.filter((s) => adminOwnClientIds.has(s.client.id));
 
   const createWorker = async (data: { email: string; password: string; name: string; role?: string; company?: string }) => {
     const res = await API.post("/users", { ...data, role: data.role || "WORKER" });
@@ -543,6 +619,94 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   const handleCancelEdit = () => setEditingDomain(null);
 
+  const createServer = async (data: {
+    clientId: string;
+    label: string;
+    provider?: string;
+    ipAddress?: string;
+    plan?: string;
+    location?: string;
+    notes?: string;
+    activationDate?: string;
+    expirationDate?: string;
+    lifespanYears?: number | null;
+    status?: string;
+  }) => {
+    await API.post("/servers", {
+      clientId: Number(data.clientId),
+      label: data.label,
+      provider: data.provider || null,
+      ipAddress: data.ipAddress || null,
+      plan: data.plan || null,
+      location: data.location || null,
+      notes: data.notes || null,
+      activationDate: data.activationDate || null,
+      expirationDate: data.expirationDate || null,
+      lifespanYears: data.lifespanYears ?? null,
+      status: data.status || "PENDING",
+    });
+    await fetchAll();
+    toast.success("Server added successfully!");
+  };
+
+  const updateServer = async (
+    serverId: number,
+    data: {
+      label: string;
+      provider?: string;
+      ipAddress?: string;
+      plan?: string;
+      location?: string;
+      notes?: string;
+      activationDate?: string;
+      expirationDate?: string;
+      lifespanYears?: number | null;
+      status?: string;
+    }
+  ) => {
+    await API.put(`/servers/${serverId}`, {
+      label: data.label,
+      provider: data.provider || null,
+      ipAddress: data.ipAddress || null,
+      plan: data.plan || null,
+      location: data.location || null,
+      notes: data.notes || null,
+      activationDate: data.activationDate || null,
+      expirationDate: data.expirationDate || null,
+      lifespanYears: data.lifespanYears ?? null,
+      status: data.status,
+    });
+    setEditingServer(null);
+    await fetchAll();
+    toast.success("Server updated successfully!");
+  };
+
+  const deleteServer = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this server?")) return;
+    await API.delete(`/servers/${id}`);
+    await fetchAll();
+    toast.success("Server deleted successfully!");
+  };
+
+  const handleEditServer = (server: Server) => {
+    setEditingServer({
+      id: server.id,
+      label: server.label,
+      provider: server.provider,
+      ipAddress: server.ipAddress,
+      plan: server.plan,
+      location: server.location,
+      notes: server.notes,
+      clientId: server.client.id,
+      activationDate: server.activationDate,
+      expirationDate: server.expirationDate,
+      lifespanYears: server.lifespanYears,
+      status: server.status,
+    });
+  };
+
+  const handleCancelServerEdit = () => setEditingServer(null);
+
   const value: AdminContextValue = {
     clients,
     workers,
@@ -591,6 +755,14 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     deleteDomain,
     handleEditDomain,
     handleCancelEdit,
+    servers,
+    adminOwnServers,
+    editingServer,
+    createServer,
+    updateServer,
+    deleteServer,
+    handleEditServer,
+    handleCancelServerEdit,
   };
 
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>;

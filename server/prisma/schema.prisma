@@ -38,6 +38,7 @@ model User {
   companyOwner   User?              @relation("CompanyTeam", fields: [companyOwnerId], references: [id])
   teamMembers    User[]             @relation("CompanyTeam")
   domains        Domain[]           @relation("ClientDomains")
+  servers        Server[]           @relation("ClientServers")
   fileComments   FileComment[]
   invoices       Invoice[]          @relation("ClientInvoices")
   clientProjects Project[]          @relation("ClientProjects")
@@ -89,6 +90,29 @@ model Domain {
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @default(now()) @updatedAt
   client                  User      @relation("ClientDomains", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([expirationDate])
+}
+
+model Server {
+  id                      Int       @id @default(autoincrement())
+  clientId                Int
+  label                   String
+  provider                String?
+  ipAddress               String?
+  plan                    String?
+  location                String?
+  notes                   String?
+  activationDate          DateTime?
+  expirationDate          DateTime?
+  lifespanYears           Int?
+  status                  String    @default("PENDING")
+  isActive                Boolean   @default(true)
+  renewalReminderSentAt   DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @default(now()) @updatedAt
+  client                  User      @relation("ClientServers", fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
   @@index([expirationDate])
@@ -190,6 +214,7 @@ model Milestone {
   isDone      Boolean   @default(false)
   doneAt      DateTime?
   doneBy      Int?
+  priority    String    @default("MEDIUM")   // HIGH | MEDIUM | LOW
   createdById Int
   order       Int       @default(0)
   createdAt   DateTime  @default(now())

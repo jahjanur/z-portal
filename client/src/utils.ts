@@ -113,8 +113,11 @@ interface RevenueInvoice {
 
 /** How much of a single invoice is actually paid (partial payments aware). */
 export function invoicePaid(i: RevenueInvoice): number {
+  // A PAID label always means the invoice is fully settled — honour it even when
+  // no payment rows exist yet (e.g. marked paid via the status dropdown).
+  if ((i.status ?? "").toUpperCase() === "PAID") return i.amount;
   if (typeof i.amountPaid === "number") return i.amountPaid;
-  return (i.status ?? "").toUpperCase() === "PAID" ? i.amount : 0; // fallback for old data
+  return 0;
 }
 
 /** How much of a single invoice is still owed. */

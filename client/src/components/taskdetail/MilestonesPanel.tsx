@@ -5,7 +5,45 @@ import API, { getFileUrl } from "../../api";
 import Modal from "../ui/Modal";
 import ProgressBar from "../ui/ProgressBar";
 import { useFileDrop } from "../../hooks/useFileDrop";
-import { type Milestone, type LinkedComment, milestoneProgress, milestoneImages, milestoneDocs, fileExt } from "../../utils/milestones";
+import { type Milestone, type LinkedComment, type Priority, milestoneProgress, milestoneImages, milestoneDocs, fileExt, priorityMeta, PRIORITIES } from "../../utils/milestones";
+
+/** Colored pill selector for choosing a to-do priority. */
+function PrioritySelect({ value, onChange, size = "sm" }: { value: Priority; onChange: (p: Priority) => void; size?: "sm" | "md" }) {
+  const pad = size === "md" ? "px-3 py-1.5 text-xs" : "px-2.5 py-1 text-[11px]";
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {PRIORITIES.map((p) => {
+        const meta = priorityMeta(p);
+        const active = value === p;
+        return (
+          <button
+            key={p}
+            type="button"
+            onClick={() => onChange(p)}
+            aria-pressed={active}
+            className={`inline-flex items-center gap-1.5 rounded-full font-semibold ring-1 ring-inset transition ${pad} ${
+              active ? meta.pill : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)] ring-[var(--color-border)] hover:text-[var(--color-text-secondary)]"
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${active ? meta.dot : "bg-[var(--color-text-muted)]"}`} />
+            {meta.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Small colored priority badge shown on a to-do. */
+function PriorityBadge({ priority, className = "" }: { priority?: string | null; className?: string }) {
+  const meta = priorityMeta(priority);
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ring-inset ${meta.badge} ${className}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+      {meta.label}
+    </span>
+  );
+}
 
 const fmtWhen = (d: string) => {
   const date = new Date(d);
@@ -42,6 +80,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [priority, setPriority] = useState<Priority>("MEDIUM");
   const [images, setImages] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<number | null>(null);
@@ -51,7 +90,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
   const open = openId != null ? list.find((m) => m.id === openId) ?? null : null;
 
   const resetForm = () => {
-    setTitle(""); setDescription(""); setImages([]); setAdding(false);
+    setTitle(""); setDescription(""); setPriority("MEDIUM"); setImages([]); setAdding(false);
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -62,6 +101,7 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
       const fd = new FormData();
       fd.append("title", title.trim());
       if (description.trim()) fd.append("description", description.trim());
+      fd.append("priority", priority);
       images.forEach((f) => fd.append("images", f));
       // Content-Type:undefined lets the browser set multipart/form-data + boundary
       // (the API instance defaults to application/json, which breaks file uploads).
@@ -158,9 +198,12 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
                 ) : null}
 
                 <div className="min-w-0 flex-1">
-                  <p className={`truncate text-sm font-semibold ${m.isDone ? "text-[var(--color-text-muted)] line-through" : "text-[var(--color-text-primary)]"}`}>
-                    {m.title}
-                  </p>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className={`truncate text-sm font-semibold ${m.isDone ? "text-[var(--color-text-muted)] line-through" : "text-[var(--color-text-primary)]"}`}>
+                      {m.title}
+                    </p>
+                    {!m.isDone && <PriorityBadge priority={m.priority} className="shrink-0" />}
+                  </div>
                   {m.description && <p className="truncate text-xs text-[var(--color-text-muted)]">{m.description}</p>}
                   <StageChips m={m} canComplete={canComplete} onToggle={setStage} className="mt-1.5" />
                 </div>
@@ -198,6 +241,10 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
             rows={2}
             className="input-dark w-full resize-y px-3 py-2 text-sm"
           />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Priority</span>
+            <PrioritySelect value={priority} onChange={setPriority} />
+          </div>
           {images.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {images.map((f, i) => {
@@ -322,6 +369,7 @@ export function TodoDetailModal({
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(milestone.title);
   const [editDesc, setEditDesc] = useState(milestone.description ?? "");
+  const [editPriority, setEditPriority] = useState<Priority>((milestone.priority ?? "MEDIUM").toUpperCase() as Priority);
   const [savingEdit, setSavingEdit] = useState(false);
 
   const saveEdit = async () => {
@@ -331,6 +379,7 @@ export function TodoDetailModal({
       await API.patch(`/tasks/${taskId}/milestones/${milestone.id}`, {
         title: editTitle.trim(),
         description: editDesc.trim(),
+        priority: editPriority,
       });
       setEditing(false);
       onChanged();
@@ -413,7 +462,10 @@ export function TodoDetailModal({
             >
               {milestone.isDone ? <><Check className="h-3.5 w-3.5" strokeWidth={3} /> Done</> : <>● In progress</>}
             </span>
-            <span className="text-xs text-[var(--color-text-muted)]">Deployed = done</span>
+            <div className="flex items-center gap-2">
+              <PriorityBadge priority={milestone.priority} />
+              <span className="text-xs text-[var(--color-text-muted)]">Deployed = done</span>
+            </div>
           </div>
           <StageChipsModal milestone={milestone} canComplete={canComplete} onSetStage={onSetStage} />
 
@@ -496,8 +548,12 @@ export function TodoDetailModal({
                 className="input-dark w-full resize-y px-3 py-2 text-sm"
               />
             </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-[var(--color-text-muted)]">Priority</label>
+              <PrioritySelect value={editPriority} onChange={setEditPriority} size="md" />
+            </div>
             <div className="flex items-center justify-end gap-2">
-              <button type="button" onClick={() => { setEditing(false); setEditTitle(milestone.title); setEditDesc(milestone.description ?? ""); }} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">Cancel</button>
+              <button type="button" onClick={() => { setEditing(false); setEditTitle(milestone.title); setEditDesc(milestone.description ?? ""); setEditPriority((milestone.priority ?? "MEDIUM").toUpperCase() as Priority); }} className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]">Cancel</button>
               <button type="button" onClick={saveEdit} disabled={savingEdit || !editTitle.trim()} className="btn-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold disabled:opacity-50">
                 {savingEdit ? "Saving…" : "Save"}
               </button>

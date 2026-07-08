@@ -19,11 +19,70 @@ export interface Milestone {
   isDone: boolean;
   doneAt?: string | null;
   doneBy?: number | null;
+  priority?: string | null;
   createdById: number;
   order: number;
   createdAt: string;
   /** Messages linked to this to-do (join rows, each carrying the comment preview). */
   commentLinks?: { comment: LinkedComment }[] | null;
+}
+
+/* -------------------------------- priority ------------------------------- */
+
+export type Priority = "HIGH" | "MEDIUM" | "LOW";
+
+/** Order High → Medium → Low; the three selectable to-do priorities. */
+export const PRIORITIES: Priority[] = ["HIGH", "MEDIUM", "LOW"];
+
+interface PriorityMeta {
+  value: Priority;
+  label: string;
+  /** rank for sorting (0 = highest priority) */
+  rank: number;
+  /** badge classes (bg + text + ring), matching the app's tone tokens */
+  badge: string;
+  /** solid colour dot */
+  dot: string;
+  /** classes for the selected pill in the priority picker */
+  pill: string;
+}
+
+const PRIORITY_META: Record<Priority, PriorityMeta> = {
+  HIGH: {
+    value: "HIGH",
+    label: "High",
+    rank: 0,
+    badge: "bg-[var(--color-destructive-bg)] text-[var(--color-destructive-text)] ring-[var(--color-destructive-border)]",
+    dot: "bg-[var(--color-destructive-text)]",
+    pill: "bg-[var(--color-destructive-bg)] text-[var(--color-destructive-text)] ring-[var(--color-destructive-border)]",
+  },
+  MEDIUM: {
+    value: "MEDIUM",
+    label: "Medium",
+    rank: 1,
+    badge: "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] ring-[var(--color-warning-border)]",
+    dot: "bg-[var(--color-warning-text)]",
+    pill: "bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] ring-[var(--color-warning-border)]",
+  },
+  LOW: {
+    value: "LOW",
+    label: "Low",
+    rank: 2,
+    badge: "bg-[var(--color-info-bg)] text-[var(--color-info-text)] ring-[var(--color-info-border)]",
+    dot: "bg-[var(--color-info-text)]",
+    pill: "bg-[var(--color-info-bg)] text-[var(--color-info-text)] ring-[var(--color-info-border)]",
+  },
+};
+
+/** Resolve a raw priority string to its display metadata (defaults to Medium). */
+export function priorityMeta(p?: string | null): PriorityMeta {
+  const v = (p ?? "MEDIUM").toUpperCase() as Priority;
+  return PRIORITY_META[v] ?? PRIORITY_META.MEDIUM;
+}
+
+/** Sort rank for a to-do's priority (0 = High). */
+export function priorityRank(p?: string | null): number {
+  return priorityMeta(p).rank;
 }
 
 const IMAGE_EXTS = ["jpg", "jpeg", "png", "gif", "webp", "avif", "svg", "bmp", "heic", "heif", "ico"];

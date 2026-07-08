@@ -19,13 +19,18 @@ import { convert, type Rates } from "../lib/currency";
 const router = Router();
 const SALT_ROUNDS = 10;
 
-/** Sum of payments recorded against an invoice (partial-payment aware). */
-const paidOf = (inv: { payments: { amount: number }[] }) => inv.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+/** Sum of payments recorded against an invoice (partial-payment aware). A PAID
+ *  label always counts as fully settled, even if no payment rows exist yet
+ *  (e.g. the invoice was marked paid via the status dropdown). */
+const paidOf = (inv: { amount: number; status?: string | null; payments: { amount: number }[] }) =>
+  (inv.status ?? "").toUpperCase() === "PAID"
+    ? Number(inv.amount || 0)
+    : inv.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
 
 /** Revenue totals converted into a single display currency (each invoice may be
  *  in a different currency). */
 function revenueTotals(
-  invoices: { amount: number; currency?: string | null; payments: { amount: number }[] }[],
+  invoices: { amount: number; currency?: string | null; status?: string | null; payments: { amount: number }[] }[],
   display: string,
   rates: Rates
 ) {

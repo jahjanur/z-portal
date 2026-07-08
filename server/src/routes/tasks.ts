@@ -1499,6 +1499,13 @@ function canCompleteMilestones(task: MiniTask, user: ReqUser): boolean {
   return user.role === "ADMIN" || (user.role === "WORKER" && task.workers.some((w) => w.userId === user.userId));
 }
 
+/** Normalise a to-do priority to one of HIGH | MEDIUM | LOW (defaults MEDIUM). */
+const TODO_PRIORITIES = ["HIGH", "MEDIUM", "LOW"];
+function normalizePriority(value: unknown): string {
+  const v = String(value ?? "").toUpperCase();
+  return TODO_PRIORITIES.includes(v) ? v : "MEDIUM";
+}
+
 // list milestones for a task
 router.get("/:id/milestones", verifyJWT, async (req: any, res) => {
   try {
@@ -1547,6 +1554,7 @@ router.post("/:id/milestones", verifyJWT, upload.any(), async (req: any, res) =>
         title: title.slice(0, 160),
         description: req.body.description ? String(req.body.description).trim() : null,
         imageUrls: files.map((f) => `/uploads/${f.filename}`),
+        priority: normalizePriority(req.body.priority),
         createdById: req.user.userId,
         order: (last?.order ?? 0) + 1,
       },
@@ -1657,6 +1665,13 @@ router.patch("/:id/milestones/:mid", verifyJWT, async (req: any, res) => {
       }
       if (typeof req.body.title === "string" && req.body.title.trim()) data.title = req.body.title.trim().slice(0, 160);
       if ("description" in req.body) data.description = req.body.description ? String(req.body.description).trim() : null;
+    }
+
+    if ("priority" in req.body) {
+      if (!isStaff && milestone.createdById !== userId) {
+        return res.status(403).json({ error: "You can only edit to-dos you created" });
+      }
+      data.priority = normalizePriority(req.body.priority);
     }
 
     let justCompleted = false;

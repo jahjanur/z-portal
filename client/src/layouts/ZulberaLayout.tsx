@@ -51,7 +51,7 @@ const ZULBERA_NAV_SECTIONS = [
     items: [
       { path: "/admin/zulbera/invoices", label: "Invoices", icon: Receipt },
       { path: "/admin/zulbera/seo", label: "SEO", icon: Search },
-      { path: "/admin/zulbera/domains", label: "Domains", icon: Globe },
+      { path: "/admin/zulbera/domains", label: "Domains & Servers", icon: Globe },
       { path: "/admin/zulbera/send-offer", label: "Send Offer", icon: Send },
     ],
   },

@@ -372,6 +372,51 @@ export async function sendDomainRenewalReminderEmail(domain: any, client: { emai
   }
 }
 
+/** Reminder that a server's service is about to lapse (~2 weeks before expiry). */
+export async function sendServerRenewalReminderEmail(server: any, client: { email: string; name: string }) {
+  try {
+    const activationStr = server.activationDate ? new Date(server.activationDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
+    const expirationStr = server.expirationDate ? new Date(server.expirationDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "—";
+    const provider = server.provider ? `<p><strong>Provider:</strong> ${server.provider}</p>` : "";
+    const plan = server.plan ? `<p><strong>Plan / Specs:</strong> ${server.plan}</p>` : "";
+    await transporter.sendMail({
+      from: process.env.SMTP_USER,
+      to: client.email,
+      subject: "Server Renewal Reminder — action needed",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #374151;">Server Renewal Reminder</h2>
+          <p>Dear ${client.name},</p>
+          <p>Your server <strong>${server.label}</strong> is scheduled to expire on <strong>${expirationStr}</strong>.</p>
+          <p><strong>Your services will stop working in about 2 weeks</strong> unless this server is renewed. Please renew before the expiration date to avoid any interruption.</p>
+
+          <div style="background-color: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
+            <h3 style="margin-top: 0; color: #92400E;">Server Details</h3>
+            <p><strong>Server:</strong> ${server.label}</p>
+            ${provider}
+            ${plan}
+            <p><strong>Activation Date:</strong> ${activationStr}</p>
+            <p><strong>Expiration Date:</strong> ${expirationStr}</p>
+            <p><strong>Remaining time:</strong> Approximately 2 weeks until services stop</p>
+          </div>
+
+          <p>If you need assistance renewing, contact our support team as soon as possible.</p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${FRONTEND_URL}/dashboard"
+               style="display: inline-block; padding: 12px 30px; background-color: #F59E0B; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+              View Dashboard
+            </a>
+          </div>
+        </div>
+      `,
+    });
+    console.log(`✅ Server renewal reminder sent to ${client.email}`);
+  } catch (error) {
+    console.error(`❌ Failed to send server renewal reminder to ${client.email}:`, error);
+  }
+}
+
 /** When admin extends expiration (renewal) — short confirmation, no first-time wording. */
 export async function sendDomainRenewalConfirmationEmail(domain: any, client: { email: string; name: string }) {
   try {

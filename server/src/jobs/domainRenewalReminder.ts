@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import prisma from "../lib/prisma";
-import { sendDomainRenewalReminderEmail } from "../services/notifications";
+import { sendDomainRenewalReminderEmail, sendServerRenewalReminderEmail } from "../services/notifications";
 
 const clientSelect = {
   id: true,
@@ -105,6 +105,44 @@ export async function runHostingExpiryReminders(): Promise<void> {
   }
 }
 
+/**
+ * Find servers expiring in ~2 weeks (15 days) that haven't had a renewal
+ * reminder sent, email the client that their services will stop working soon,
+ * and set renewalReminderSentAt + RENEWAL_DUE.
+ */
+export async function runServerRenewalReminders(): Promise<void> {
+  const now = new Date();
+  const inFifteenDays = new Date(now);
+  inFifteenDays.setDate(inFifteenDays.getDate() + 15);
+
+  const servers = await prisma.server.findMany({
+    where: {
+      expirationDate: { gt: now, lte: inFifteenDays },
+      renewalReminderSentAt: null,
+    },
+    include: { client: { select: clientSelect } },
+  });
+
+  for (const server of servers) {
+    if (!server.client || !("email" in server.client)) continue;
+    try {
+      await sendServerRenewalReminderEmail(server, {
+        email: (server.client as { email: string }).email,
+        name: server.client.name,
+      });
+      await prisma.server.update({
+        where: { id: server.id },
+        data: {
+          renewalReminderSentAt: new Date(),
+          status: "RENEWAL_DUE",
+        },
+      });
+    } catch (err) {
+      console.error(`Server renewal reminder failed for server ${server.id}:`, err);
+    }
+  }
+}
+
 /** Schedule daily at 9:00 AM. */
 export function scheduleDomainRenewalReminders(): void {
   cron.schedule("0 9 * * *", () => {
@@ -114,6 +152,9 @@ export function scheduleDomainRenewalReminders(): void {
     runHostingExpiryReminders().catch((err) =>
       console.error("Hosting expiry reminder job error:", err)
     );
+    runServerRenewalReminders().catch((err) =>
+      console.error("Server renewal reminder job error:", err)
+    );
   });
-  console.log("Domain + hosting renewal reminder cron scheduled (daily at 9:00 AM).");
+  console.log("Domain + hosting + server renewal reminder cron scheduled (daily at 9:00 AM).");
 }

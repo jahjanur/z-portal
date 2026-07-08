@@ -19,6 +19,10 @@ function attachPayments<T extends { amount?: number | null; payments?: { amount:
   return { ...inv, amountPaid, remaining: Math.max(0, Math.round((total - amountPaid) * 100) / 100) };
 }
 
+/** Sentinel note for payments auto-created when an invoice is marked Paid via
+ *  the status dropdown, so they can be reversed if the status is switched back. */
+const MARKED_PAID_NOTE = "Marked paid";
+
 /** Recompute an invoice's status from its payments (PAID when fully covered). */
 async function recomputeInvoiceStatus(invoiceId: number) {
   const inv = await prisma.invoice.findUnique({
@@ -547,6 +551,35 @@ router.put("/:id", verifyJWT, async (req: any, res) => {
           sortOrder: i,
         })),
       });
+    }
+
+    // Marking an invoice PAID via the status dropdown must also record a real
+    // payment — analytics derive "paid" from the Payment ledger, not the status
+    // label. Without this, a Paid-marked invoice still counts as fully pending.
+    if (status === "PAID") {
+      const invForPayments = await prisma.invoice.findUnique({
+        where: { id: invoiceId },
+        select: { amount: true, payments: { select: { amount: true } } },
+      });
+      if (invForPayments) {
+        const alreadyPaid = invForPayments.payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+        const outstanding = Number(invForPayments.amount || 0) - alreadyPaid;
+        if (outstanding > 0.001) {
+          await prisma.payment.create({
+            data: {
+              invoiceId,
+              amount: outstanding,
+              paidAt: updateData.paidAt instanceof Date ? updateData.paidAt : new Date(),
+              note: MARKED_PAID_NOTE,
+            },
+          });
+        }
+      }
+    } else if (status !== undefined) {
+      // Switching an invoice off "Paid" removes the auto-generated payment so it
+      // no longer counts as settled in the ledger (real, manually-recorded
+      // payments are kept untouched).
+      await prisma.payment.deleteMany({ where: { invoiceId, note: MARKED_PAID_NOTE } });
     }
 
     const result = await prisma.invoice.findUnique({

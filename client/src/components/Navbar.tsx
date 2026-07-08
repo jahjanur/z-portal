@@ -30,7 +30,7 @@ const ZULBERA_NAV_LINKS = [
   { path: "comments", label: "Comments", icon: MessageSquare },
   { path: "invoices", label: "Invoices", icon: Receipt },
   { path: "seo", label: "SEO", icon: Search },
-  { path: "domains", label: "Domains", icon: Globe },
+  { path: "domains", label: "Domains & Servers", icon: Globe },
   { path: "send-offer", label: "Send Offer", icon: Send },
   { path: "timesheets", label: "Timesheets", icon: CalendarClock },
 ];

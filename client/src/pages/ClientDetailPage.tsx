@@ -41,15 +41,28 @@ interface Invoice {
 interface Domain {
   id: number;
   domainName: string;
-  domainRegistrar?: string;
   expirationDate?: string;
   hostingProvider?: string;
   hostingPlan?: string;
   hostingExpiry?: string;
-  sslExpiry?: string;
   isPrimary: boolean;
   isActive: boolean;
   notes?: string;
+  createdAt: string;
+}
+
+interface Server {
+  id: number;
+  label: string;
+  provider?: string | null;
+  ipAddress?: string | null;
+  plan?: string | null;
+  location?: string | null;
+  notes?: string | null;
+  activationDate?: string | null;
+  expirationDate?: string | null;
+  lifespanYears?: number | null;
+  status?: string;
   createdAt: string;
 }
 
@@ -87,6 +100,7 @@ interface Client {
   clientTasks: Task[];
   invoices: Invoice[];
   domains: Domain[];
+  servers: Server[];
 }
 
 type ExpiryTone = "neutral" | "success" | "warning" | "danger";
@@ -151,10 +165,11 @@ const ClientDetailPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await API.get(`/users/${id}`);
-      const [tasksRes, invoicesRes, domainsRes] = await Promise.all([
+      const [tasksRes, invoicesRes, domainsRes, serversRes] = await Promise.all([
         API.get(`/tasks?clientId=${id}`),
         API.get(`/invoices?clientId=${id}`),
         ...(isEraSphere ? [Promise.resolve({ data: [] as Domain[] })] : [API.get(`/domains/client/${id}`)]),
+        ...(isEraSphere ? [Promise.resolve({ data: [] as Server[] })] : [API.get(`/servers/client/${id}`)]),
       ]);
 
       setClient({
@@ -162,6 +177,7 @@ const ClientDetailPage: React.FC = () => {
         clientTasks: tasksRes.data,
         invoices: invoicesRes.data,
         domains: domainsRes?.data ?? [],
+        servers: serversRes?.data ?? [],
       });
       setError(null);
     } catch (err) {
@@ -379,6 +395,7 @@ const fetchAllFiles = async () => {
   const clientCur = invCurrencies.length === 1 ? invCurrencies[0] : "USD";
 
   const domains = client.domains || [];
+  const servers = client.servers || [];
 
   return (
     <div className="min-h-screen w-full max-w-full min-w-0 overflow-x-hidden bg-app py-24">
@@ -836,7 +853,6 @@ const fetchAllFiles = async () => {
                   {domains.map((domain) => {
                     const domainDays = domain.expirationDate ? getDaysUntilExpiry(domain.expirationDate) : null;
                     const hostingDays = domain.hostingExpiry ? getDaysUntilExpiry(domain.hostingExpiry) : null;
-                    const sslDays = domain.sslExpiry ? getDaysUntilExpiry(domain.sslExpiry) : null;
 
                     return (
                       <div
@@ -864,9 +880,6 @@ const fetchAllFiles = async () => {
                               >
                                 {domain.domainName}
                               </a>
-                              {domain.domainRegistrar && (
-                                <p className="text-sm text-[var(--color-text-muted)]">Registrar: {domain.domainRegistrar}</p>
-                              )}
                             </div>
                           </div>
                           <div className="flex shrink-0 flex-wrap justify-end gap-2">
@@ -884,7 +897,7 @@ const fetchAllFiles = async () => {
                         </div>
 
                         {/* Expiry Cards */}
-                        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
                           {renderExpiryCard(
                             "Domain",
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -900,14 +913,6 @@ const fetchAllFiles = async () => {
                             </svg>,
                             hostingDays,
                             domain.hostingExpiry
-                          )}
-                          {renderExpiryCard(
-                            "SSL",
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>,
-                            sslDays,
-                            domain.sslExpiry
                           )}
                         </div>
 
@@ -932,6 +937,99 @@ const fetchAllFiles = async () => {
                           <div className="mt-4 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-4">
                             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-warning-text)]">Notes</p>
                             <p className="text-sm text-[var(--color-warning-text)]">{domain.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Servers */}
+              <div className="mt-10 mb-6">
+                <h2 className="section-title">Servers</h2>
+                <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+                  All servers assigned to this client and how long they stay active
+                </p>
+              </div>
+
+              {servers.length === 0 ? (
+                <EmptyState
+                  title="No server information"
+                  description="No servers have been assigned to this client yet"
+                  icon={
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                    </svg>
+                  }
+                />
+              ) : (
+                <div className="space-y-6 stagger-children">
+                  {servers.map((server) => {
+                    const serverDays = server.expirationDate ? getDaysUntilExpiry(server.expirationDate) : null;
+
+                    return (
+                      <div
+                        key={server.id}
+                        className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-5 sm:p-6"
+                      >
+                        {/* Server Header */}
+                        <div className="mb-6 flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="shrink-0 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3 text-[var(--color-text-secondary)]">
+                              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                              </svg>
+                            </div>
+                            <div className="min-w-0">
+                              <p className="break-all text-xl font-bold text-[var(--color-text-primary)]">{server.label}</p>
+                              {server.provider && (
+                                <p className="text-sm text-[var(--color-text-muted)]">Provider: {server.provider}</p>
+                              )}
+                            </div>
+                          </div>
+                          {server.status && (
+                            <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                              <StatusBadge tone="neutral" dot={false} className="uppercase tracking-wide">
+                                {server.status.replace(/_/g, " ")}
+                              </StatusBadge>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Expiry Card */}
+                        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                          {renderExpiryCard(
+                            "Active until",
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>,
+                            serverDays,
+                            server.expirationDate ?? undefined
+                          )}
+                          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">IP Address</p>
+                            <p className="text-sm font-medium text-[var(--color-text-primary)]">{server.ipAddress || 'Not specified'}</p>
+                          </div>
+                        </div>
+
+                        {/* Additional Details */}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Plan / Specs</p>
+                            <p className="text-sm font-medium text-[var(--color-text-primary)]">{server.plan || 'Not specified'}</p>
+                          </div>
+                          <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Location</p>
+                            <p className="text-sm font-medium text-[var(--color-text-primary)]">{server.location || 'Not specified'}</p>
+                          </div>
+                        </div>
+
+                        {/* Notes */}
+                        {server.notes && (
+                          <div className="mt-4 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] p-4">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-warning-text)]">Notes</p>
+                            <p className="text-sm text-[var(--color-warning-text)]">{server.notes}</p>
                           </div>
                         )}
                       </div>
