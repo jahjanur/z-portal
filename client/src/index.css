@@ -568,8 +568,10 @@ form label {
 .skeleton {
   position: relative;
   overflow: hidden;
-  border-radius: 0.5rem;
+  border-radius: 0.625rem;
   background-color: var(--color-skeleton-base);
+  /* gentle breathing so the placeholder feels alive even between sweeps */
+  animation: skeleton-pulse 2.4s ease-in-out infinite;
 }
 .skeleton::after {
   content: "";
@@ -578,14 +580,26 @@ form label {
   transform: translateX(-100%);
   background: linear-gradient(
     90deg,
-    transparent,
-    var(--color-skeleton-highlight),
-    transparent
+    transparent 0%,
+    var(--color-skeleton-highlight) 45%,
+    var(--color-skeleton-sheen, var(--color-skeleton-highlight)) 50%,
+    var(--color-skeleton-highlight) 55%,
+    transparent 100%
   );
-  animation: skeleton-sweep 1.4s ease-in-out infinite;
+  /* smooth, unhurried sweep with a soft ease for a premium feel */
+  animation: skeleton-sweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 @keyframes skeleton-sweep {
   100% { transform: translateX(100%); }
+}
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
+}
+/* Respect users who prefer less motion: keep a calm pulse, drop the sweep. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: skeleton-pulse 2.4s ease-in-out infinite; }
+  .skeleton::after { animation: none; }
 }
 
 /* ---------------------------------------------------------------------------

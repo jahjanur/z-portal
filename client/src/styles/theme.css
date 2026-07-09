@@ -103,6 +103,7 @@
   /* Skeleton shimmer */
   --color-skeleton-base: rgba(255, 255, 255, 0.06);
   --color-skeleton-highlight: rgba(255, 255, 255, 0.12);
+  --color-skeleton-sheen: rgba(255, 255, 255, 0.18);
   /* Premium bento system (dark) */
   --card-radius: 1.25rem;
   --card-grad-top: rgba(255, 255, 255, 0.055);
@@ -216,7 +217,8 @@
   --color-scrollbar-hover: rgba(15, 23, 42, 0.35);
   /* Skeleton shimmer */
   --color-skeleton-base: rgba(15, 23, 42, 0.06);
-  --color-skeleton-highlight: rgba(15, 23, 42, 0.12);
+  --color-skeleton-highlight: rgba(15, 23, 42, 0.11);
+  --color-skeleton-sheen: rgba(15, 23, 42, 0.16);
   /* Premium bento system (light) */
   --card-radius: 1.25rem;
   --card-grad-top: #ffffff;
@@ -352,6 +354,7 @@ html:not([data-theme]) {
   --color-scrollbar-hover: rgba(255, 255, 255, 0.28);
   --color-skeleton-base: rgba(255, 255, 255, 0.06);
   --color-skeleton-highlight: rgba(255, 255, 255, 0.12);
+  --color-skeleton-sheen: rgba(255, 255, 255, 0.18);
   --card-radius: 1.25rem;
   --card-grad-top: rgba(255, 255, 255, 0.055);
   --card-grad-bottom: rgba(255, 255, 255, 0.012);
