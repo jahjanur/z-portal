@@ -10,8 +10,8 @@ interface TaskBoardProps {
   tasks: Task[];
   onDelete: (id: number) => void;
   onEdit?: (task: Task) => void;
-  /** "board" = kanban columns, "list" = single dense list */
-  view?: "board" | "list";
+  /** "board" = kanban columns, "list" = single dense list, "projects" = per-project folders */
+  view?: "board" | "list" | "projects";
   /** When provided, board cards can be dragged between columns to change status. */
   onChangeStatus?: (id: number, status: string) => void;
 }
@@ -70,6 +70,7 @@ function TaskCard({
   navigate,
   draggable,
   onDragStart,
+  hideProject,
 }: {
   task: Task;
   accent: string;
@@ -78,6 +79,8 @@ function TaskCard({
   navigate: ReturnType<typeof useNavigate>;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
+  /** Hide the project badge (e.g. when the card is already inside a project folder). */
+  hideProject?: boolean;
 }) {
   const completed = task.status === "COMPLETED";
   const dstate = dueState(task.dueDate, completed);
@@ -131,7 +134,7 @@ function TaskCard({
         </div>
       </div>
 
-      {task.project && (
+      {task.project && !hideProject && (
         <div className="mt-2 pl-1.5">
           <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-3)] px-2.5 py-0.5 text-[0.6875rem] font-medium text-[var(--color-text-secondary)]">
             <FolderKanban className="h-3 w-3 shrink-0" />
@@ -199,18 +202,184 @@ function TaskCard({
   );
 }
 
-export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onChangeStatus }: TaskBoardProps) {
-  const navigate = useNavigate();
+/** The three status columns (Pending / In Progress / Completed) for a given set
+ *  of tasks. Reused both for the flat board and inside each project folder. */
+function BoardColumns({
+  tasks,
+  onDelete,
+  onEdit,
+  navigate,
+  onChangeStatus,
+  hideProject,
+  collapseLimit = 6,
+}: {
+  tasks: Task[];
+  onDelete: (id: number) => void;
+  onEdit?: (task: Task) => void;
+  navigate: ReturnType<typeof useNavigate>;
+  onChangeStatus?: (id: number, status: string) => void;
+  hideProject?: boolean;
+  collapseLimit?: number;
+}) {
   const [dragOverCol, setDragOverCol] = useState<ColumnKey | null>(null);
   const [collapsedCols, setCollapsedCols] = useState<Set<ColumnKey>>(new Set());
   const [expandedCols, setExpandedCols] = useState<Set<ColumnKey>>(new Set());
-  const COLLAPSE_LIMIT = 6;
   const dnd = !!onChangeStatus;
 
   const toggleCollapse = (k: ColumnKey) =>
     setCollapsedCols((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
   const toggleExpand = (k: ColumnKey) =>
     setExpandedCols((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {COLUMNS.map((col) => {
+        const colTasks = tasks.filter(col.match);
+        const isOver = dragOverCol === col.key;
+        const isCollapsed = collapsedCols.has(col.key);
+        const isExpanded = expandedCols.has(col.key);
+        const visibleTasks = isExpanded ? colTasks : colTasks.slice(0, collapseLimit);
+        return (
+          <div
+            key={col.key}
+            onDragOver={dnd ? (e) => { e.preventDefault(); if (dragOverCol !== col.key) setDragOverCol(col.key); } : undefined}
+            onDragLeave={dnd ? (e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverCol(null); } : undefined}
+            onDrop={dnd ? (e) => {
+              e.preventDefault();
+              const id = Number(e.dataTransfer.getData("text/plain"));
+              setDragOverCol(null);
+              if (id) onChangeStatus?.(id, col.status);
+            } : undefined}
+            className={`flex min-w-0 flex-col self-start rounded-2xl border bg-[var(--color-surface-2)] transition-colors ${isOver ? "border-[var(--card-hover-border)] bg-[var(--color-surface-3)] ring-2 ring-[var(--color-focus-ring)]" : "border-[var(--color-border)]"}`}
+          >
+            {/* header doubles as a fold toggle */}
+            <button
+              type="button"
+              onClick={() => toggleCollapse(col.key)}
+              aria-expanded={!isCollapsed}
+              className={`flex items-center justify-between gap-2 px-4 py-3 text-left transition hover:bg-[var(--color-surface-3)]/60 ${isCollapsed ? "" : "border-b border-[var(--color-border)]"}`}
+            >
+              <div className="flex items-center gap-2">
+                <ChevronDown className={`h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: col.dot }} aria-hidden />
+                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">{col.label}</h3>
+              </div>
+              <span className="rounded-full bg-[var(--color-surface-3)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[var(--color-text-secondary)]">
+                {colTasks.length}
+              </span>
+            </button>
+            {!isCollapsed && (
+              <div className="flex flex-1 flex-col gap-3 p-3">
+                {colTasks.length === 0 ? (
+                  <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] py-10 text-center text-xs text-[var(--color-text-muted)]">
+                    {isOver ? `Drop to mark ${col.label}` : `No ${col.label.toLowerCase()} tasks`}
+                  </div>
+                ) : (
+                  <>
+                    {visibleTasks.map((t) => (
+                      <TaskCard
+                        onEdit={onEdit}
+                        key={t.id}
+                        task={t}
+                        accent={col.accent}
+                        onDelete={onDelete}
+                        navigate={navigate}
+                        draggable={dnd}
+                        hideProject={hideProject}
+                        onDragStart={dnd ? (e) => { e.dataTransfer.setData("text/plain", String(t.id)); e.dataTransfer.effectAllowed = "move"; } : undefined}
+                      />
+                    ))}
+                    {colTasks.length > collapseLimit && (
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(col.key)}
+                        className="rounded-xl border border-dashed border-[var(--color-border-hover)] py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
+                      >
+                        {isExpanded ? "Show less" : `Show all ${colTasks.length}`}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** A collapsible project folder wrapping its own mini status board. */
+function ProjectFolder({
+  name,
+  tasks,
+  collapsed,
+  onToggle,
+  onDelete,
+  onEdit,
+  navigate,
+  onChangeStatus,
+}: {
+  name: string;
+  tasks: Task[];
+  collapsed: boolean;
+  onToggle: () => void;
+  onDelete: (id: number) => void;
+  onEdit?: (task: Task) => void;
+  navigate: ReturnType<typeof useNavigate>;
+  onChangeStatus?: (id: number, status: string) => void;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)]">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        className={`flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition hover:bg-[var(--color-surface-2)] ${collapsed ? "" : "border-b border-[var(--color-border)]"}`}
+      >
+        <div className="flex min-w-0 items-center gap-2.5">
+          <ChevronDown className={`h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+          <FolderKanban className="h-5 w-5 shrink-0 text-[var(--color-text-secondary)]" />
+          <h3 className="truncate text-base font-bold text-[var(--color-text-primary)]">{name}</h3>
+          <span className="shrink-0 rounded-full bg-[var(--color-surface-3)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[var(--color-text-secondary)]">
+            {tasks.length}
+          </span>
+        </div>
+        {/* per-status counts at a glance */}
+        <div className="hidden shrink-0 items-center gap-3 text-xs font-medium text-[var(--color-text-muted)] sm:flex">
+          {COLUMNS.map((c) => {
+            const n = tasks.filter(c.match).length;
+            return (
+              <span key={c.key} className="inline-flex items-center gap-1.5" title={c.label}>
+                <span className="h-2 w-2 rounded-full" style={{ background: c.dot }} aria-hidden />
+                <span className="tabular-nums">{n}</span>
+              </span>
+            );
+          })}
+        </div>
+      </button>
+      {!collapsed && (
+        <div className="p-3 sm:p-4">
+          <BoardColumns
+            tasks={tasks}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            navigate={navigate}
+            onChangeStatus={onChangeStatus}
+            hideProject
+            collapseLimit={4}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onChangeStatus }: TaskBoardProps) {
+  const navigate = useNavigate();
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  const toggleFolder = (k: string) =>
+    setCollapsedFolders((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
   if (view === "list") {
     const ordered = [...tasks].sort((a, b) => {
@@ -292,79 +461,59 @@ export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onC
     );
   }
 
+  if (view === "projects") {
+    // Group tasks into project folders (+ a "Standalone" bucket), preserving
+    // only projects that actually have tasks in the current (filtered) set.
+    const byKey = new Map<string, { key: string; name: string; tasks: Task[] }>();
+    const order: string[] = [];
+    const standalone: Task[] = [];
+    for (const t of tasks) {
+      if (t.projectId) {
+        const key = String(t.projectId);
+        let g = byKey.get(key);
+        if (!g) { g = { key, name: t.project?.name ?? `Project #${t.projectId}`, tasks: [] }; byKey.set(key, g); order.push(key); }
+        g.tasks.push(t);
+      } else {
+        standalone.push(t);
+      }
+    }
+    const folders = order.map((k) => byKey.get(k)!).sort((a, b) => a.name.localeCompare(b.name));
+    if (standalone.length) folders.push({ key: "standalone", name: "Standalone tasks", tasks: standalone });
+
+    if (folders.length === 0) {
+      return (
+        <div className="rounded-2xl border border-dashed border-[var(--color-border)] py-12 text-center text-sm text-[var(--color-text-muted)]">
+          No tasks found
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {folders.map((f) => (
+          <ProjectFolder
+            key={f.key}
+            name={f.name}
+            tasks={f.tasks}
+            collapsed={collapsedFolders.has(f.key)}
+            onToggle={() => toggleFolder(f.key)}
+            onDelete={onDelete}
+            onEdit={onEdit}
+            navigate={navigate}
+            onChangeStatus={onChangeStatus}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {COLUMNS.map((col) => {
-        const colTasks = tasks.filter(col.match);
-        const isOver = dragOverCol === col.key;
-        const isCollapsed = collapsedCols.has(col.key);
-        const isExpanded = expandedCols.has(col.key);
-        const visibleTasks = isExpanded ? colTasks : colTasks.slice(0, COLLAPSE_LIMIT);
-        return (
-          <div
-            key={col.key}
-            onDragOver={dnd ? (e) => { e.preventDefault(); if (dragOverCol !== col.key) setDragOverCol(col.key); } : undefined}
-            onDragLeave={dnd ? (e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverCol(null); } : undefined}
-            onDrop={dnd ? (e) => {
-              e.preventDefault();
-              const id = Number(e.dataTransfer.getData("text/plain"));
-              setDragOverCol(null);
-              if (id) onChangeStatus?.(id, col.status);
-            } : undefined}
-            className={`flex min-w-0 flex-col self-start rounded-2xl border bg-[var(--color-surface-2)] transition-colors ${isOver ? "border-[var(--card-hover-border)] bg-[var(--color-surface-3)] ring-2 ring-[var(--color-focus-ring)]" : "border-[var(--color-border)]"}`}
-          >
-            {/* header doubles as a fold toggle */}
-            <button
-              type="button"
-              onClick={() => toggleCollapse(col.key)}
-              aria-expanded={!isCollapsed}
-              className={`flex items-center justify-between gap-2 px-4 py-3 text-left transition hover:bg-[var(--color-surface-3)]/60 ${isCollapsed ? "" : "border-b border-[var(--color-border)]"}`}
-            >
-              <div className="flex items-center gap-2">
-                <ChevronDown className={`h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: col.dot }} aria-hidden />
-                <h3 className="text-sm font-bold text-[var(--color-text-primary)]">{col.label}</h3>
-              </div>
-              <span className="rounded-full bg-[var(--color-surface-3)] px-2 py-0.5 text-xs font-semibold tabular-nums text-[var(--color-text-secondary)]">
-                {colTasks.length}
-              </span>
-            </button>
-            {!isCollapsed && (
-              <div className="flex flex-1 flex-col gap-3 p-3">
-                {colTasks.length === 0 ? (
-                  <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] py-10 text-center text-xs text-[var(--color-text-muted)]">
-                    {isOver ? `Drop to mark ${col.label}` : `No ${col.label.toLowerCase()} tasks`}
-                  </div>
-                ) : (
-                  <>
-                    {visibleTasks.map((t) => (
-                      <TaskCard
-                        onEdit={onEdit}
-                        key={t.id}
-                        task={t}
-                        accent={col.accent}
-                        onDelete={onDelete}
-                        navigate={navigate}
-                        draggable={dnd}
-                        onDragStart={dnd ? (e) => { e.dataTransfer.setData("text/plain", String(t.id)); e.dataTransfer.effectAllowed = "move"; } : undefined}
-                      />
-                    ))}
-                    {colTasks.length > COLLAPSE_LIMIT && (
-                      <button
-                        type="button"
-                        onClick={() => toggleExpand(col.key)}
-                        className="rounded-xl border border-dashed border-[var(--color-border-hover)] py-2 text-xs font-semibold text-[var(--color-text-secondary)] transition hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-primary)]"
-                      >
-                        {isExpanded ? "Show less" : `Show all ${colTasks.length}`}
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <BoardColumns
+      tasks={tasks}
+      onDelete={onDelete}
+      onEdit={onEdit}
+      navigate={navigate}
+      onChangeStatus={onChangeStatus}
+    />
   );
 }

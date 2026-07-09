@@ -28,7 +28,7 @@ export default function AdminTasksPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [projectFilter, setProjectFilter] = useState<string>("all");
-  const [view, setView] = useState<"board" | "list">("board");
+  const [view, setView] = useState<"board" | "list" | "projects">("board");
   const [showCreate, setShowCreate] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [editingTask, setEditingTask] = useState<import("../../contexts/AdminContext").Task | null>(null);
@@ -120,7 +120,7 @@ export default function AdminTasksPage() {
     }
   };
 
-  const viewBtn = (key: "board" | "list", label: string, Icon: typeof LayoutGrid) => (
+  const viewBtn = (key: "board" | "list" | "projects", label: string, Icon: typeof LayoutGrid) => (
     <button
       type="button"
       onClick={() => setView(key)}
@@ -183,6 +183,7 @@ export default function AdminTasksPage() {
         <div className="flex shrink-0 items-center gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1">
           {viewBtn("board", "Board", LayoutGrid)}
           {viewBtn("list", "List", List)}
+          {viewBtn("projects", "Folders", FolderKanban)}
         </div>
         {isAdmin && (
           <Link
