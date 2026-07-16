@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import toast from "react-hot-toast";
 import { Check, Plus, Trash2, ImagePlus, Flag, X, ChevronRight, ChevronLeft, Github, Rocket, Pencil, RotateCcw, Paperclip, FileText, MessageSquare } from "lucide-react";
 import API, { getFileUrl } from "../../api";
@@ -734,7 +735,11 @@ export function TodoDetailModal({
         </div>
       </div>
 
-      {lightboxIdx !== null && imgs[lightboxIdx] && (
+      {/* Rendered in a portal on <body>: the Modal panel keeps a persistent
+          `transform` (animate-scale-in uses fill-mode: both), which would make
+          this fixed overlay resolve against the panel and get clipped by its
+          overflow-hidden — cropping the image. */}
+      {lightboxIdx !== null && imgs[lightboxIdx] && createPortal(
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/85 p-4 animate-fade-in"
           onClick={closeLightbox}
@@ -749,7 +754,7 @@ export function TodoDetailModal({
           <img
             src={getFileUrl(imgs[lightboxIdx])}
             alt=""
-            className="max-h-[90vh] max-w-[92vw] rounded-xl object-contain shadow-elev-lg"
+            className="h-auto w-auto max-h-[92vh] max-w-[94vw] rounded-xl object-contain shadow-elev-lg"
             onClick={(e) => e.stopPropagation()}
           />
 
@@ -778,10 +783,23 @@ export function TodoDetailModal({
             </>
           )}
 
-          <button type="button" aria-label="Close image" onClick={(e) => { e.stopPropagation(); closeLightbox(); }} className="absolute right-4 top-4 rounded-full bg-black/40 p-2 text-white/80 transition hover:bg-black/60 hover:text-white">
-            <X className="h-6 w-6" />
-          </button>
-        </div>
+          <div className="absolute right-4 top-4 flex items-center gap-2">
+            {/* view the untouched file at its real resolution */}
+            <a
+              href={getFileUrl(imgs[lightboxIdx])}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="rounded-full bg-black/40 px-3 py-2 text-xs font-semibold text-white/80 transition hover:bg-black/60 hover:text-white"
+            >
+              Open original
+            </a>
+            <button type="button" aria-label="Close image" onClick={(e) => { e.stopPropagation(); closeLightbox(); }} className="rounded-full bg-black/40 p-2 text-white/80 transition hover:bg-black/60 hover:text-white">
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        </div>,
+        document.body
       )}
     </Modal>
   );
