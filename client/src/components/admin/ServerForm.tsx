@@ -36,6 +36,10 @@ export interface ServerFormPayload {
   activationDate?: string;
   expirationDate?: string;
   lifespanYears?: number | null;
+  price?: number | null;
+  providerCost?: number | null;
+  currency?: string;
+  billingCycle?: string;
   status?: string;
 }
 
@@ -55,10 +59,20 @@ interface ServerFormProps {
     activationDate?: string | null;
     expirationDate?: string | null;
     lifespanYears?: number | null;
+    price?: number | null;
+    providerCost?: number | null;
+    currency?: string | null;
+    billingCycle?: string | null;
     status?: string;
   } | null;
   onCancelEdit: () => void;
 }
+
+const CURRENCY_OPTIONS = [
+  { value: "EUR", label: "EUR (€)" },
+  { value: "USD", label: "USD ($)" },
+  { value: "CAD", label: "CAD (CA$)" },
+];
 
 function toDateInputValue(d: string | Date | null | undefined): string {
   if (!d) return "";
@@ -87,6 +101,10 @@ const EMPTY = {
   expirationDate: "",
   lifespan: "1",
   customLifespanYears: "" as string,
+  price: "" as string,
+  providerCost: "" as string,
+  currency: "EUR",
+  billingCycle: "YEARLY",
   status: "PENDING",
 };
 
@@ -126,6 +144,10 @@ const ServerForm: React.FC<ServerFormProps> = ({ onSubmit, onUpdate, clients, ed
           editingServer.lifespanYears != null && ![1, 2, 3].includes(editingServer.lifespanYears)
             ? String(editingServer.lifespanYears)
             : "",
+        price: editingServer.price != null ? String(editingServer.price) : "",
+        providerCost: editingServer.providerCost != null ? String(editingServer.providerCost) : "",
+        currency: editingServer.currency || "EUR",
+        billingCycle: editingServer.billingCycle || "YEARLY",
         status: editingServer.status || "PENDING",
       });
     } else {
@@ -173,6 +195,12 @@ const ServerForm: React.FC<ServerFormProps> = ({ onSubmit, onUpdate, clients, ed
       toast.error("Please enter a valid custom lifespan (1 or more years).");
       return;
     }
+    const parsePrice = (v: string): number | null => {
+      const t = v.trim();
+      if (!t) return null;
+      const n = Number(t);
+      return Number.isFinite(n) && n >= 0 ? n : null;
+    };
     const payload = {
       label: formData.label,
       provider: formData.provider || undefined,
@@ -183,6 +211,10 @@ const ServerForm: React.FC<ServerFormProps> = ({ onSubmit, onUpdate, clients, ed
       activationDate: formData.activationDate || undefined,
       expirationDate: formData.expirationDate || undefined,
       lifespanYears: lifespanYears ?? undefined,
+      price: parsePrice(formData.price),
+      providerCost: parsePrice(formData.providerCost),
+      currency: formData.currency,
+      billingCycle: formData.billingCycle,
       status: formData.status,
     };
     if (editingServer) {
@@ -361,6 +393,74 @@ const ServerForm: React.FC<ServerFormProps> = ({ onSubmit, onUpdate, clients, ed
                 );
               })()}
             </div>
+          </div>
+
+          {/* Billing cycle: segmented pills */}
+          <div className="w-full">
+            <label className={CONTROL_LABEL}>Billing Cycle</label>
+            <div className="inline-flex w-full gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-1">
+              {[
+                { value: "MONTHLY", label: "Per month" },
+                { value: "YEARLY", label: "Per year" },
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, billingCycle: opt.value }))}
+                  aria-pressed={formData.billingCycle === opt.value}
+                  className={`flex-1 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                    formData.billingCycle === opt.value
+                      ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)]"
+                      : "text-[var(--color-text-muted)] hover:bg-[var(--color-surface-3)] hover:text-[var(--color-text-secondary)]"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="w-full">
+            <label className={CONTROL_LABEL}>
+              Price to Client <span className="text-[var(--color-text-muted)]">/ {formData.billingCycle === "MONTHLY" ? "mo" : "yr"}</span>
+            </label>
+            <input
+              type="number"
+              name="price"
+              min={0}
+              step="0.01"
+              value={formData.price}
+              onChange={handleChange}
+              placeholder="e.g. 120"
+              className={CONTROL_INPUT}
+            />
+          </div>
+
+          <div className="w-full">
+            <label className={CONTROL_LABEL}>
+              Provider Cost <span className="text-[var(--color-text-muted)]">/ {formData.billingCycle === "MONTHLY" ? "mo" : "yr"}</span>
+            </label>
+            <input
+              type="number"
+              name="providerCost"
+              min={0}
+              step="0.01"
+              value={formData.providerCost}
+              onChange={handleChange}
+              placeholder="e.g. 60"
+              className={CONTROL_INPUT}
+            />
+          </div>
+
+          <div className="w-full">
+            <label className={CONTROL_LABEL}>Currency</label>
+            <select name="currency" value={formData.currency} onChange={handleChange} className={CONTROL_SELECT}>
+              {CURRENCY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="w-full md:col-span-2 lg:col-span-3">

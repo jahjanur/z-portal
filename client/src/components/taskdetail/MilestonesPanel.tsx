@@ -85,10 +85,34 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
   const [images, setImages] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<number | null>(null);
+  const [stageFilter, setStageFilter] = useState<"all" | "todo" | "pushed" | "deployed">("all");
   const fileRef = useRef<HTMLInputElement>(null);
   const { dragging: createDragging, dropHandlers: createDrop } = useFileDrop((files) => setImages((prev) => [...prev, ...files]));
 
   const open = openId != null ? list.find((m) => m.id === openId) ?? null : null;
+
+  // Stage buckets for the filter: "todo" = no stage yet, "pushed" = pushed to
+  // GitHub but not deployed, "deployed" = deployed.
+  const stageCounts = {
+    all: list.length,
+    todo: list.filter((m) => !m.pushedToGithub && !m.deployed).length,
+    pushed: list.filter((m) => !!m.pushedToGithub && !m.deployed).length,
+    deployed: list.filter((m) => !!m.deployed).length,
+  };
+  const filteredList = list.filter((m) => {
+    switch (stageFilter) {
+      case "todo": return !m.pushedToGithub && !m.deployed;
+      case "pushed": return !!m.pushedToGithub && !m.deployed;
+      case "deployed": return !!m.deployed;
+      default: return true;
+    }
+  });
+  const STAGE_FILTERS: { key: typeof stageFilter; label: string }[] = [
+    { key: "all", label: "All" },
+    { key: "todo", label: "To do" },
+    { key: "pushed", label: "Pushed" },
+    { key: "deployed", label: "Deployed" },
+  ];
 
   const resetForm = () => {
     setTitle(""); setDescription(""); setPriority("MEDIUM"); setImages([]); setAdding(false);
@@ -156,9 +180,34 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
 
       {total > 0 && <ProgressBar percent={percent} size="md" className="mb-4" />}
 
-      {list.length > 0 ? (
+      {list.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {STAGE_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              onClick={() => setStageFilter(f.key)}
+              aria-pressed={stageFilter === f.key}
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset transition ${
+                stageFilter === f.key
+                  ? "bg-[var(--color-tab-active-bg)] text-[var(--color-tab-active-text)] ring-[var(--color-tab-active-border)]"
+                  : "bg-[var(--color-surface-2)] text-[var(--color-text-muted)] ring-[var(--color-border)] hover:text-[var(--color-text-secondary)]"
+              }`}
+            >
+              {f.label}
+              <span className="tabular-nums opacity-70">{stageCounts[f.key]}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {list.length === 0 ? (
+        !adding && <p className="text-xs text-[var(--color-text-muted)]">No to-dos yet. Break this task into smaller to-dos to track progress.</p>
+      ) : filteredList.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-[var(--color-border)] py-6 text-center text-xs text-[var(--color-text-muted)]">No to-dos in this filter.</p>
+      ) : (
         <ul className="space-y-2">
-          {list.map((m) => {
+          {filteredList.map((m) => {
             const imgs = milestoneImages(m);
             const docs = milestoneDocs(m);
             return (
@@ -214,8 +263,6 @@ export default function MilestonesPanel({ taskId, milestones, canComplete, curre
             );
           })}
         </ul>
-      ) : (
-        !adding && <p className="text-xs text-[var(--color-text-muted)]">No to-dos yet. Break this task into smaller to-dos to track progress.</p>
       )}
 
       {adding ? (
@@ -808,7 +855,7 @@ export function TodoDetailModal({
 /* ----------------------------- stage chips ------------------------------- */
 
 const STAGES = [
-  { key: "pushedToGithub" as const, label: "GitHub", longLabel: "Pushed to GitHub", Icon: Github },
+  { key: "pushedToGithub" as const, label: "Pushed", longLabel: "Pushed", Icon: Github },
   { key: "deployed" as const, label: "Deployed", longLabel: "Deployed", Icon: Rocket },
 ];
 

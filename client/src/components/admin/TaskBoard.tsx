@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, FolderKanban, Trash2, Pencil, User as UserIcon, ChevronDown } from "lucide-react";
+import { Calendar, FolderKanban, Trash2, Pencil, User as UserIcon, ChevronDown, Pin, PinOff, ArrowUp } from "lucide-react";
 import type { Task } from "../../contexts/AdminContext";
 import { avatarGlyph } from "../../constants/workerProfile";
 import ProgressBar from "../ui/ProgressBar";
@@ -14,9 +14,25 @@ interface TaskBoardProps {
   view?: "board" | "list" | "projects";
   /** When provided, board cards can be dragged between columns to change status. */
   onChangeStatus?: (id: number, status: string) => void;
+  /** When provided, a card can be dragged onto the column's "Pin to top" strip (or toggled) to pin it. */
+  onPin?: (id: number, pinned: boolean) => void;
 }
 
 type ColumnKey = "pending" | "in_progress" | "completed";
+
+const ts = (s?: string | null) => (s ? new Date(s).getTime() : 0);
+
+/** Order a column: pinned first (most-recently pinned on top), then the
+ *  most-recently-worked tasks (latest updatedAt), newest as a final tiebreak. */
+function sortColumn(list: Task[]): Task[] {
+  return [...list].sort((a, b) => {
+    const ap = a.pinnedAt ? 1 : 0;
+    const bp = b.pinnedAt ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+    if (ap && bp) return ts(b.pinnedAt) - ts(a.pinnedAt);
+    return ts(b.updatedAt) - ts(a.updatedAt) || ts(b.createdAt) - ts(a.createdAt) || b.id - a.id;
+  });
+}
 
 const COLUMNS: {
   key: ColumnKey;
@@ -70,7 +86,9 @@ function TaskCard({
   navigate,
   draggable,
   onDragStart,
+  onDragEnd,
   hideProject,
+  onUnpin,
 }: {
   task: Task;
   accent: string;
@@ -79,10 +97,14 @@ function TaskCard({
   navigate: ReturnType<typeof useNavigate>;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
   /** Hide the project badge (e.g. when the card is already inside a project folder). */
   hideProject?: boolean;
+  /** When provided, the card is pinned and clicking the control unpins it. */
+  onUnpin?: () => void;
 }) {
   const completed = task.status === "COMPLETED";
+  const pinned = !!task.pinnedAt;
   const dstate = dueState(task.dueDate, completed);
   const workers = task.workers ?? [];
 
@@ -93,6 +115,7 @@ function TaskCard({
       tabIndex={0}
       draggable={draggable}
       onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -106,10 +129,24 @@ function TaskCard({
 
       <div className="flex items-start justify-between gap-2 pl-1.5">
         <h4 className="min-w-0 break-words pr-1 text-[0.9375rem] font-semibold leading-snug text-[var(--color-text-primary)]">
+          {pinned && (
+            <Pin className="mr-1 inline h-3.5 w-3.5 -translate-y-0.5 fill-current text-[var(--color-warning-text)]" aria-label="Pinned" />
+          )}
           {task.title}
         </h4>
-        {/* action cluster — subtle, reveals on hover/focus */}
-        <div className="flex shrink-0 items-center gap-0.5 rounded-lg opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+        {/* action cluster — subtle, reveals on hover/focus (pin control stays visible when pinned) */}
+        <div className={`flex shrink-0 items-center gap-0.5 rounded-lg transition focus-within:opacity-100 group-hover:opacity-100 ${pinned ? "opacity-100" : "opacity-0"}`}>
+          {onUnpin && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onUnpin(); }}
+              aria-label={`Unpin task: ${task.title}`}
+              title="Unpin"
+              className="rounded-md p-1.5 text-[var(--color-warning-text)] transition hover:bg-[var(--color-surface-3)]"
+            >
+              <PinOff className="h-4 w-4" />
+            </button>
+          )}
           {onEdit && (
             <button
               type="button"
@@ -210,6 +247,7 @@ function BoardColumns({
   onEdit,
   navigate,
   onChangeStatus,
+  onPin,
   hideProject,
   collapseLimit = 6,
 }: {
@@ -218,13 +256,16 @@ function BoardColumns({
   onEdit?: (task: Task) => void;
   navigate: ReturnType<typeof useNavigate>;
   onChangeStatus?: (id: number, status: string) => void;
+  onPin?: (id: number, pinned: boolean) => void;
   hideProject?: boolean;
   collapseLimit?: number;
 }) {
   const [dragOverCol, setDragOverCol] = useState<ColumnKey | null>(null);
+  const [draggingId, setDraggingId] = useState<number | null>(null);
   const [collapsedCols, setCollapsedCols] = useState<Set<ColumnKey>>(new Set());
   const [expandedCols, setExpandedCols] = useState<Set<ColumnKey>>(new Set());
   const dnd = !!onChangeStatus;
+  const canPin = !!onPin;
 
   const toggleCollapse = (k: ColumnKey) =>
     setCollapsedCols((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
@@ -234,7 +275,7 @@ function BoardColumns({
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       {COLUMNS.map((col) => {
-        const colTasks = tasks.filter(col.match);
+        const colTasks = sortColumn(tasks.filter(col.match));
         const isOver = dragOverCol === col.key;
         const isCollapsed = collapsedCols.has(col.key);
         const isExpanded = expandedCols.has(col.key);
@@ -248,6 +289,7 @@ function BoardColumns({
               e.preventDefault();
               const id = Number(e.dataTransfer.getData("text/plain"));
               setDragOverCol(null);
+              setDraggingId(null);
               if (id) onChangeStatus?.(id, col.status);
             } : undefined}
             className={`flex min-w-0 flex-col self-start rounded-2xl border bg-[var(--color-surface-2)] transition-colors ${isOver ? "border-[var(--card-hover-border)] bg-[var(--color-surface-3)] ring-2 ring-[var(--color-focus-ring)]" : "border-[var(--color-border)]"}`}
@@ -270,6 +312,26 @@ function BoardColumns({
             </button>
             {!isCollapsed && (
               <div className="flex flex-1 flex-col gap-3 p-3">
+                {/* Pin-to-top drop strip — only while a card is being dragged */}
+                {canPin && draggingId != null && (
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const id = Number(e.dataTransfer.getData("text/plain"));
+                      setDragOverCol(null);
+                      setDraggingId(null);
+                      if (!id) return;
+                      onPin?.(id, true);
+                      const t = tasks.find((x) => x.id === id);
+                      if (t && !col.match(t)) onChangeStatus?.(id, col.status);
+                    }}
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[var(--color-focus-ring)] bg-[var(--color-focus-ring)]/10 py-2.5 text-[11px] font-semibold text-[var(--color-text-secondary)]"
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" /> Pin to top
+                  </div>
+                )}
                 {colTasks.length === 0 ? (
                   <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] py-10 text-center text-xs text-[var(--color-text-muted)]">
                     {isOver ? `Drop to mark ${col.label}` : `No ${col.label.toLowerCase()} tasks`}
@@ -286,7 +348,9 @@ function BoardColumns({
                         navigate={navigate}
                         draggable={dnd}
                         hideProject={hideProject}
-                        onDragStart={dnd ? (e) => { e.dataTransfer.setData("text/plain", String(t.id)); e.dataTransfer.effectAllowed = "move"; } : undefined}
+                        onDragStart={dnd ? (e) => { e.dataTransfer.setData("text/plain", String(t.id)); e.dataTransfer.effectAllowed = "move"; setDraggingId(t.id); } : undefined}
+                        onDragEnd={dnd ? () => setDraggingId(null) : undefined}
+                        onUnpin={canPin && t.pinnedAt ? () => onPin?.(t.id, false) : undefined}
                       />
                     ))}
                     {colTasks.length > collapseLimit && (
@@ -319,6 +383,7 @@ function ProjectFolder({
   onEdit,
   navigate,
   onChangeStatus,
+  onPin,
 }: {
   name: string;
   tasks: Task[];
@@ -328,6 +393,7 @@ function ProjectFolder({
   onEdit?: (task: Task) => void;
   navigate: ReturnType<typeof useNavigate>;
   onChangeStatus?: (id: number, status: string) => void;
+  onPin?: (id: number, pinned: boolean) => void;
 }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface-1)]">
@@ -366,6 +432,7 @@ function ProjectFolder({
             onEdit={onEdit}
             navigate={navigate}
             onChangeStatus={onChangeStatus}
+            onPin={onPin}
             hideProject
             collapseLimit={4}
           />
@@ -375,16 +442,23 @@ function ProjectFolder({
   );
 }
 
-export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onChangeStatus }: TaskBoardProps) {
+export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onChangeStatus, onPin }: TaskBoardProps) {
   const navigate = useNavigate();
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
   const toggleFolder = (k: string) =>
     setCollapsedFolders((prev) => { const n = new Set(prev); n.has(k) ? n.delete(k) : n.add(k); return n; });
 
   if (view === "list") {
+    const order = { PENDING: 0, IN_PROGRESS: 1, PENDING_APPROVAL: 1, COMPLETED: 2 } as Record<string, number>;
     const ordered = [...tasks].sort((a, b) => {
-      const order = { PENDING: 0, IN_PROGRESS: 1, PENDING_APPROVAL: 1, COMPLETED: 2 } as Record<string, number>;
-      return (order[a.status] ?? 3) - (order[b.status] ?? 3);
+      const byStatus = (order[a.status] ?? 3) - (order[b.status] ?? 3);
+      if (byStatus !== 0) return byStatus;
+      // within the same status: pinned first, then most-recently worked
+      const ap = a.pinnedAt ? 1 : 0;
+      const bp = b.pinnedAt ? 1 : 0;
+      if (ap !== bp) return bp - ap;
+      if (ap && bp) return ts(b.pinnedAt) - ts(a.pinnedAt);
+      return ts(b.updatedAt) - ts(a.updatedAt) || ts(b.createdAt) - ts(a.createdAt) || b.id - a.id;
     });
     if (ordered.length === 0) {
       return (
@@ -501,6 +575,7 @@ export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onC
             onEdit={onEdit}
             navigate={navigate}
             onChangeStatus={onChangeStatus}
+            onPin={onPin}
           />
         ))}
       </div>
@@ -514,6 +589,7 @@ export default function TaskBoard({ tasks, onDelete, onEdit, view = "board", onC
       onEdit={onEdit}
       navigate={navigate}
       onChangeStatus={onChangeStatus}
+      onPin={onPin}
     />
   );
 }

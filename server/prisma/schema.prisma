@@ -107,6 +107,10 @@ model Server {
   activationDate          DateTime?
   expirationDate          DateTime?
   lifespanYears           Int?
+  price                   Float?    // what we charge the client, per billingCycle
+  providerCost            Float?    // what we pay the provider, per billingCycle
+  currency                String    @default("EUR")
+  billingCycle            String    @default("YEARLY") // MONTHLY | YEARLY
   status                  String    @default("PENDING")
   isActive                Boolean   @default(true)
   renewalReminderSentAt   DateTime?
@@ -124,6 +128,7 @@ model Task {
   description String?
   status      String        @default("PENDING")
   dueDate     DateTime?
+  pinnedAt    DateTime?     // when set, the task is pinned to the top of its board column
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @default(now()) @updatedAt
   clientId    Int

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../../api";
-import { formatCurrency, formatDate, computeInvoiceRevenue, isInvoiceOverdue, computeRevenueTrend } from "../../utils";
+import { formatCurrency, formatDate, computeInvoiceRevenue, isInvoiceOverdue, computeRevenueTrend, toDisplay } from "../../utils";
 import {
   PieChart,
   Pie,
@@ -85,6 +85,16 @@ interface Domain {
   client: { id: number; name: string; company?: string };
 }
 
+interface Server {
+  id: number;
+  label: string;
+  price?: number | null;
+  providerCost?: number | null;
+  currency?: string | null;
+  billingCycle?: string | null;
+  client: { id: number; name: string; company?: string };
+}
+
 const colors = {
   primary: "rgba(255,255,255,0.9)",
   accent: "#FFA726",
@@ -109,6 +119,7 @@ export default function ZulberaAnalyticsPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
+  const [servers, setServers] = useState<Server[]>([]);
   const [projects, setProjects] = useState<SvcProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<"week" | "month" | "year">("month");
@@ -135,15 +146,21 @@ export default function ZulberaAnalyticsPage() {
         (u) => u.role === "CLIENT" && (u as User).referredById == null
       );
       const allDomains: Domain[] = [];
+      const allServers: Server[] = [];
       for (const client of adminOwnClients) {
         try {
-          const domainRes = await API.get(`/domains/client/${client.id}`);
+          const [domainRes, serverRes] = await Promise.all([
+            API.get(`/domains/client/${client.id}`),
+            API.get(`/servers/client/${client.id}`).catch(() => ({ data: [] as Server[] })),
+          ]);
           allDomains.push(...domainRes.data);
+          allServers.push(...serverRes.data);
         } catch (err) {
-          console.error(`Error fetching domains for client ${client.id}:`, err);
+          console.error(`Error fetching domains/servers for client ${client.id}:`, err);
         }
       }
       setDomains(allDomains);
+      setServers(allServers);
     } catch (err) {
       console.error("Error fetching Zulbera overview:", err);
     } finally {
@@ -267,6 +284,18 @@ export default function ZulberaAnalyticsPage() {
   // ---- Service-aware aggregates (Web App / Website / SMM) ----
   const smmProjects = projects.filter((p) => p.serviceType === "SMM");
   const mrr = smmProjects.reduce((s, p) => s + mnum((p.metadata as Record<string, unknown>)?.monthlyBudget), 0);
+  // Hosting/server recurring revenue — normalize each server to a monthly figure
+  // (yearly price ÷ 12), converted into the display currency so it reconciles.
+  const toMonthly = (amt: number, cycle?: string | null) => (cycle === "MONTHLY" ? amt : amt / 12);
+  const serverMrr = servers.reduce(
+    (s, sv) => (sv.price == null ? s : s + toDisplay(toMonthly(sv.price, sv.billingCycle), sv.currency)),
+    0
+  );
+  const serverCostMrr = servers.reduce(
+    (s, sv) => (sv.providerCost == null ? s : s + toDisplay(toMonthly(sv.providerCost, sv.billingCycle), sv.currency)),
+    0
+  );
+  const serverMarginMrr = serverMrr - serverCostMrr;
   const adBudget = smmProjects.reduce((s, p) => s + mnum((p.metadata as Record<string, unknown>)?.adBudget), 0);
   const adSpent = smmProjects.reduce((s, p) => s + mnum((p.metadata as Record<string, unknown>)?.adSpent), 0);
   const adPct = adBudget > 0 ? Math.min(100, Math.round((adSpent / adBudget) * 100)) : 0;
@@ -371,10 +400,26 @@ export default function ZulberaAnalyticsPage() {
               </div>
             )) : <p className="text-sm text-[var(--color-text-muted)]">No services yet — add one from Tasks → Projects.</p>}
           </div>
-          {mrr > 0 && (
-            <div className="mt-4 flex items-center justify-between border-t border-[var(--color-border)] pt-3 text-sm">
-              <span className="text-[var(--color-text-muted)]">Recurring (retainers)</span>
-              <span className="font-bold text-[var(--color-text-primary)]">{formatCurrency(mrr)}/mo</span>
+          {(mrr > 0 || serverMrr > 0) && (
+            <div className="mt-4 space-y-2 border-t border-[var(--color-border)] pt-3 text-sm">
+              {mrr > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--color-text-muted)]">Recurring (retainers)</span>
+                  <span className="font-bold text-[var(--color-text-primary)]">{formatCurrency(mrr)}/mo</span>
+                </div>
+              )}
+              {serverMrr > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[var(--color-text-muted)]">Hosting / servers</span>
+                  <span className="font-bold text-[var(--color-text-primary)]">{formatCurrency(serverMrr)}/mo</span>
+                </div>
+              )}
+              {serverMrr > 0 && serverMarginMrr > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-[var(--color-text-muted)]">Hosting margin</span>
+                  <span className="font-semibold text-[var(--color-success-text)]">{formatCurrency(serverMarginMrr)}/mo</span>
+                </div>
+              )}
             </div>
           )}
         </div>

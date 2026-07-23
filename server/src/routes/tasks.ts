@@ -616,6 +616,51 @@ router.patch("/:id/status", verifyJWT, async (req: any, res) => {
   }
 });
 
+// pin / unpin a task (moves it to the top of its board column)
+router.patch("/:id/pin", verifyJWT, async (req: any, res) => {
+  try {
+    const { role, userId } = req.user;
+    const taskId = Number(req.params.id);
+    const pinned = !!req.body?.pinned;
+
+    const existingTask = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { workers: { select: { userId: true } } },
+    });
+    if (!existingTask) {
+      return res.status(404).json({ error: "Task not found" });
+    }
+
+    const isAssignedWorker = existingTask.workers.some((tw) => tw.userId === userId);
+    if (role === "CLIENT") {
+      return res.status(403).json({ error: "Clients cannot pin tasks" });
+    }
+    if (role === "WORKER" && !isAssignedWorker) {
+      return res.status(403).json({ error: "Not authorized to update this task" });
+    }
+    if (role !== "ADMIN" && role !== "WORKER" && role !== "ERASPHERE") {
+      return res.status(403).json({ error: "Not authorized to update this task" });
+    }
+    if (role === "ERASPHERE") {
+      const referredIds = await getReferredClientIds(userId);
+      if (existingTask.clientId === null || !referredIds.includes(existingTask.clientId)) {
+        return res.status(403).json({ error: "Not authorized to update this task" });
+      }
+    }
+
+    const updated = await prisma.task.update({
+      where: { id: taskId },
+      data: { pinnedAt: pinned ? new Date() : null },
+      select: { id: true, pinnedAt: true },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error("Error pinning task:", error);
+    res.status(500).json({ error: "Failed to pin task" });
+  }
+});
+
 // post files
 router.post("/:id/files", verifyJWT, upload.single("file"), async (req: any, res) => {
   try {

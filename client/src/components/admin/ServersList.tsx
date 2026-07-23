@@ -1,6 +1,7 @@
 import StatusBadge from "../ui/StatusBadge";
 import EmptyState from "../ui/EmptyState";
 import Button from "../ui/Button";
+import { formatMoney } from "../../utils/currency";
 
 interface Server {
   id: number;
@@ -14,8 +15,15 @@ interface Server {
   activationDate?: string | null;
   expirationDate?: string | null;
   lifespanYears?: number | null;
+  price?: number | null;
+  providerCost?: number | null;
+  currency?: string | null;
+  billingCycle?: string | null;
   status?: string;
 }
+
+/** Short suffix for a billing cycle, e.g. "/yr". */
+const cycleSuffix = (cycle?: string | null) => (cycle === "MONTHLY" ? "/mo" : "/yr");
 
 interface ServersListProps {
   servers: Server[];
@@ -88,6 +96,26 @@ const ServersList: React.FC<ServersListProps> = ({ servers, onEdit, onDelete }) 
                 <span>Active for: {lifespanLabel(server.lifespanYears)}</span>
                 <span>Location: {server.location || "—"}</span>
               </div>
+
+              {(server.price != null || server.providerCost != null) && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {server.price != null && (
+                    <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-success-border)] bg-[var(--color-success-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--color-success-text)]">
+                      Charge: {formatMoney(server.price, server.currency)}{cycleSuffix(server.billingCycle)}
+                    </span>
+                  )}
+                  {server.providerCost != null && (
+                    <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1 text-xs font-medium text-[var(--color-text-muted)]">
+                      Cost: {formatMoney(server.providerCost, server.currency)}{cycleSuffix(server.billingCycle)}
+                    </span>
+                  )}
+                  {server.price != null && server.providerCost != null && (
+                    <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-3)] px-2.5 py-1 text-xs font-semibold text-[var(--color-text-secondary)]">
+                      Margin: {formatMoney(server.price - server.providerCost, server.currency)}{cycleSuffix(server.billingCycle)}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col gap-2 shrink-0 sm:flex-row">

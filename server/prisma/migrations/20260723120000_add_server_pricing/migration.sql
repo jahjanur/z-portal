@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "public"."Server" ADD COLUMN     "price" DOUBLE PRECISION,
+ADD COLUMN     "providerCost" DOUBLE PRECISION,
+ADD COLUMN     "currency" TEXT NOT NULL DEFAULT 'EUR',
+ADD COLUMN     "billingCycle" TEXT NOT NULL DEFAULT 'YEARLY';

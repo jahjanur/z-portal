@@ -79,6 +79,20 @@ interface Domain {
   createdAt: string;
 }
 
+interface Server {
+  id: number;
+  label: string;
+  provider?: string | null;
+  plan?: string | null;
+  location?: string | null;
+  expirationDate?: string | null;
+  price?: number | null;
+  currency?: string | null;
+  billingCycle?: string | null;
+  status?: string | null;
+  notes?: string | null;
+}
+
 const PAGE_SIZE = 10;
 
 const TABS = [
@@ -87,6 +101,7 @@ const TABS = [
   { key: "invoices", label: "Invoices" },
   { key: "files", label: "Files" },
   { key: "domains", label: "Domains" },
+  { key: "servers", label: "Servers" },
   { key: "team", label: "Team" },
 ] as const;
 
@@ -96,13 +111,14 @@ const RoleUser: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
+  const [servers, setServers] = useState<Server[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const activeTab: "overview" | "tasks" | "invoices" | "files" | "domains" | "team" =
-    (["overview", "tasks", "invoices", "files", "domains", "team"] as const).includes(tabParam as any)
-      ? (tabParam as "overview" | "tasks" | "invoices" | "files" | "domains" | "team")
+  const activeTab: "overview" | "tasks" | "invoices" | "files" | "domains" | "servers" | "team" =
+    (["overview", "tasks", "invoices", "files", "domains", "servers", "team"] as const).includes(tabParam as any)
+      ? (tabParam as "overview" | "tasks" | "invoices" | "files" | "domains" | "servers" | "team")
       : "overview";
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
@@ -136,15 +152,17 @@ const fetchAll = async () => {
       throw new Error("User ID not found. Please login again.");
     }
 
-    const [tasksRes, invoicesRes, domainsRes] = await Promise.all([
+    const [tasksRes, invoicesRes, domainsRes, serversRes] = await Promise.all([
       API.get<Task[]>("/tasks"),
       API.get<Invoice[]>("/invoices"),
       API.get<Domain[]>(`/domains/client/${userId}`),
+      API.get<Server[]>(`/servers/client/${userId}`).catch(() => ({ data: [] as Server[] })),
     ]);
 
     setTasks(Array.isArray(tasksRes.data) ? tasksRes.data : []);
     setInvoices(Array.isArray(invoicesRes.data) ? invoicesRes.data : []);
     setDomains(Array.isArray(domainsRes.data) ? domainsRes.data : []);
+    setServers(Array.isArray(serversRes.data) ? serversRes.data : []);
   } catch (err: unknown) {
     console.error("❌ Fetch error:", err);
     setError(err instanceof Error ? err.message : "Failed to fetch data");
@@ -875,6 +893,78 @@ const fetchAll = async () => {
                 }
               />
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Servers Tab */}
+      {activeTab === "servers" && (
+        <div className="space-y-6">
+          {servers.length === 0 ? (
+            <EmptyState
+              title="No servers found"
+              description="Contact your administrator to add servers"
+              icon={
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                </svg>
+              }
+            />
+          ) : (
+            <SectionCard
+              title="All Servers"
+              headerRight={<span className="badge">{servers.length} server{servers.length !== 1 ? "s" : ""}</span>}
+              bodyClassName="space-y-4 stagger-children"
+            >
+              {servers.map((server) => (
+                <div key={server.id} className="card-panel card-panel-hover p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2.5">
+                        <span className="break-all text-lg font-bold tracking-tight text-[var(--color-text-primary)]">{server.label}</span>
+                        {server.status && <span className="badge">{server.status.replace(/_/g, " ")}</span>}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                        {server.provider && (
+                          <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                            <svg className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+                            </svg>
+                            <span>{server.provider}{server.plan ? ` · ${server.plan}` : ""}</span>
+                          </div>
+                        )}
+
+                        {server.expirationDate && (
+                          <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                            <svg className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Renews: {formatDate(server.expirationDate)}</span>
+                            {expiryBadge(server.expirationDate)}
+                          </div>
+                        )}
+
+                        {server.price != null && (
+                          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
+                            <svg className="h-4 w-4 shrink-0 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{formatMoney(server.price, server.currency)}{server.billingCycle === "MONTHLY" ? "/mo" : "/yr"}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {server.notes && (
+                        <div className="mt-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-1)] p-3">
+                          <p className="text-sm text-[var(--color-text-secondary)]">{server.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </SectionCard>
           )}
         </div>
       )}

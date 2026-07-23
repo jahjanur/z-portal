@@ -41,6 +41,9 @@ export interface Task {
   projectId?: number;
   status: string;
   dueDate?: string;
+  pinnedAt?: string | null;
+  updatedAt?: string;
+  createdAt?: string;
   workers?: { user: User }[];
   client?: User;
   project?: Project;
@@ -139,6 +142,10 @@ export interface Server {
   activationDate?: string | null;
   expirationDate?: string | null;
   lifespanYears?: number | null;
+  price?: number | null;
+  providerCost?: number | null;
+  currency?: string | null;
+  billingCycle?: string | null;
   status?: string;
   isActive?: boolean;
   renewalReminderSentAt?: string | null;
@@ -156,6 +163,10 @@ interface EditingServer {
   activationDate?: string | null;
   expirationDate?: string | null;
   lifespanYears?: number | null;
+  price?: number | null;
+  providerCost?: number | null;
+  currency?: string | null;
+  billingCycle?: string | null;
   status?: string;
 }
 
@@ -209,6 +220,7 @@ interface AdminContextValue {
   deleteProject: (id: number) => Promise<void>;
   deleteTask: (id: number) => Promise<void>;
   updateTaskStatus: (id: number, status: string) => Promise<void>;
+  pinTask: (id: number, pinned: boolean) => Promise<void>;
   updateTask: (id: number, data: { title?: string; description?: string; clientId?: string; workerIds?: number[]; dueDate?: string; projectId?: string }) => Promise<void>;
   createInvoice: (formData: FormData) => Promise<void>;
   updateInvoice: (id: number, data: { status?: string; dueDate?: string; paymentLink?: string; notes?: string; paidAt?: string | null }) => Promise<void>;
@@ -257,6 +269,10 @@ interface AdminContextValue {
     activationDate?: string;
     expirationDate?: string;
     lifespanYears?: number | null;
+    price?: number | null;
+    providerCost?: number | null;
+    currency?: string;
+    billingCycle?: string;
     status?: string;
   }) => Promise<void>;
   updateServer: (serverId: number, data: {
@@ -269,6 +285,10 @@ interface AdminContextValue {
     activationDate?: string;
     expirationDate?: string;
     lifespanYears?: number | null;
+    price?: number | null;
+    providerCost?: number | null;
+    currency?: string;
+    billingCycle?: string;
     status?: string;
   }) => Promise<void>;
   deleteServer: (id: number) => void;
@@ -495,9 +515,23 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 
   // Optimistic status change (used by drag-and-drop on the task board).
   const updateTaskStatus = async (id: number, status: string) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)) as typeof prev);
+    // Bump updatedAt locally so the moved card jumps to the top of its new
+    // column immediately (latest-worked ordering), matching the server.
+    const now = new Date().toISOString();
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status, updatedAt: now } : t)) as typeof prev);
     try {
       await API.patch(`/tasks/${id}/status`, { status });
+    } catch (err) {
+      await fetchAll(); // revert to server truth on failure
+      throw err;
+    }
+  };
+
+  const pinTask = async (id: number, pinned: boolean) => {
+    const pinnedAt = pinned ? new Date().toISOString() : null;
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, pinnedAt } : t)) as typeof prev);
+    try {
+      await API.patch(`/tasks/${id}/pin`, { pinned });
     } catch (err) {
       await fetchAll(); // revert to server truth on failure
       throw err;
@@ -630,6 +664,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     activationDate?: string;
     expirationDate?: string;
     lifespanYears?: number | null;
+    price?: number | null;
+    providerCost?: number | null;
+    currency?: string;
+    billingCycle?: string;
     status?: string;
   }) => {
     await API.post("/servers", {
@@ -643,6 +681,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       activationDate: data.activationDate || null,
       expirationDate: data.expirationDate || null,
       lifespanYears: data.lifespanYears ?? null,
+      price: data.price ?? null,
+      providerCost: data.providerCost ?? null,
+      currency: data.currency || "EUR",
+      billingCycle: data.billingCycle || "YEARLY",
       status: data.status || "PENDING",
     });
     await fetchAll();
@@ -661,6 +703,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       activationDate?: string;
       expirationDate?: string;
       lifespanYears?: number | null;
+      price?: number | null;
+      providerCost?: number | null;
+      currency?: string;
+      billingCycle?: string;
       status?: string;
     }
   ) => {
@@ -674,6 +720,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       activationDate: data.activationDate || null,
       expirationDate: data.expirationDate || null,
       lifespanYears: data.lifespanYears ?? null,
+      price: data.price ?? null,
+      providerCost: data.providerCost ?? null,
+      currency: data.currency || "EUR",
+      billingCycle: data.billingCycle || "YEARLY",
       status: data.status,
     });
     setEditingServer(null);
@@ -701,6 +751,10 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
       activationDate: server.activationDate,
       expirationDate: server.expirationDate,
       lifespanYears: server.lifespanYears,
+      price: server.price,
+      providerCost: server.providerCost,
+      currency: server.currency,
+      billingCycle: server.billingCycle,
       status: server.status,
     });
   };
@@ -744,6 +798,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
     deleteProject,
     deleteTask,
     updateTaskStatus,
+    pinTask,
     updateTask,
     createInvoice,
     updateInvoice,

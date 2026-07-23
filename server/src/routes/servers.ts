@@ -19,6 +19,16 @@ function addYears(date: Date, years: number): Date {
   return d;
 }
 
+const CURRENCIES = ["USD", "EUR", "CAD"];
+const BILLING_CYCLES = ["MONTHLY", "YEARLY"];
+
+/** Parse a money amount to a non-negative number, or null when blank/invalid. */
+function parseMoney(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
 // get all servers for a client (admin: any client; CLIENT: only own)
 router.get("/client/:clientId", verifyJWT, async (req: any, res) => {
   try {
@@ -81,6 +91,10 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
       expirationDate: expirationDateRaw,
       lifespanYears,
       status: statusBody,
+      price: priceRaw,
+      providerCost: providerCostRaw,
+      currency: currencyRaw,
+      billingCycle: billingCycleRaw,
     } = req.body;
 
     if (!clientId || !label) {
@@ -88,6 +102,12 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
     }
 
     const status = (statusBody && String(statusBody).toUpperCase()) || "PENDING";
+    const currency = CURRENCIES.includes(String(currencyRaw).toUpperCase())
+      ? String(currencyRaw).toUpperCase()
+      : "EUR";
+    const billingCycle = BILLING_CYCLES.includes(String(billingCycleRaw).toUpperCase())
+      ? String(billingCycleRaw).toUpperCase()
+      : "YEARLY";
     let activationDate: Date | null = activationDateRaw ? new Date(activationDateRaw) : null;
     let expirationDate: Date | null = expirationDateRaw ? new Date(expirationDateRaw) : null;
     const lifespanYearsNum = lifespanYears != null ? Number(lifespanYears) : null;
@@ -111,6 +131,10 @@ router.post("/", verifyJWT, verifyAdmin, async (req, res) => {
         activationDate,
         expirationDate,
         lifespanYears: lifespanYearsNum,
+        price: parseMoney(priceRaw),
+        providerCost: parseMoney(providerCostRaw),
+        currency,
+        billingCycle,
         status,
         isActive: status === "ACTIVE" || status === "RENEWED" || status === "RENEWAL_DUE",
       },
@@ -140,6 +164,10 @@ router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
       expirationDate: expirationDateRaw,
       lifespanYears,
       status: statusBody,
+      price: priceRaw,
+      providerCost: providerCostRaw,
+      currency: currencyRaw,
+      billingCycle: billingCycleRaw,
     } = req.body;
 
     const existing = await prisma.server.findUnique({ where: { id: Number(id) } });
@@ -148,6 +176,14 @@ router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
     }
 
     const status = statusBody !== undefined ? String(statusBody).toUpperCase() : existing.status;
+    const currency =
+      currencyRaw !== undefined
+        ? (CURRENCIES.includes(String(currencyRaw).toUpperCase()) ? String(currencyRaw).toUpperCase() : existing.currency)
+        : existing.currency;
+    const billingCycle =
+      billingCycleRaw !== undefined
+        ? (BILLING_CYCLES.includes(String(billingCycleRaw).toUpperCase()) ? String(billingCycleRaw).toUpperCase() : existing.billingCycle)
+        : existing.billingCycle;
     let activationDate: Date | null =
       activationDateRaw !== undefined ? (activationDateRaw ? new Date(activationDateRaw) : null) : existing.activationDate;
     let expirationDate: Date | null =
@@ -185,6 +221,10 @@ router.put("/:id", verifyJWT, verifyAdmin, async (req, res) => {
         activationDate,
         expirationDate,
         lifespanYears: lifespanYearsNum,
+        price: priceRaw !== undefined ? parseMoney(priceRaw) : existing.price,
+        providerCost: providerCostRaw !== undefined ? parseMoney(providerCostRaw) : existing.providerCost,
+        currency,
+        billingCycle,
         status,
         ...(isRenewal ? { renewalReminderSentAt: null } : {}),
       },

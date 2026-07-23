@@ -62,6 +62,10 @@ interface Server {
   activationDate?: string | null;
   expirationDate?: string | null;
   lifespanYears?: number | null;
+  price?: number | null;
+  providerCost?: number | null;
+  currency?: string | null;
+  billingCycle?: string | null;
   status?: string;
   createdAt: string;
 }
@@ -1024,6 +1028,32 @@ const fetchAllFiles = async () => {
                             <p className="text-sm font-medium text-[var(--color-text-primary)]">{server.location || 'Not specified'}</p>
                           </div>
                         </div>
+
+                        {/* Pricing */}
+                        {(server.price != null || server.providerCost != null) && (
+                          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                            {server.price != null && (
+                              <div className="rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)] p-4">
+                                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-success-text)]">
+                                  Price {server.billingCycle === "MONTHLY" ? "/ month" : "/ year"}
+                                </p>
+                                <p className="text-lg font-bold text-[var(--color-text-primary)]">
+                                  {formatCurrency(server.price, server.currency || "EUR")}
+                                </p>
+                              </div>
+                            )}
+                            {server.providerCost != null && (
+                              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] p-4">
+                                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                                  Provider cost {server.billingCycle === "MONTHLY" ? "/ month" : "/ year"}
+                                </p>
+                                <p className="text-lg font-bold text-[var(--color-text-primary)]">
+                                  {formatCurrency(server.providerCost, server.currency || "EUR")}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* Notes */}
                         {server.notes && (
